@@ -1,0 +1,2181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a1a2e">
+  <title>🏡 OurBackyard - 社區微商城</title>
+  <style>
+    /* ============================
+       Modern Design System
+       ============================ */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    :root {
+      --primary: oklch(65% 0.18 250);
+      --primary-light: oklch(92% 0.04 250);
+      --bg-main: oklch(15% 0.02 260);
+      --bg-card: oklch(20% 0.02 260);
+      --surface: oklch(25% 0.02 260);
+      --text: oklch(95% 0.01 260);
+      --text-muted: oklch(70% 0.02 260);
+      --accent-green: oklch(70% 0.18 150);
+      --accent-pink: oklch(70% 0.18 330);
+      --accent-orange: oklch(70% 0.18 30);
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --shadow: 0 8px 32px -4px rgba(0,0,0,0.3);
+    }
+
+    /* Day Mode */
+    body.day-mode {
+      --bg-main: oklch(98% 0.01 240);
+      --bg-card: oklch(100% 0 0);
+      --surface: oklch(95% 0.01 240);
+      --text: oklch(20% 0.02 240);
+      --text-muted: oklch(55% 0.02 240);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg-main);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 100px;
+    }
+
+    /* Header */
+    .header {
+      padding: 20px 20px 16px;
+      background: linear-gradient(180deg, rgba(26,26,46,0.9) 0%, transparent 100%);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--primary), var(--accent-pink));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .theme-toggle {
+      background: var(--surface);
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .chat-btn-header {
+      background: var(--accent-blue);
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      font-size: 18px;
+      cursor: pointer;
+      display: none;
+    }
+    .location-badge {
+      background: var(--surface);
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .location-badge.loading {
+      background: #ff9800;
+      animation: location-pulse 1s infinite;
+    }
+    .location-badge.success {
+      background: #4caf50;
+    }
+    .location-badge.error {
+      background: #f44336;
+    }
+    @keyframes location-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    /* Status Bar */
+    .status-bar {
+      background: var(--bg-card);
+      padding: 14px 18px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #f44336;
+      box-shadow: 0 0 12px #f44336;
+    }
+    .status-dot.connected {
+      background: var(--accent-green);
+      box-shadow: 0 0 12px var(--accent-green);
+    }
+    .status-dot.connecting {
+      background: var(--accent-orange);
+      box-shadow: 0 0 12px var(--accent-orange);
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    .status-text { font-size: 14px; font-weight: 500; }
+    .peer-count {
+      background: var(--primary);
+      color: #000 4px ;
+      padding:10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* Info Card */
+    .info-card {
+      background: var(--bg-card);
+      padding: 16px 18px;
+      border-radius: var(--radius-lg);
+      margin: 0 20px 20px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .info-row:last-child { margin-bottom: 0; }
+    .info-label { color: var(--text-muted); }
+    .info-value { font-weight: 500; font-family: monospace; font-size: 12px; }
+
+    /* Tab Bar */
+    .tab-bar {
+      display: flex;
+      gap: 8px;
+      padding: 0 20px 16px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    .tab {
+      flex-shrink: 0;
+      background: var(--bg-card);
+      border: none;
+      padding: 14px 20px;
+      border-radius: var(--radius-md);
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tab.active {
+      background: var(--primary);
+      color: #000;
+    }
+
+    /* Category Filter */
+    .category-bar {
+      display: flex;
+      gap: 10px;
+      padding: 0 20px 16px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .category-bar::-webkit-scrollbar { display: none; }
+    .category-tag {
+      flex-shrink: 0;
+      background: var(--surface);
+      padding: 10px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .category-tag.active {
+      background: var(--accent-pink);
+      color: #fff;
+    }
+
+    /* Market Grid */
+    .market-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      padding: 0 20px;
+    }
+    .item-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .item-card:active { transform: scale(0.98); }
+    .item-card.gone { opacity: 0.5; }
+    .item-image {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: var(--surface);
+    }
+    .item-info {
+      padding: 14px;
+    }
+    .item-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .item-price {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent-green);
+      margin-bottom: 8px;
+    }
+    .item-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .item-status {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .status-available { background: var(--accent-green); color: #000; }
+    .status-pending { background: var(--accent-orange); color: #000; }
+    .status-gone { background: var(--text-muted); color: #fff; }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-text { font-size: 15px; }
+
+    /* Form */
+    .form { padding: 20px; }
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: block;
+    }
+    .form input, .form select, .form textarea {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: var(--radius-md);
+      background: var(--bg-card);
+      color: var(--text);
+      font-size: 15px;
+      font-family: inherit;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .form input:focus, .form select:focus, .form textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .form textarea { height: 100px; resize: none; }
+
+    /* Buttons */
+    .btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: var(--primary);
+      color: #000;
+    }
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+    }
+    .btn-danger {
+      background: #f44336;
+      color: #fff;
+    }
+    /* SOS Button - hidden for now */
+    .btn-sos {
+      display: none;
+      background: linear-gradient(135deg, #f44336, #d32f2f);
+      color: #fff;
+      padding: 18px;
+      font-size: 16px;
+      margin: 20px;
+      border-radius: var(--radius-lg);
+      animation: sos-pulse 2s infinite;
+    }
+    .btn-chat {
+      display: none;
+      background: var(--accent-blue);
+      color: #fff;
+      padding: 12px 20px;
+      font-size: 14px;
+      border-radius: var(--radius-md);
+    }
+    @keyframes sos-pulse {
+      0%,100%{box-shadow: 0 0 0 0 rgba(244,67,54,0.4);}
+      50%{box-shadow: 0 0 0 12px rgba(244,67,54,0);}
+    }
+
+    /* Chat Modal */
+    .chat-container {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      max-width: 500px;
+      margin: 40px auto;
+      padding: 20px;
+      height: calc(100vh - 100px);
+      display: flex;
+      flex-direction: column;
+    }
+    .chat-header { padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .chat-header h3 { margin: 0 0 8px 0; }
+    #chat-peer-selector {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .chat-peer-btn {
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .chat-peer-btn.active { background: var(--accent-blue); border-color: var(--accent-blue); }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 0;
+    }
+    .chat-message {
+      margin: 8px 0;
+      padding: 10px 14px;
+      border-radius: 12px;
+      max-width: 80%;
+    }
+    .chat-message.sent {
+      background: var(--accent-blue);
+      margin-left: auto;
+      color: #fff;
+    }
+    .chat-message.received {
+      background: var(--bg-dark);
+    }
+    .chat-message .meta {
+      font-size: 10px;
+      opacity: 0.7;
+      margin-top: 4px;
+    }
+    .chat-input {
+      display: flex;
+      gap: 8px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .chat-input input {
+      flex: 1;
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px;
+      border-radius: var(--radius-md);
+    }
+    .chat-input button {
+      background: var(--accent-blue);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+    }
+
+    /* Modal */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: none;
+      align-items: flex-end;
+      animation: slideUp 0.3s ease;
+    }
+    .modal.show { display: flex; }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal-content {
+      background: var(--bg-main);
+      width: 100%;
+      max-height: 85vh;
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      padding: 24px;
+      overflow-y: auto;
+    }
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: none;
+      color: var(--text);
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    /* Photo Preview */
+    .photo-preview {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .photo-preview img {
+      width: 70px;
+      height: 70px;
+      object-fit: cover;
+      border-radius: var(--radius-md);
+    }
+
+    /* Setup Screen */
+    #setup { padding: 40px 20px; }
+    .setup-title {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .setup-subtitle {
+      text-align: center;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">
+        <div class="logo-icon">🏡</div>
+        OurBackyard
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="chat-btn-header" id="btn-chat-header" onclick="openChat()" title="Chat with neighbors">💬</button>
+        <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">🌙</button>
+        <div class="location-badge loading" id="location-badge"></div>
+      </div>
+    </div>
+    
+    <div class="status-bar">
+      <div class="status-indicator">
+        <div class="status-dot" id="status-dot"></div>
+        <span class="status-text" id="status-text">Disconnected</span>
+      </div>
+      <div class="peer-count" id="peer-count">0 online</div>
+    </div>
+  </div>
+
+  <!-- Setup -->
+  <div id="setup">
+    <div class="setup-title">Welcome Home</div>
+    <div class="setup-subtitle">Connect with your neighbors</div>
+    
+    <div class="form">
+      <div class="form-group">
+        <label class="form-label">Your Name</label>
+        <input type="text" id="input-name" placeholder="Enter your name">
+      </div>
+      <button class="btn btn-primary" id="btn-join">🚀 Enter Neighborhood</button>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app" class="hidden">
+    <!-- Info -->
+    <div class="info-card">
+      <div class="info-row">
+        <span class="info-label">Zone (H3)</span>
+        <span class="info-value" id="h3-index">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Your ID</span>
+        <span class="info-value" id="peer-id">-</span>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar">
+      <button class="tab active" data-tab="browse">🛒 Browse</button>
+      <button class="tab" data-tab="myitems">📦 My Items</button>
+      <button class="tab" data-tab="add">➕ Add</button>
+    </div>
+
+    <!-- Browse -->
+    <div id="tab-browse">
+      <div class="category-bar" id="category-bar"></div>
+      <div class="market-grid" id="market-grid">
+        <div class="empty-state">
+          <div class="empty-icon">🛒</div>
+          <div class="empty-text">No items nearby</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- My Items -->
+    <div id="tab-myitems" class="hidden">
+      <div class="market-grid" id="my-items-grid"></div>
+    </div>
+
+    <!-- Add Item -->
+    <div id="tab-add" class="hidden">
+      <div class="form">
+        <div class="form-group">
+          <label class="form-label">What are you giving?</label>
+          <input type="text" id="item-title" placeholder="e.g., IKEA Desk">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select id="item-category">
+            <option value="">Select category</option>
+            <option value="Furniture">🪑 Furniture</option>
+            <option value="Kids">🧸 Kids</option>
+            <option value="Tools">🔧 Tools</option>
+            <option value="Plants">🌱 Plants</option>
+            <option value="Electronics">📱 Electronics</option>
+            <option value="Clothing">👕 Clothing</option>
+            <option value="Other">📦 Other</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Price</label>
+          <select id="item-price">
+            <option value="0">🎁 Free (Curb Alert)</option>
+            <option value="swap">☕ Swap for Coffee</option>
+            <option value="5">$5</option>
+            <option value="10">$10</option>
+            <option value="20">$20</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Condition</label>
+          <select id="item-condition">
+            <option value="New">✨ Like New</option>
+            <option value="Good">👍 Good</option>
+            <option value="Fair">👌 Fair</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Description (optional)</label>
+          <textarea id="item-desc" placeholder="Describe your item..."></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Photos</label>
+          <button class="btn btn-secondary" id="btn-select-photos">📷 Add Photos</button>
+          <input type="file" id="item-photos" accept="image/*" multiple style="display:none">
+          <div class="photo-preview" id="photo-preview"></div>
+        </div>
+        
+        <button class="btn btn-primary" id="btn-publish">🚀 Publish to Neighborhood</button>
+      </div>
+    </div>
+
+    <!-- Chat Button -->
+    <button class="btn btn-chat" id="btn-chat" style="background:var(--accent-blue);margin-right:8px">💬 Chat</button>
+    
+    <!-- SOS Button -->
+    <button class="btn btn-sos" id="btn-sos">🚨 SOS - Emergency</button>
+  </div>
+
+  <!-- Chat Modal -->
+  <div id="chat-modal" class="modal">
+    <button class="modal-close" onclick="closeChatModal()">×</button>
+    <div class="chat-container">
+      <div class="chat-header">
+        <h3>💬 Neighborhood Chat</h3>
+        <div id="chat-peer-selector"></div>
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input">
+        <input type="text" id="chat-input" placeholder="Type a message...">
+        <button onclick="sendChatMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="item-modal" class="modal">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div class="modal-content" id="modal-content"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/dexie@4.0.4/dist/dexie.js"></script>
+  <script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
+  
+  <script>
+    // ============ Image Utilities ============
+    
+    // Compress image to max 800px for storage
+    function compressImage(file, maxWidth = 800, quality = 0.7) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
+          
+          // Scale down if needed
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob(blob => resolve(blob), 'image/jpeg', quality);
+        };
+        
+        img.onerror = () => resolve(null);
+        img.src = URL.createObjectURL(file);
+      });
+    }
+    
+    // Generate micro-thumbnail (50px) for instant loading
+    function generateMicroThumbnail(file) {
+      return compressImage(file, 50, 0.5);
+    }
+    
+    // ============ Binary-First Image Loader ============
+    const ImageLoader = {
+      // Load full image from blob on demand
+      async loadImage(itemId) {
+        try {
+          // Try IndexedDB blob first
+          const blob = await db.blobs.get(itemId);
+          if (blob?.blob) {
+            return URL.createObjectURL(blob.blob);
+          }
+        } catch(e) {}
+        
+        // Fallback: return null (will show placeholder)
+        return null;
+      },
+      
+      // Lazy load with IntersectionObserver
+      init() {
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(async (entry) => {
+            if (entry.isIntersecting) {
+              const img = entry.target;
+              const itemId = img.dataset.itemId;
+              const microSrc = img.dataset.microSrc;
+              
+              // First show micro-thumbnail immediately
+              if (microSrc && !img.src.startsWith('data:')) {
+                img.src = microSrc;
+                img.style.transition = 'opacity 0.3s';
+              }
+              
+              // Then load full image
+              if (itemId) {
+                const fullUrl = await this.loadImage(itemId);
+                if (fullUrl) {
+                  img.onload = () => {
+                    // Release memory after load
+                    if (img.dataset.loadedSrc) {
+                      URL.revokeObjectURL(img.dataset.loadedSrc);
+                    }
+                    img.dataset.loadedSrc = fullUrl;
+                    img.style.filter = 'blur(0)';
+                  };
+                  img.style.filter = 'blur(5px)';
+                  img.src = fullUrl;
+                }
+              }
+              
+              observer.unobserve(img);
+            }
+          });
+        }, { rootMargin: '100px', threshold: 0.01 });
+        
+        return observer;
+      }
+    };
+    
+    // Convert blob to base64 for display
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+    
+    // Convert blob to ArrayBuffer for P2P transfer
+    function blobToArrayBuffer(blob) {
+      return blob.arrayBuffer();
+    }
+    
+    // Convert ArrayBuffer to blob
+    function arrayBufferToBlob(buffer, mimeType = 'image/jpeg') {
+      return new Blob([buffer], { type: mimeType });
+    }
+
+    // ============ OPFS Storage (Priority 1) ============
+    const OPFS = {
+      dirHandle: null,
+      
+      async init() {
+        try {
+          if ('storage' in navigator && 'getDirectory' in navigator.storage) {
+            this.dirHandle = await navigator.storage.getDirectory();
+            console.log('OPFS initialized');
+            return true;
+          }
+          console.log('OPFS not supported, using fallback');
+          return false;
+        } catch(e) {
+          console.log('OPFS init failed:', e);
+          return false;
+        }
+      },
+      
+      async saveImage(itemId, blob) {
+        if (!this.dirHandle) return null;
+        
+        try {
+          const fileName = `img_${itemId}.jpg`;
+          const fileHandle = await this.dirHandle.getFileHandle(fileName, { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          
+          // Return a URL for the file
+          const file = await fileHandle.getFile();
+          return URL.createObjectURL(file);
+        } catch(e) {
+          console.error('OPFS save error:', e);
+          return null;
+        }
+      },
+      
+      async loadImage(itemId) {
+        if (!this.dirHandle) return null;
+        
+        try {
+          const fileName = `img_${itemId}.jpg`;
+          const fileHandle = await this.dirHandle.getFileHandle(fileName);
+          const file = await fileHandle.getFile();
+          return URL.createObjectURL(file);
+        } catch(e) {
+          return null;
+        }
+      },
+      
+      async deleteImage(itemId) {
+        if (!this.dirHandle) return;
+        
+        try {
+          await this.dirHandle.removeEntry(`img_${itemId}.jpg`);
+        } catch(e) {}
+      }
+    };
+    
+    // ============ DID (Decentralized Identity) ============
+    const DIDService = {
+      keyPair: null,
+      publicKey: null,
+      
+      // Generate or load key pair
+      async init() {
+        // Try to load existing keys
+        const savedPrivateKey = localStorage.getItem('did_privateKey');
+        const savedPublicKey = localStorage.getItem('did_publicKey');
+        
+        if (savedPrivateKey && savedPublicKey) {
+          this.publicKey = savedPublicKey;
+          console.log('[DID] Loaded existing keys');
+          return;
+        }
+        
+        // Generate new key pair using Web Crypto API
+        const keyPair = await crypto.subtle.generateKey(
+          { name: 'ECDSA', namedCurve: 'P-256' },
+          true,
+          ['sign', 'verify']
+        );
+        
+        // Export public key
+        const publicKeyBuffer = await crypto.subtle.exportKey('spki', keyPair.publicKey);
+        this.publicKey = this.arrayBufferToBase64(publicKeyBuffer);
+        
+        // Store private key (in production, use secure storage)
+        const privateKeyBuffer = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
+        localStorage.setItem('did_privateKey', this.arrayBufferToBase64(privateKeyBuffer));
+        localStorage.setItem('did_publicKey', this.publicKey);
+        
+        console.log('[DID] Generated new identity:', this.publicKey.substring(0, 20) + '...');
+      },
+      
+      // Sign a message
+      async sign(message) {
+        const savedPrivateKey = localStorage.getItem('did_privateKey');
+        if (!savedPrivateKey) {
+          await this.init();
+        }
+        
+        const privateKeyBuffer = this.base64ToArrayBuffer(savedPrivateKey);
+        const privateKey = await crypto.subtle.importKey(
+          'pkcs8',
+          privateKeyBuffer,
+          { name: 'ECDSA', namedCurve: 'P-256' },
+          false,
+          ['sign']
+        );
+        
+        const encoder = new TextEncoder();
+        const data = encoder.encode(JSON.stringify(message));
+        
+        const signature = await crypto.subtle.sign(
+          { name: 'ECDSA', hash: 'SHA-256' },
+          privateKey,
+          data
+        );
+        
+        return this.arrayBufferToBase64(signature);
+      },
+      
+      // Verify a signature
+      async verify(message, signature, publicKeyBase64) {
+        try {
+          const publicKeyBuffer = this.base64ToArrayBuffer(publicKeyBase64);
+          const publicKey = await crypto.subtle.importKey(
+            'spki',
+            publicKeyBuffer,
+            { name: 'ECDSA', namedCurve: 'P-256' },
+            false,
+            ['verify']
+          );
+          
+          const encoder = new TextEncoder();
+          const data = encoder.encode(JSON.stringify(message));
+          const signatureBuffer = this.base64ToArrayBuffer(signature);
+          
+          return await crypto.subtle.verify(
+            { name: 'ECDSA', hash: 'SHA-256' },
+            publicKey,
+            data,
+            signatureBuffer
+          );
+        } catch(e) {
+          console.error('[DID] Verify failed:', e);
+          return false;
+        }
+      },
+      
+      // Get our DID
+      getDID() {
+        return this.publicKey;
+      },
+      
+      // Helpers
+      arrayBufferToBase64(buffer) {
+        const bytes = new Uint8Array(buffer);
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
+      },
+      
+      base64ToArrayBuffer(base64) {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes.buffer;
+      }
+    };
+    
+    // Initialize DID on load
+    DIDService.init();
+
+    // ============ Initialize IndexedDB (Dexie) ============
+    const db = new Dexie('OurBackyardDB');
+    db.version(2).stores({
+      items: '++id, title, category, price, status, sellerId, h3Index, timestamp',
+      blobs: 'itemId',
+      sync: 'key'
+    });
+    console.log('IndexedDB initialized v2');
+
+    // ============ Initialize OPFS ============
+
+    // ============ Merkle Tree Sync (Priority 2) ============
+    const MerkleSync = {
+      // Simple hash for items
+      hashItem(item) {
+        const str = item.title + '|' + item.sellerId + '|' + item.timestamp;
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+          hash = ((hash << 5) - hash) + str.charCodeAt(i);
+          hash = hash & hash;
+        }
+        return Math.abs(hash).toString(36);
+      },
+      
+      // Get all item hashes
+      async getItemHashes() {
+        const items = await db.items.toArray();
+        return items.map(item => ({ id: item.id, hash: this.hashItem(item) }));
+      },
+      
+      // Find differences
+      async findDifferences(peerHashes) {
+        const localHashes = await this.getItemHashes();
+        const localSet = new Set(localHashes.map(h => h.hash));
+        const peerSet = new Set(peerHashes.map(h => h.hash));
+        
+        const missing = peerHashes.filter(h => !localSet.has(h.hash));
+        const extra = localHashes.filter(h => !peerSet.has(h.hash));
+        
+        return { missing, extra };
+      },
+      
+      // Create sync request
+      async createSyncRequest() {
+        return { type: 'SYNC_REQUEST', hashes: await this.getItemHashes(), peerId };
+      },
+      
+      // Process sync request
+      async processSyncRequest(peerHashes) {
+        const diff = await this.findDifferences(peerHashes);
+        const items = await db.items.where('id').anyOf(diff.extra.map(h => h.id)).toArray();
+        return { type: 'SYNC_RESPONSE', items, peerId };
+      }
+    };
+
+    // ============ Web Worker for Merkle (Performance) ============
+    const MerkleWorker = {
+      worker: null,
+      
+      init() {
+        const workerCode = `
+          self.onmessage = function(e) {
+            const { items } = e.data;
+            // Simple hash for each item
+            const hashes = items.map(item => {
+              const str = item.title + '|' + (item.sellerId || '') + '|' + (item.timestamp || 0);
+              let hash = 0;
+              for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                hash = hash & hash;
+              }
+              return { id: item.id, hash: Math.abs(hash).toString(36) };
+            });
+            self.postMessage({ hashes });
+          };
+        `;
+        
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        this.worker = new Worker(URL.createObjectURL(blob));
+      },
+      
+      async computeHashes(items) {
+        if (!this.worker) this.init();
+        
+        return new Promise(resolve => {
+          this.worker.onmessage = (e) => {
+            resolve(e.data.hashes);
+          };
+          this.worker.postMessage({ items });
+        });
+      }
+    };
+    
+    // Initialize worker
+    MerkleWorker.init();
+
+    // ============ Intersection Observer for Lazy Loading (Performance) ============
+    const LazyLoader = {
+      observer: null,
+      
+      init() {
+        this.observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const img = entry.target;
+              const src = img.dataset.src;
+              if (src) {
+                img.src = src;
+                img.removeAttribute('data-src');
+              }
+              this.observer.unobserve(img);
+            }
+          });
+        }, { rootMargin: '100px' });
+      },
+      
+      observe(img, src) {
+        if (!this.observer) this.init();
+        img.dataset.src = src;
+        this.observer.observe(img);
+      },
+      
+      unobserve(img) {
+        if (this.observer) this.observer.unobserve(img);
+      }
+    };
+
+    // ============ Sync Controller ============
+    const SyncController = {
+      // Get last sync timestamp
+      async getLastSync() {
+        const record = await db.sync.get('lastSync');
+        return record ? record.value : 0;
+      },
+      
+      // Update last sync timestamp
+      async setLastSync() {
+        await db.sync.put({ key: 'lastSync', value: Date.now() });
+      },
+      
+      // Check if item already synced (by title + seller + timestamp)
+      async isItemSynced(item) {
+        const existing = await db.items
+          .where('title').equals(item.title)
+          .and(i => i.sellerId === item.sellerId)
+          .first();
+        return !!existing;
+      },
+      
+      // Sync new item only
+      async syncItem(item) {
+        if (await this.isItemSynced(item)) {
+          console.log('Item already synced:', item.title);
+          return false;
+        }
+        
+        const newId = await db.items.add({
+          ...item,
+          id: undefined,
+          syncedAt: Date.now()
+        });
+        
+        console.log('Synced new item:', item.title);
+        return true;
+      },
+      
+      // Request sync from peer
+      async requestSync() {
+        const lastSync = await this.getLastSync();
+        return { type: 'REQUEST_SYNC', since: lastSync };
+      }
+    };
+
+    // ============ State ============
+    let peerId = localStorage.getItem('ourbackyard_peerId');
+    if (!peerId) {
+      peerId = 'peer_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('ourbackyard_peerId', peerId);
+    }
+    document.getElementById('peer-id').textContent = peerId.substring(0, 12) + '...';
+    
+    // Load theme preference
+    const isDayMode = localStorage.getItem('ourbackyard_daymode') === 'true';
+    if (isDayMode) {
+      document.body.classList.add('day-mode');
+      document.getElementById('theme-toggle').textContent = '☀️';
+    }
+    
+    function toggleTheme() {
+      const isDay = document.body.classList.toggle('day-mode');
+      localStorage.setItem('ourbackyard_daymode', isDay);
+      document.getElementById('theme-toggle').textContent = isDay ? '☀️' : '🌙';
+    }
+    
+    // ============ Haptic Feedback ============
+    function triggerHaptic(type = 'success') {
+      if (!navigator.vibrate) return;
+      switch(type) {
+        case 'success': navigator.vibrate([50, 30, 50]); break;
+        case 'error': navigator.vibrate([100, 50, 100]); break;
+        case 'sos': navigator.vibrate([200, 100, 200, 100, 200]); break;
+        case 'notification': navigator.vibrate([50]); break;
+      }
+    }
+    
+    // ============ Toast Notification ============
+    function notify(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position:fixed;top:20px;left:50%;transform:translateX(-50%);
+        background:${type==='success'?'var(--accent-green)':type==='error'?'#f44336':'var(--primary)'};
+        color:#000;padding:12px 24px;border-radius:12px;font-weight:600;z-index:10000;
+      `;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      triggerHaptic(type);
+      setTimeout(() => { toast.style.opacity='0'; setTimeout(()=>toast.remove(),300); }, 3000);
+    }
+    
+    let displayName = '';
+    let roomId = 'ourbackyard-calgary-test';
+    let currentH3Index = null;
+    let selectedCategory = 'All';
+    let selectedPhotos = [];
+    let connectedPeers = 0;
+    let onlineNeighbors = new Set();  // Track online neighbors
+    
+    // Constants
+    const CATEGORIES = ['All', 'Furniture', 'Kids', 'Tools', 'Plants', 'Electronics', 'Clothing', 'Other'];
+    const CHUNK_SIZE = 16384;
+    const HEARTBEAT_INTERVAL = 15000; // 15 seconds (foreground)
+    const HEARTBEAT_INTERVAL_BACKGROUND = 60000; // 60 seconds (background)
+    
+    // Stability: Connection monitoring
+    let peerConnections = {}; // peerId -> RTCPeerConnection
+    
+    let ws = null;
+    let dataChannels = {};
+    let heartbeatInterval = null;
+    let isBackground = false;
+
+    // ============ Adaptive Heartbeat (Battery Optimization) ============
+    function startHeartbeat(interval = HEARTBEAT_INTERVAL) {
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      
+      heartbeatInterval = setInterval(() => {
+        const heartbeatMsg = { type: 'HEARTBEAT', peerId, timestamp: Date.now() };
+        
+        // Send via P2P
+        for (const [_, dc] of Object.entries(dataChannels)) {
+          if (dc.readyState === 'open') dc.send(JSON.stringify(heartbeatMsg));
+        }
+        
+        // Send via WS
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify(heartbeatMsg));
+        }
+        
+        console.log('Heartbeat (interval: ' + interval/1000 + 's)');
+      }, interval);
+    }
+    
+    // Detect app visibility (foreground/background)
+    function initVisibilityHandler() {
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          isBackground = true;
+          console.log('App in background - extending heartbeat to 60s');
+          startHeartbeat(HEARTBEAT_INTERVAL_BACKGROUND);
+        } else {
+          isBackground = false;
+          console.log('App in foreground - normal heartbeat 15s');
+          startHeartbeat(HEARTBEAT_INTERVAL);
+        }
+      });
+    }
+    initVisibilityHandler();
+
+    // ============ Stability: ICE Restart ============
+    function monitorConnection(peerId, pc) {
+      peerConnections[peerId] = pc;
+      
+      pc.oniceconnectionstatechange = () => {
+        const state = pc.iceConnectionState;
+        console.log('ICE state:', peerId, state);
+        
+        if (state === 'failed' || state === 'disconnected') {
+          console.log('Network changed, restarting ICE for', peerId);
+          // ICE Restart
+          pc.restartIce();
+          
+          // Request new offer via WS
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              type: 'REQUEST_PEER_ITEMS',
+              target: peerId
+            }));
+          }
+          
+          notify('🔄 Reconnecting...', 'info');
+        } else if (state === 'connected') {
+          console.log('ICE connected for', peerId);
+          notify('✅ Reconnected!', 'success');
+        }
+      };
+    }
+
+    // ============ Stability: Backpressure Control ============
+    async function sendWithBackpressure(dc, data) {
+      return new Promise((resolve, reject) => {
+        // Check if buffer is full (> 1MB)
+        if (dc.bufferedAmount > 1024 * 1024) {
+          // Wait for buffer to drain
+          const checkBuffer = () => {
+            if (dc.bufferedAmount < 512 * 512) {
+              resolve();
+            } else {
+              setTimeout(checkBuffer, 100);
+            }
+          };
+          
+          dc.onbufferedamountlow = () => {
+            dc.onbufferedamountlow = null;
+            resolve();
+          };
+          
+          // Timeout after 10 seconds - send anyway
+          setTimeout(() => {
+            if (dc.onbufferedamountlow) {
+              dc.onbufferedamountlow = null;
+              resolve();
+            }
+          }, 10000);
+        } else {
+          resolve();
+        }
+      });
+    }
+
+    // ============ Init ============
+    // Auto-join H3 L9 zone based on location
+    async function initLocation() {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+          resolve(null);
+          return;
+        }
+        
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const { latitude, longitude } = pos.coords;
+            
+            // L9 for precise neighborhood (~0.1 km²)
+            currentH3Index = h3.latLngToCell(latitude, longitude, 9);
+            
+            document.getElementById('h3-index').textContent = currentH3Index;
+            
+            // Update badge: green = success
+            const badge = document.getElementById('location-badge');
+            badge.textContent = '';
+            badge.className = 'location-badge success';
+            
+            // Auto-join H3 L9 room
+            roomId = 'ourbackyard.h3.' + currentH3Index;
+            
+            console.log('Auto-joined H3 L9 zone:', roomId);
+            resolve({ lat: latitude, lng: longitude, h3: currentH3Index });
+          },
+          (err) => {
+            // Update badge: red = failed
+            const badge = document.getElementById('location-badge');
+            badge.textContent = '';
+            badge.className = 'location-badge error';
+            
+            console.log('Location unavailable, using default room');
+            resolve(null);
+          },
+          { timeout: 5000, enableHighAccuracy: true }
+        );
+      });
+    }
+
+    // Initialize
+    initLocation().then(() => {
+      loadItems();
+      renderCategories();
+    });
+
+    // ============ UI Functions ============
+    function updateStatus(state, text) {
+      const dot = document.getElementById('status-dot');
+      dot.className = 'status-dot ' + state;
+      document.getElementById('status-text').textContent = text;
+    }
+    
+    // ============ UX: Mesh Radar Indicator ============
+    function updatePeerCount(count) {
+      connectedPeers = count;
+      
+      // Mesh Radar: show visual indicator
+      const el = document.getElementById('peer-count');
+      if (count === 0) {
+        el.innerHTML = '<span style="color:#666">○ No neighbors</span>';
+      } else if (count === 1) {
+        el.innerHTML = '<span style="color:#4caf50">● 1 neighbor</span>';
+      } else {
+        el.innerHTML = `<span style="color:#4caf50">● ${count} neighbors</span>`;
+      }
+    }
+
+    // ============ UX: Optimistic UI - Instant Feedback ============
+    function optimisticUpdate(action, successCallback) {
+      // 1. Instant UI feedback (Optimistic)
+      triggerHaptic('success');
+      
+      // 2. Show success animation immediately
+      notify('✅ ' + action, 'success');
+      
+      // 3. Do actual network sync in background
+      successCallback().catch(err => {
+        // If fails, show error but UI already felt fast
+        console.error('Background sync failed:', err);
+      });
+    }
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const tabName = tab.dataset.tab;
+        ['browse', 'myitems', 'add'].forEach(t => {
+          document.getElementById('tab-' + t).classList.toggle('hidden', t !== tabName);
+        });
+        if (tabName === 'myitems') loadMyItems();
+      });
+    });
+
+    // Categories
+    function renderCategories() {
+      document.getElementById('category-bar').innerHTML = CATEGORIES.map(cat => 
+        `<span class="category-tag ${cat === selectedCategory ? 'active' : ''}" onclick="filterCategory('${cat}')">${cat}</span>`
+      ).join('');
+    }
+    window.filterCategory = function(cat) {
+      selectedCategory = cat;
+      renderCategories();
+      loadItems();
+    };
+
+    // ============ Load Items ============
+    async function loadItems() {
+      let items = await db.items.where('status').notEqual('gone').toArray();
+      if (selectedCategory !== 'All') {
+        items = items.filter(i => i.category === selectedCategory);
+      }
+      renderMarketGrid(items, document.getElementById('market-grid'));
+    }
+
+    async function loadMyItems() {
+      let items = await db.items.where('sellerId').equals(peerId).toArray();
+      renderMarketGrid(items, document.getElementById('my-items-grid'));
+    }
+
+    function renderMarketGrid(items, container) {
+      if (items.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-text">No items nearby</div></div>';
+        return;
+      }
+      
+      // Micro-thumbnail placeholder (blur effect)
+      const microPlaceholder = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><rect fill="%23444" width="50" height="50"/></svg>');
+      
+      container.innerHTML = items.map(item => {
+        const statusClass = item.status === 'available' ? 'status-available' : 
+                          item.status === 'pending' ? 'status-pending' : 'status-gone';
+        const priceText = item.price === 0 ? '🎁 Free' : 
+                        item.price === 'swap' ? '☕ Swap' : `$${item.price}`;
+        
+        // Use micro-thumbnail + lazy load full image
+        const microSrc = item.microThumbnail || microPlaceholder;
+        
+        return `
+          <div class="item-card ${item.status}" onclick="showItemDetail(${item.id})">
+            <img class="item-image lazy" 
+                 data-item-id="${item.id}" 
+                 data-micro-src="${microSrc}" 
+                 src="${microSrc}" 
+                 alt="${item.title}"
+                 style="filter: blur(3px)"
+                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 x=%2250%22 y=%2255%22 text-anchor=%22middle%22>📷</text></svg>'">
+            <div class="item-info">
+              <div class="item-title">${item.title}</div>
+              <div class="item-price">${priceText}</div>
+              <div class="item-footer">
+                <span class="item-status ${statusClass}">${item.status}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      // Initialize lazy loading with binary-first loader
+      setTimeout(() => {
+        const observer = ImageLoader.init();
+        const images = container.querySelectorAll('.lazy');
+        images.forEach(img => observer.observe(img));
+      }, 100);
+    }
+
+    // ============ Item Detail ============
+    window.showItemDetail = async function(id) {
+      const item = await db.items.get(id);
+      if (!item) return;
+      
+      // Try thumbnail first, then blob, then base64
+      let imagesHtml = '';
+      const defaultImg = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 x=%2250%22 y=%2255%22 text-anchor=%22middle%22>📷</text></svg>';
+      if (item.thumbnail) {
+        imagesHtml = `<img src="${item.thumbnail}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
+      } else if (item.imageBase64) {
+        imagesHtml = `<img src="${item.imageBase64}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
+      } else {
+        // Try blob from OPFS/IndexedDB
+        try {
+          const blobs = await db.blobs.where('itemId').equals(id).toArray();
+          if (blobs.length > 0) {
+            const url = URL.createObjectURL(blobs[0].blob);
+            imagesHtml = `<img src="${url}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
+          }
+        } catch(e) {
+          console.log('Blob load failed:', e);
+        }
+      }
+      
+      const priceText = item.price === 0 ? '🎁 Free' : item.price === 'swap' ? '☕ Swap for Coffee' : `$${item.price}`;
+      
+      document.getElementById('modal-content').innerHTML = `
+        ${imagesHtml}
+        <h2 style="font-size:22px;margin-bottom:8px">${item.title}</h2>
+        <p style="color:var(--accent-green);font-size:24px;font-weight:700;margin-bottom:16px">${priceText}</p>
+        <p style="color:var(--text-muted);margin-bottom:8px"><strong>Condition:</strong> ${item.condition}</p>
+        <p style="color:var(--text-muted);margin-bottom:8px"><strong>Category:</strong> ${item.category}</p>
+        <p style="color:var(--text-muted);margin-bottom:16px">${item.description || ''}</p>
+        
+        ${item.sellerId !== peerId && item.status === 'available' ? 
+          `<button onclick="claimItem(${item.id})" class="btn btn-primary" style="margin-top:20px">✋ Claim This Item</button>` : ''}
+        ${item.sellerId === peerId ? 
+          `<button onclick="markAsGone(${item.id})" class="btn btn-danger" style="margin-top:10px">✓ Mark as Given Away</button>` : ''}
+      `;
+      
+      document.getElementById('item-modal').classList.add('show');
+    };
+
+    window.closeModal = function() {
+      document.getElementById('item-modal').classList.remove('show');
+    };
+
+    window.claimItem = async function(id) {
+      // Optimistic UI: Update locally FIRST, then sync
+      const item = await db.items.get(id);
+      await db.items.update(id, { status: 'pending' });
+      loadItems();
+      triggerHaptic('success');
+      notify('🎉 Item claimed!', 'success');
+      closeModal();
+      
+      // Background sync
+      broadcastItemUpdate(id, 'pending').catch(console.error);
+    };
+
+    window.markAsGone = async function(id) {
+      // Optimistic UI: Update locally FIRST, then sync
+      await db.items.update(id, { status: 'gone' });
+      loadItems();
+      triggerHaptic('success');
+      notify('✓ Item marked as given away', 'success');
+      closeModal();
+      
+      // Background sync
+      broadcastItemUpdate(id, 'gone').catch(console.error);
+    };
+
+    async function broadcastItemUpdate(itemId, status) {
+      // Sign the message with DID
+      const message = { type: 'ITEM_UPDATE', itemId, status, timestamp: Date.now() };
+      DIDService.sign(message).then(signature => {
+        const msg = { ...message, signature, did: DIDService.getDID() };
+        
+        for (const [_, dc] of Object.entries(dataChannels)) {
+          if (dc.readyState === 'open') dc.send(JSON.stringify(msg));
+        }
+        if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+      });
+    }
+
+    // ============ Add Item ============
+    document.getElementById('btn-select-photos').addEventListener('click', () => {
+      document.getElementById('item-photos').click();
+    });
+
+    document.getElementById('item-photos').addEventListener('change', async (e) => {
+      selectedPhotos = Array.from(e.target.files);
+      const preview = document.getElementById('photo-preview');
+      preview.innerHTML = '';
+      for (const file of selectedPhotos) {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        preview.appendChild(img);
+      }
+    });
+
+    document.getElementById('btn-publish').addEventListener('click', async () => {
+      const title = document.getElementById('item-title').value.trim();
+      const category = document.getElementById('item-category').value;
+      const price = document.getElementById('item-price').value;
+      const condition = document.getElementById('item-condition').value;
+      const description = document.getElementById('item-desc').value.trim();
+      
+      if (!title || !category) {
+        alert('Please fill in title and category');
+        return;
+      }
+
+      // Compress images before storing
+      let imageBase64 = null;
+      let imageBlob = null;
+      let microThumbnail = null;
+      
+      if (selectedPhotos.length > 0) {
+        // Generate micro-thumbnail (50px) for instant display
+        const microBlob = await generateMicroThumbnail(selectedPhotos[0]);
+        if (microBlob) {
+          microThumbnail = await blobToBase64(microBlob);
+        }
+        
+        // Compress first image to 800px
+        imageBlob = await compressImage(selectedPhotos[0], 800, 0.7);
+        if (imageBlob) {
+          imageBase64 = await blobToBase64(imageBlob);
+          
+          // Store compressed blob
+          const itemId = await db.items.add({
+            type: 'marketplace', status: 'available', category, price, condition,
+            title, description, sellerId: peerId, sellerName: displayName,
+            h3Index: currentH3Index, timestamp: Date.now(),
+            thumbnail: imageBase64,  // Full thumbnail (800px)
+            microThumbnail: microThumbnail  // Micro thumbnail (50px, ~2KB)
+          });
+          
+          // Also save blob for potential P2P transfer
+          await db.blobs.add({ itemId, blob: imageBlob });
+        }
+      }
+      
+      if (!imageBase64) {
+        await db.items.add({
+          type: 'marketplace', status: 'available', category, price, condition,
+          title, description, sellerId: peerId, sellerName: displayName,
+          h3Index: currentH3Index, timestamp: Date.now()
+        });
+      }
+
+      // Broadcast to neighbors
+      const fullItem = {
+        title, category, price, condition, description,
+        sellerId: peerId, sellerName: displayName,
+        status: 'available', timestamp: Date.now(),
+        imageBase64
+      };
+      broadcastNewItem(fullItem);
+
+      alert('🎉 Item published!');
+      document.getElementById('item-title').value = '';
+      document.getElementById('item-desc').value = '';
+      selectedPhotos = [];
+      document.getElementById('photo-preview').innerHTML = '';
+      
+      loadItems();
+      document.querySelector('[data-tab="browse"]').click();
+    });
+
+    function createThumbnail(file) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        img.onload = () => {
+          const scale = 200 / Math.max(img.width, img.height);
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.7);
+        };
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    async function broadcastNewItem(item) {
+      // Broadcast item without base64 (for WS efficiency)
+      // Images will transfer via P2P when connected
+      const itemForBroadcast = { 
+        ...item, 
+        title: item.title,
+        category: item.category,
+        price: item.price,
+        condition: item.condition,
+        description: item.description,
+        sellerId: item.sellerId,
+        sellerName: item.sellerName,
+        status: item.status,
+        hasImage: !!item.imageBase64
+      };
+      
+      // Sign the item with DID
+      const message = { type: 'NEW_ITEM', item: itemForBroadcast, h3Index: currentH3Index, timestamp: Date.now() };
+      const signature = await DIDService.sign(message);
+      const signedMsg = { ...message, signature, did: DIDService.getDID() };
+      
+      // Via P2P (can send images) - with backpressure control
+      const connected = Object.entries(dataChannels).filter(([_, dc]) => dc.readyState === 'open');
+      if (connected.length > 0) {
+        // Send full item with base64 via P2P
+        const fullMsg = { type: 'NEW_ITEM', item: item, h3Index: currentH3Index, signature, did: DIDService.getDID() };
+        for (const [peerId, dc] of connected) {
+          // Use backpressure control for large messages
+          const msgData = JSON.stringify(fullMsg);
+          if (msgData.length > 50000) { // Large message - use backpressure
+            await sendWithBackpressure(dc, msgData);
+          }
+          dc.send(msgData);
+        }
+      }
+      
+      // Via WebSocket (without image for efficiency)
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(signedMsg));
+      }
+    }
+
+    // ============ WebSocket ============
+    function connect() {
+      displayName = document.getElementById('input-name').value || peerId;
+      updateStatus('connecting', 'Connecting...');
+      
+      ws = new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws/${roomId}`);
+      
+      ws.onopen = () => {
+        updateStatus('connected', 'Connected');
+        document.getElementById('setup').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        loadItems();
+        
+        // Request history from server
+        ws.send(JSON.stringify({ type: 'REQUEST_HISTORY' }));
+        
+        // Request peer list
+        ws.send(JSON.stringify({ type: 'get-peers' }));
+        
+        // Merkle sync - request items from peers
+        MerkleSync.createSyncRequest().then(syncMsg => {
+          ws.send(JSON.stringify(syncMsg));
+        });
+        
+        // Start heartbeat
+        startHeartbeat();
+        
+        // Refresh peer count periodically
+        setInterval(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'get-peers' }));
+          }
+        }, 10000);
+      };
+      
+      ws.onmessage = (e) => handleMessage(e.data);
+      ws.onerror = () => { 
+        stopHeartbeat(); 
+        updateStatus('', 'Disconnected'); 
+        // Show offline indicator
+        notify('📴 Offline mode - showing cached items', 'info');
+      };
+      ws.onclose = () => { 
+        stopHeartbeat(); 
+        updateStatus('', 'Disconnected');
+        // Show offline indicator  
+        notify('📴 Offline - showing cached items', 'info');
+      };
+    }
+    
+    // ============ Heartbeat Functions ============
+    function startHeartbeat() {
+      if (heartbeatInterval) return;
+      
+      heartbeatInterval = setInterval(() => {
+        const heartbeatMsg = { type: 'HEARTBEAT', peerId, timestamp: Date.now() };
+        
+        // Send via P2P
+        for (const [_, dc] of Object.entries(dataChannels)) {
+          if (dc.readyState === 'open') dc.send(JSON.stringify(heartbeatMsg));
+        }
+        
+        // Send via WS
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify(heartbeatMsg));
+        }
+        
+        console.log('Heartbeat sent');
+      }, HEARTBEAT_INTERVAL);
+    }
+    
+    function stopHeartbeat() {
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+      }
+    }
+
+    // P2P connection established - request items from peer
+    function requestItemsFromPeer(peerId) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'REQUEST_ITEMS_FROM_PEER', target: peerId }));
+      }
+    }
+
+    async function handleMessage(data) {
+      try {
+        const msg = JSON.parse(data);
+        
+        switch (msg.type) {
+          case 'sys':
+            if (msg.peerCount) updatePeerCount(msg.peerCount);
+            // Track all peers from sys message
+            if (msg.peers && Array.isArray(msg.peers)) {
+              msg.peers.forEach(p => trackPeer(p));
+            }
+            break;
+          case 'peers':
+            // Update peer list from server
+            if (msg.peers && Array.isArray(msg.peers)) {
+              msg.peers.forEach(p => trackPeer(p));
+              updatePeerCount(msg.peers.length);
+            }
+            break;
+          case 'peer-joined':
+            trackPeer(msg.peerId);
+            if (msg.peerCount) updatePeerCount(msg.peerCount);
+            else updatePeerCount(connectedPeers + 1);
+            break;
+          case 'peer-left':
+            if (msg.peerId) knownPeers.delete(msg.peerId);
+            if (msg.peerCount) updatePeerCount(msg.peerCount);
+            else updatePeerCount(Math.max(0, connectedPeers - 1));
+            break;
+          case 'NEW_ITEM':
+            console.log('Received NEW_ITEM:', msg.item ? 'has item' : 'no item', 
+              msg.item && msg.item.imageBase64 ? 'has image' : 'no image');
+            saveNeighborItem(msg.item);
+            break;
+          case 'CHAT':
+            // Handle incoming chat message
+            if (msg.to === peerId) {
+              handleChatMessage(msg);
+            }
+            break;
+          case 'ITEM_UPDATE':
+            if (msg.itemId) {
+              db.items.update(msg.itemId, { status: msg.status }).then(loadItems);
+            }
+            break;
+          case 'HEARTBEAT':
+            onlineNeighbors.add(msg.peerId);
+            console.log('Neighbor heartbeat:', msg.peerId);
+            break;
+          case 'SYNC_REQUEST':
+            // Respond with items peer is missing
+            console.log('Received SYNC_REQUEST from', msg.peerId);
+            MerkleSync.processSyncRequest(msg.hashes).then(response => {
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(response));
+              }
+            });
+            break;
+          case 'SYNC_RESPONSE':
+            // Process incoming items
+            console.log('Received SYNC_RESPONSE with', msg.items?.length || 0, 'items');
+            for (const item of (msg.items || [])) {
+              await saveNeighborItem(item);
+            }
+            break;
+        }
+      } catch (e) {}
+    }
+
+    async function saveNeighborItem(item) {
+      // Use Sync Controller to avoid duplicates
+      const synced = await SyncController.syncItem(item);
+      if (synced) {
+        loadItems();
+      }
+    }
+    
+    function createThumbnailFromBlob(blob) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        img.onload = () => {
+          const scale = 200 / Math.max(img.width, img.height);
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(b => resolve(b), 'image/jpeg', 0.7);
+        };
+        img.src = URL.createObjectURL(blob);
+      });
+    }
+
+    // ============ Chat ============
+    let activeChatPeer = null;
+    const chatMessages = {}; // peerId -> messages[]
+    const knownPeers = new Set(); // Track all known peers
+    
+    document.getElementById('btn-chat').addEventListener('click', () => {
+      document.getElementById('chat-modal').classList.add('show');
+      updateChatPeerSelector();
+      renderChatMessages();
+    });
+    
+    function closeChatModal() {
+      document.getElementById('chat-modal').classList.remove('show');
+    }
+    
+    function updateChatPeerSelector() {
+      const container = document.getElementById('chat-peer-selector');
+      
+      // Use knownPeers set for chat targets (more reliable)
+      const peerList = Array.from(knownPeers).filter(p => p !== peerId);
+      
+      if (peerList.length === 0) {
+        container.innerHTML = '<span style="color:var(--text-muted)">No neighbors online</span>';
+        return;
+      }
+      
+      container.innerHTML = peerList.map(id => `
+        <button class="chat-peer-btn ${activeChatPeer === id ? 'active' : ''}" 
+                onclick="selectChatPeer('${id}')">
+          ${id.substring(0, 8)}...
+        </button>
+      `).join('');
+    }
+    
+    window.selectChatPeer = function(peerId) {
+      activeChatPeer = peerId;
+      updateChatPeerSelector();
+      renderChatMessages();
+    };
+    
+    function renderChatMessages() {
+      const container = document.getElementById('chat-messages');
+      if (!activeChatPeer || !chatMessages[activeChatPeer]) {
+        container.innerHTML = '<div style="text-align:center;color:var(--text-muted)">Select a neighbor to chat</div>';
+        return;
+      }
+      
+      container.innerHTML = chatMessages[activeChatPeer].map(m => `
+        <div class="chat-message ${m.sent ? 'sent' : 'received'}">
+          ${m.text}
+          <div class="meta">${m.from?.substring(0, 8)}... • ${new Date(m.timestamp).toLocaleTimeString()}</div>
+        </div>
+      `).join('');
+      container.scrollTop = container.scrollHeight;
+    }
+    
+    window.sendChatMessage = function() {
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if (!text || !activeChatPeer) return;
+      
+      const msg = { type: 'CHAT', text, from: peerId, to: activeChatPeer, timestamp: Date.now() };
+      
+      // Send via WebSocket (main communication channel)
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(msg));
+      }
+      
+      // Also try DataChannel if available
+      const dc = dataChannels[activeChatPeer];
+      if (dc && dc.readyState === 'open') {
+        dc.send(JSON.stringify(msg));
+      }
+      
+      // Store locally
+      if (!chatMessages[activeChatPeer]) chatMessages[activeChatPeer] = [];
+      chatMessages[activeChatPeer].push({ ...msg, sent: true });
+      
+      input.value = '';
+      renderChatMessages();
+      triggerHaptic('light');
+    };
+    
+    document.getElementById('chat-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendChatMessage();
+    });
+    
+    // Handle incoming chat messages
+    function handleChatMessage(msg) {
+      const from = msg.from;
+      knownPeers.add(from); // Track this peer
+      
+      if (!chatMessages[from]) chatMessages[from] = [];
+      chatMessages[from].push({ ...msg, sent: false });
+      
+      // If chat is open with this peer, update
+      if (activeChatPeer === from) {
+        renderChatMessages();
+      }
+      
+      // Show notification
+      notify(`💬 ${from.substring(0, 8)}...: ${msg.text.substring(0, 30)}`, 'info');
+      triggerHaptic('light');
+    }
+    
+    // Show chat button when peers connect
+    const originalUpdatePeerCount = updatePeerCount;
+    updatePeerCount = function(count) {
+      originalUpdatePeerCount(count);
+      const chatBtn = document.getElementById('btn-chat');  // Old button (bottom)
+      const chatBtnHeader = document.getElementById('btn-chat-header');  // New button (header)
+      const show = count > 0 ? 'inline-flex' : 'none';
+      if (chatBtn) chatBtn.style.display = show;
+      if (chatBtnHeader) chatBtnHeader.style.display = show;
+      if (count > 0) updateChatPeerSelector();
+    };
+    
+    // Track peers from server messages
+    function trackPeer(newPeerId) {
+      if (newPeerId && newPeerId !== peerId) {  // Only add OTHER peers
+        knownPeers.add(newPeerId);
+        updatePeerCount(knownPeers.size);
+        updateChatPeerSelector();
+      }
+    }
+    
+    window.openChat = function() {
+      document.getElementById('chat-modal').classList.add('show');
+      updateChatPeerSelector();
+      renderChatMessages();
+    };
+
+    // ============ SOS ============
+    document.getElementById('btn-sos').addEventListener('click', async () => {
+      if (!confirm('Send emergency SOS to all neighbors?')) return;
+      
+      let location = 'Unknown';
+      if (navigator.geolocation) {
+        location = await new Promise(r => navigator.geolocation.getCurrentPosition(
+          p => r(`${p.coords.latitude.toFixed(4)}, ${p.coords.longitude.toFixed(4)}`), 
+          () => r('Unknown')
+        ));
+      }
+      
+      const sos = { type: 'SOS', from: displayName, location, timestamp: Date.now() };
+      
+      for (const [_, dc] of Object.entries(dataChannels)) {
+        if (dc.readyState === 'open') dc.send(JSON.stringify(sos));
+      }
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(sos));
+      
+      triggerHaptic('sos');
+      notify('🚨 SOS sent to neighbors!', 'error');
+    });
+
+    // ============ Start ============
+    document.getElementById('btn-join').addEventListener('click', connect);
+    
+    // ============ Capacitor Native Features ============
+    // Auto-detect and initialize native features
+    if (window.Capacitor) {
+      console.log('Running in Capacitor - initializing native features');
+      
+      // Import native plugins
+      import('@capacitor/push-notifications').then(({ PushNotifications }) => {
+        PushNotifications.requestPermissions().then(result => {
+          if (result.receive === 'granted') {
+            PushNotifications.register();
+            PushNotifications.addEventListener('push', (notif) => {
+              console.log('Native push:', notif);
+              const data = notif.notification.data;
+              if (data?.type === 'sos') {
+                triggerHaptic('sos');
+                notify('🚨 SOS: ' + data.location, 'error');
+              }
+            });
+          }
+        });
+      }).catch(e => console.log('Push not available:', e));
+      
+      import('@capacitor/network').then(({ Network }) => {
+        Network.getStatus().then(status => {
+          if (!status.connected) {
+            notify('📴 Offline - local mode only', 'info');
+          }
+        });
+        Network.addListener('networkStatusChange', status => {
+          if (status.connected) {
+            notify('🌐 Online', 'success');
+          } else {
+            notify('📴 Offline - local mode only', 'info');
+          }
+        });
+      }).catch(e => console.log('Network not available:', e));
+    }
+
+    // ============ mDNS Local Discovery ============
+    const MDNSService = {
+      isRunning: false,
+      peerList: new Map(),
+      
+      start() {
+        if (this.isRunning) return;
+        console.log('[mDNS] Starting local discovery...');
+        this.isRunning = true;
+        
+        // Broadcast presence
+        this.broadcastInterval = setInterval(() => {
+          this.broadcastPresence();
+        }, 5000);
+        
+        // Scan for peers
+        this.scanInterval = setInterval(() => {
+          this.scanForPeers();
+        }, 3000);
+      },
+      
+      stop() {
+        this.isRunning = false;
+        clearInterval(this.broadcastInterval);
+        clearInterval(this.scanInterval);
+      },
+      
+      broadcastPresence() {
+        const presence = {
+          type: 'ourbackyard-presence',
+          peerId, displayName,
+          h3Index: currentH3Index,
+          timestamp: Date.now()
+        };
+        try {
+          localStorage.setItem('mDNS_' + peerId, JSON.stringify(presence));
+        } catch(e) {}
+      },
+      
+      scanForPeers() {
+        const now = Date.now();
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('mDNS_')) {
+              try {
+                const data = JSON.parse(localStorage.getItem(key));
+                if (data.peerId !== peerId && now - data.timestamp < 10000) {
+                  if (!this.peerList.has(data.peerId)) {
+                    console.log('[mDNS] Found peer:', data.displayName);
+                    notify('📡 Found: ' + data.displayName, 'info');
+                  }
+                  this.peerList.set(data.peerId, { ...data, lastSeen: now });
+                }
+              } catch(e) {}
+            }
+          }
+        } catch(e) {}
+        
+        // Clean stale
+        for (const [id, p] of this.peerList) {
+          if (now - p.lastSeen > 15000) this.peerList.delete(id);
+        }
+      },
+      
+      getPeers() {
+        return Array.from(this.peerList.values());
+      }
+    };
+
+    // Auto-start mDNS when offline (if NetworkService exists)
+    if (typeof NetworkService !== 'undefined') {
+      const originalEnterOfflineMode = NetworkService.enterOfflineMode;
+      NetworkService.enterOfflineMode = function() {
+        originalEnterOfflineMode?.();
+        MDNSService.start();
+      };
+      NetworkService.exitOfflineMode = function() {
+        originalEnterOfflineMode?.();
+        MDNSService.stop();
+      };
+    }
+  </script>
+</body>
+</html>

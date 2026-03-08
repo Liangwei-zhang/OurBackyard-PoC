@@ -1,0 +1,20 @@
+{
+  "name": "ourbackyard-poc",
+  "version": "1.0.0",
+  "description": "``` ┌─────────────┐     WebSocket      ┌─────────────┐ │   Client A  │◄─────────────────► │  Signaling  │ │  (Offer)    │     (Relay)        │   Server    │ └─────────────┘                    └──────┬──────┘        │                                     │        │        WebRTC DataChannel          │        └─────────────────────────────────────┘                   (P2P Direct) ```",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/cli": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/ios": "^8.2.0",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/push-notifications": "^8.0.2"
+  }
+}

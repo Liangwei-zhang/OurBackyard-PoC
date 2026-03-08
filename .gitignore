@@ -1,0 +1,15 @@
+node_modules/
+android/app/build/
+android/.gradle/
+ios/App/Pods/
+__pycache__/
+*.pyc
+.env
+node_modules/
+*.pyc
+__pycache__/
+skills/
+ios/App/Pods/
+android/app/build/
+android/.gradle/
+calgary_sg/

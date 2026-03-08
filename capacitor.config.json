@@ -1,0 +1,20 @@
+{
+  "appId": "com.ourbackyard.app",
+  "appName": "OurBackyard",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    },
+    "Geolocation": {
+      "enableHighAccuracy": true
+    }
+  },
+  "android": {
+    "allowMixedContent": true
+  },
+  "ios": {
+    "allowsLinkPreviews": false
+  }
+}
