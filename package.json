@@ -16,6 +16,9 @@
     "@capacitor/ios": "^8.2.0",
     "@capacitor/network": "^8.0.1",
     "@capacitor/push-notifications": "^8.0.2",
-    "libp2p": "^3.1.5"
+    "hyperdrive": "^13.3.0",
+    "libp2p": "^3.1.5",
+    "y-indexeddb": "^9.0.12",
+    "yjs": "^13.6.29"
   }
 }
