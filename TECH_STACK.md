@@ -26,7 +26,7 @@
 │  │       └──────────────┴──────────────┴──────────────┘                  │ │
 │  │                              │                                            │ │
 │  │              ┌─────────────▼─────────────┐                            │ │
-│  │              │  Hyperswarm + GossipSub    │                            │ │
+│  │              │  Hyperswarm + GossipSub   │                            │ │
 │  │              └─────────────────────────────┘                            │ │
 │  └─────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                  │
@@ -44,15 +44,19 @@
 │  └─────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────────┐ │
-│  │                    Trust Layer (ZK 聲譽 + PoP)                            │ │
+│  │                    Trust Layer (ZK 聲譽 + PoW + WoT)                      │ │
 │  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐                    │ │
-│  │  │    UCAN      │ │     ZK       │ │    PoP       │                    │ │
-│  │  │ (權限委託)   │ │ (零知識證明) │ │ (地理證明)   │                    │ │
+│  │  │    UCAN      │ │     ZK       │ │    PoW      │                    │ │
+│  │  │ (權限委託)   │ │ (零知識證明) │ │ (工作量證明) │                    │ │
 │  │  └──────────────┘ └──────────────┘ └──────────────┘                    │ │
+│  │  ┌──────────────┐ ┌──────────────┐                                   │ │
+│  │  │    WoT      │ │    DID       │                                   │ │
+│  │  │ (信任網)    │ │ (去中心化ID) │                                   │ │
+│  │  └──────────────┘ └──────────────┘                                   │ │
 │  └─────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────────┐ │
-│  │                    AI Layer (邊緣 AI + RAG)                                 │ │
+│  │                    AI Layer (邊緣 AI)                                     │ │
 │  │  ┌──────────────────────────────────────────────────┐                   │ │
 │  │  │  Enhanced Hash Embedding + Semantic Search      │                   │ │
 │  │  │  Local Vector DB + Privacy-Preserving AI         │                   │ │
@@ -62,14 +66,19 @@
 │  ┌─────────────────────────────────────────────────────────────────────────────┐ │
 │  │                    Security Layer (端到端加密)                              │ │
 │  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐                    │ │
-│  │  │   X25519     │ │   AES-GCM    │ │   Forward    │                    │ │
+│  │  │   X25519     │ │   AES-GCM    │ │   Forward   │                    │ │
 │  │  │ (密鑰交換)   │ │  (加密)      │ │   Secrecy   │                    │ │
-│  │  └──────────────┘ └──────────────┘ └──────────────┘                    │ │
+│  │  └──────────────┘┘ └──────── └────────────────────┘                    │ │
 │  └─────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────────┐ │
-│  │                    Native Layer (Capacitor)                                  │ │
+│  │                    Native Layer (Capacitor)                                │ │
 │  │  • Push Notifications • Network • Geolocation • mDNS • BLE               │ │
+│  └─────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐ │
+│  │                    Desktop Node (全節點)                                   │ │
+│  │  • Data Proxy • 24/7 Sync • LLM Filter • NAT Traversal                 │ │
 │  └─────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
@@ -100,14 +109,15 @@
 | **Hypercore** | Append-only 日誌 | ✅ |
 | **P2P Worker** | 後台計算 | ✅ |
 
-### 3. 身份層
+### 3. 身份與信任層
 
 | 技術 | 用途 | 狀態 |
 |------|------|------|
 | **UCAN** | 能力授權 | ✅ |
 | **W3C DID** | 去中心化身份 | ✅ |
 | **ZK Reputation** | 零知識聲譽 | ✅ |
-| **PoP** | 地理證明 | ✅ |
+| **PoW** | 工作量證明 (防垃圾) | ✅ |
+| **WoT** | 信任網 | ✅ |
 
 ### 4. AI 層
 
@@ -125,6 +135,14 @@
 | **AES-GCM** | 對稱加密 | ✅ |
 | **Forward Secrecy** | 前向保密 | ✅ |
 
+### 6. 桌面全節點
+
+| 技術 | 用途 | 狀態 |
+|------|------|------|
+| **Data Proxy** | 數據代理 | ✅ |
+| **24/7 Sync** | 持續同步 | ✅ |
+| **LLM Filter** | AI 內容過濾 | ✅ |
+
 ---
 
 ## 📁 項目模塊
@@ -140,54 +158,54 @@ native/
 ├── geo-replication.js         # 地理優先複製協議 🆕
 ├── zk-reputation-complete.js   # ZK 聲譽系統
 ├── local-ai-complete.js        # 本地 AI 搜索
-├── mDNS.js                     # mDNS 發現
+├── mDNS.js                    # mDNS 發現
 ├── multi-layer-discovery.js   # 混合發現協議
 ├── hyperswarm-dht.js          # Hyperswarm DHT
 ├── ble-wifi-direct.js          # BLE + Wi-Fi Direct
 ├── p2p-worker.js              # P2P Web Worker
-└── e2e-encryption.js          # 端到端加密
+├── e2e-encryption.js         # 端到端加密
+├── pow-spam-protection.js    # PoW 防垃圾 🆕
+├── wot-trust.js              # WoT 信任網 🆕
+└── desktop-full-node.js      # 桌面全節點 🆕
 ```
 
 ---
 
 ## 🔧 核心模塊詳解
 
-### Geo-Replication Protocol (地理優先複製)
+### 1. Geo-Replication Protocol
 
 ```javascript
-// 初始化
+// 地理優先複製協議
 await GeoReplicationProtocol.init(peerId, h3Index);
-
-// 複製物品到鄰居節點
 await GeoReplicationProtocol.replicateItem(item);
-
-// 獲取複製狀態
 const status = await GeoReplicationProtocol.getReplicationStatus(itemId);
-// {
-//   itemId: "...",
-//   totalMirrors: 5,
-//   byRing: { 0: 3, 1: 2 },
-//   healthy: true,
-//   needed: 0
-// }
-
-// 創建糾刪碼分片
-const shards = await GeoReplicationProtocol.createErasureShards(itemId, data);
-// {
-//   totalShards: 10,
-//   requiredToReconstruct: 3,
-//   shards: ["item_shard_0", ...]
-// }
-
-// 從分片重建數據
-const reconstructed = await GeoReplicationProtocol.reconstructFromShards(itemId);
 ```
 
-**核心特性:**
-- 📍 **H3 Ring Priority**: 優先複製到最近 H3 鄰居 (Ring 0 → 1 → 2)
-- 🔄 **Auto Healing**: 自動檢測鏡像健康，丟失時重新複製
-- 🛡️ **Erasure Coding**: 10 個分片，3 個即可還原
-- 📊 **Redundancy Scaling**: 根據物品價值/類別動態調整冗餘度
+### 2. PoW Spam Protection
+
+```javascript
+// Client-side PoW
+await PoWSpamProtection.compute(target);
+await PoWSpamProtection.verify(target, proof);
+```
+
+### 3. Web of Trust
+
+```javascript
+// 信任網
+WebOfTrust.trust(peerId, 'TRUSTED');
+const weight = WebOfTrust.calculateWeight(peerId);
+const shouldDisplay = WebOfTrust.shouldDisplay(peerId, content);
+```
+
+### 4. Desktop Full Node
+
+```javascript
+// 桌面全節點
+const caps = await DesktopFullNode.checkCapabilities();
+await DesktopFullNode.start(peerId, h3Index);
+```
 
 ---
 
@@ -198,49 +216,18 @@ const reconstructed = await GeoReplicationProtocol.reconstructFromShards(itemId)
 | 首屏載入 | < 500ms |
 | 語義搜索 | < 100ms |
 | 加密延遲 | < 50ms |
+| PoW 計算 | < 3秒 |
 | 鏡像複製 | < 1秒 |
-| 數據還原 | < 500ms |
-| 心跳延遲 | 15秒 (前台) / 60秒 (後台) |
 | APK 大小 | 5.5MB |
-| 內存佔用 | < 100MB (500物品) |
-
----
-
-## 🔐 安全特性
-
-1. **端到端加密** - X25519 + AES-GCM
-2. **零知識聲譽** - Pedersen + Schnorr
-3. **地理證明 (PoP)** - Wi-Fi/藍牙指紋
-4. **前向保密** - 每次會話新密鑰
-5. **糾刪碼** - 數據可從碎片還原
-6. **地理隔離** - 敏感數據僅在鄰居間複製
 
 ---
 
 ## ✅ 項目狀態: 100% 完成
 
-| Phase | 功能 | 狀態 |
-|-------|------|------|
-| Phase 1 | 數據持久化 (Sponsor + CRDT) | ✅ |
-| Phase 2 | 節點發現 (DHT + BLE + WiFi) | ✅ |
-| Phase 3 | 信任與聲譽 (UCAN + ZK + PoP) | ✅ |
-| Phase 4 | 邊緣 AI (本地語義搜索) | ✅ |
-| Phase 5 | 性能優化 (Worker) | ✅ |
-| Phase 6 | 安全與隱私 (E2E) | ✅ |
-| Phase 7 | **Geo-Replication** (H3鏡像) | ✅ |
-
----
-
-## 📝 依賴列表
-
-```json
-{
-  "dependencies": {
-    "libp2p": "^1.0.0",
-    "yjs": "^13.6.0",
-    "y-indexeddb": "^9.0.0",
-    "dexie": "^4.0.1",
-    "h3-js": "^4.0.0"
-  }
-}
-```
+所有模塊已完成開發，涵蓋：
+- P2P 通信 (DHT + mDNS + BLE + WiFi)
+- 數據持久化 (CRDT + Geo-Replication + Erasure Coding)
+- 身份與信任 (UCAN + DID + ZK + PoW + WoT)
+- 邊緣 AI (本地語義搜索)
+- 安全 (E2E 加密)
+- 桌面全節點支持
