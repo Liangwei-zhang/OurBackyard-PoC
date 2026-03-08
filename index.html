@@ -780,6 +780,182 @@
       }
     };
     
+    // ============ P2P Streamer - WebRTC Image Transfer ============
+    const P2PStreamer = {
+      peerConnections: new Map(),
+      dataChannels: new Map(),
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'turn:68.147.37.150:3478', username: 'ourbackyard', credential: 'calgary2024' }
+      ],
+      incomingTransfers: new Map(),
+      
+      // 通過 WS 發送信令
+      sendSignal(targetPeerId, signal) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ 
+            type: 'WEBRTC_SIGNAL', 
+            target: targetPeerId, 
+            signal,
+            from: peerId 
+          }));
+        }
+      },
+      
+      // 處理傳入的信令
+      async handleSignal(peerId, signal) {
+        let pc = this.peerConnections.get(peerId);
+        
+        if (signal.type === 'offer') {
+          pc = new RTCPeerConnection({ iceServers: this.iceServers });
+          pc.onicecandidate = (e) => {
+            if (e.candidate) this.sendSignal(peerId, { type: 'ice-candidate', candidate: e.candidate });
+          };
+          pc.ondatachannel = (e) => this.setupDataChannel(peerId, e.channel);
+          pc.onconnectionstatechange = () => {
+            if (pc.connectionState === 'connected') {
+              console.log('[P2P] Connected to', peerId);
+            }
+          };
+          await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          this.sendSignal(peerId, { type: 'answer', sdp: answer });
+          this.peerConnections.set(peerId, pc);
+        } 
+        else if (signal.type === 'answer' && pc) {
+          await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+        }
+        else if (signal.type === 'ice-candidate' && pc && signal.candidate) {
+          await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        }
+      },
+      
+      setupDataChannel(peerId, dc) {
+        dc.onmessage = (e) => this.handleMessage(peerId, e.data);
+        dc.onopen = () => console.log('[P2P] Channel open:', peerId);
+        this.dataChannels.set(peerId, dc);
+      },
+      
+      handleMessage(peerId, data) {
+        if (data instanceof ArrayBuffer || data instanceof Blob) {
+          // 二進制圖片數據
+          this.handleBinaryChunk(peerId, data);
+          return;
+        }
+        try {
+          const msg = JSON.parse(data);
+          if (msg.type === 'IMG_HEADER') {
+            this.incomingTransfers.set(msg.itemId, {
+              itemId: msg.itemId, total: msg.size, received: 0, chunks: []
+            });
+            console.log('[P2P] Receiving image:', msg.itemId);
+          }
+        } catch(e) {}
+      },
+      
+      async handleBinaryChunk(peerId, data) {
+        let transfer = null;
+        for (const [id, t] of this.incomingTransfers) {
+          if (t.received < t.total) { transfer = t; break; }
+        }
+        if (!transfer) return;
+        
+        const buffer = data instanceof Blob ? await data.arrayBuffer() : data;
+        transfer.chunks.push(buffer);
+        transfer.received += buffer.byteLength;
+        
+        if (transfer.received >= transfer.total) {
+          const blob = new Blob(transfer.chunks, { type: 'image/jpeg' });
+          await db.blobs.put({ itemId: transfer.itemId, blob: blob, timestamp: Date.now() });
+          console.log('[P2P] Image received:', transfer.itemId);
+          this.incomingTransfers.delete(transfer.itemId);
+          loadItems();
+        }
+      },
+      
+      // 通過 DataChannel 發送圖片
+      async sendImage(itemId, blob) {
+        const buffer = await blob.arrayBuffer();
+        const total = buffer.byteLength;
+        const CHUNK = 16384;
+        
+        // 發送 header
+        this.broadcast({ type: 'IMG_HEADER', itemId, size: total });
+        
+        // 分片發送
+        for (let offset = 0; offset < total; offset += CHUNK) {
+          while (true) {
+            let ready = true;
+            for (const [_, dc] of this.dataChannels) {
+              if (dc.readyState === 'open' && dc.bufferedAmount > 512 * 1024) ready = false;
+            }
+            if (ready) break;
+            await new Promise(r => setTimeout(r, 50));
+          }
+          
+          const chunk = buffer.slice(offset, offset + CHUNK);
+          for (const [_, dc] of this.dataChannels) {
+            if (dc.readyState === 'open') dc.send(chunk);
+          }
+        }
+        
+        this.broadcast({ type: 'IMG_END', itemId });
+        console.log('[P2P] Image sent:', itemId);
+      },
+      
+      broadcast(msg) {
+        const data = typeof msg === 'string' ? msg : JSON.stringify(msg);
+        for (const [_, dc] of this.dataChannels) {
+          if (dc.readyState === 'open') dc.send(data);
+        }
+      },
+      
+      getPeers() { return Array.from(this.dataChannels.keys()); }
+    };
+    
+    // ============ CID Resolver - Content Addressable Storage ============
+    const CIDResolver = {
+      cidMap: new Map(),
+      itemToCid: new Map(),
+      
+      async hash(blob) {
+        const buf = await blob.arrayBuffer();
+        const hash = await crypto.subtle.digest('SHA-256', buf);
+        const arr = Array.from(new Uint8Array(hash));
+        const hex = arr.map(b => b.toString(16).padStart(2,'0')).join('');
+        return 'qm1-' + this.base36(hex);
+      },
+      
+      base36(hex) { return BigInt('0x' + hex).toString(36); },
+      
+      async save(itemId, blob) {
+        const cid = await this.hash(blob);
+        this.cidMap.set(cid, { blob, itemId, timestamp: Date.now() });
+        this.itemToCid.set(itemId, cid);
+        
+        // 保存到 IndexedDB
+        await db.blobs.put({ itemId, blob, cid, timestamp: Date.now() });
+        console.log('[CID] Saved:', cid);
+        return cid;
+      },
+      
+      async load(cid) {
+        // 從 IndexedDB 加載
+        const stored = await db.blobs.where('cid').equals(cid).first();
+        if (stored?.blob) return stored.blob;
+        
+        // 請求網絡
+        this.broadcastCIDRequest(cid);
+        return null;
+      },
+      
+      broadcastCIDRequest(cid) {
+        P2PStreamer.broadcast({ type: 'CID_REQUEST', cid });
+      }
+    };
+    
     // Convert blob to base64 for display
     function blobToBase64(blob) {
       return new Promise((resolve, reject) => {
@@ -1590,10 +1766,13 @@
       const item = await db.items.get(id);
       if (!item) return;
       
-      // Try thumbnail first, then blob, then base64
+      // Prefer URL, then thumbnail (base64), then blob
       let imagesHtml = '';
       const defaultImg = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 x=%2250%22 y=%2255%22 text-anchor=%22middle%22>📷</text></svg>';
-      if (item.thumbnail) {
+      // Check if imageUrl is a valid URL (starts with /uploads/ or http)
+      if (item.imageUrl && (item.imageUrl.startsWith('/uploads/') || item.imageUrl.startsWith('http'))) {
+        imagesHtml = `<img src="${item.imageUrl}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
+      } else if (item.thumbnail) {
         imagesHtml = `<img src="${item.thumbnail}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
       } else if (item.imageBase64) {
         imagesHtml = `<img src="${item.imageBase64}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
@@ -1701,6 +1880,7 @@
 
       // Compress images before storing
       let imageBase64 = null;
+      let imageUrl = null;
       let imageBlob = null;
       let microThumbnail = null;
       
@@ -1716,21 +1896,66 @@
         if (imageBlob) {
           imageBase64 = await blobToBase64(imageBlob);
           
-          // Store compressed blob
+          // Upload to server and get URL
+          try {
+            const uploadResponse = await fetch('/api/upload/image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                image: imageBase64.split(',')[1] || imageBase64, // Remove data:image/xxx;base64, prefix
+                ext: 'jpg'
+              })
+            });
+            if (!uploadResponse.ok) {
+              console.error('Upload failed with status:', uploadResponse.status);
+              // HTTP 上傳失敗，標記需要 P2P 傳輸
+              imageUrl = 'p2p://' + itemId; // 標記為 P2P 模式
+            } else {
+              const uploadResult = await uploadResponse.json();
+              if (uploadResult.success && uploadResult.url) {
+                imageUrl = uploadResult.url;
+                console.log('Image uploaded successfully:', imageUrl);
+              } else {
+                imageUrl = 'p2p://' + itemId;
+              }
+            }
+          } catch (e) {
+            console.error('Upload error:', e);
+            // 網絡錯誤，啟用 P2P 傳輸
+            imageUrl = 'p2p://' + itemId;
+          }
+          
+          // 保存 CID 到本地
+          const cid = await CIDResolver.save('pending-' + Date.now(), imageBlob);
+          
+          // Store with URL first, fallback to base64
           const itemId = await db.items.add({
             type: 'marketplace', status: 'available', category, price, condition,
             title, description, sellerId: peerId, sellerName: displayName,
             h3Index: currentH3Index, timestamp: Date.now(),
-            thumbnail: imageBase64,  // Full thumbnail (800px)
-            microThumbnail: microThumbnail  // Micro thumbnail (50px, ~2KB)
+            imageUrl: imageUrl,  // Cloud URL or p2p:// marker
+            thumbnail: imageBase64,  // Base64 fallback
+            microThumbnail: microThumbnail,  // Micro thumbnail (50px, ~2KB)
+            cid: cid  // Content ID for P2P
           });
+          
+          // 更新 CID 映射
+          await CIDResolver.save(itemId, imageBlob);
+          
+          // 通過 P2P 廣播圖片 (如果 HTTP 失敗或使用 P2P 模式)
+          if (imageUrl.startsWith('p2p://')) {
+            console.log('[P2P] Broadcasting image via WebRTC...');
+            if (P2PStreamer.getPeers().length > 0) {
+              await P2PStreamer.sendImage(itemId, imageBlob);
+            }
+          }
           
           // Also save blob for potential P2P transfer
           await db.blobs.add({ itemId, blob: imageBlob });
         }
       }
       
-      if (!imageBase64) {
+      if (!imageBase64 && !imageUrl) {
         await db.items.add({
           type: 'marketplace', status: 'available', category, price, condition,
           title, description, sellerId: peerId, sellerName: displayName,
@@ -1743,6 +1968,7 @@
         title, category, price, condition, description,
         sellerId: peerId, sellerName: displayName,
         status: 'available', timestamp: Date.now(),
+        imageUrl,
         imageBase64
       };
       broadcastNewItem(fullItem);
@@ -2026,6 +2252,21 @@
             console.log('Received SYNC_RESPONSE with', msg.items?.length || 0, 'items');
             for (const item of (msg.items || [])) {
               await saveNeighborItem(item);
+            }
+            break;
+          case 'WEBRTC_SIGNAL':
+            // Handle WebRTC signaling through WebSocket
+            if (msg.target === peerId && msg.signal) {
+              await P2PStreamer.handleSignal(msg.from, msg.signal);
+            }
+            break;
+          case 'CID_REQUEST':
+            // Handle CID content request
+            if (msg.cid) {
+              const blob = await CIDResolver.load(msg.cid);
+              if (blob) {
+                P2PStreamer.broadcast({ type: 'CID_RESPONSE', cid: msg.cid });
+              }
             }
             break;
         }

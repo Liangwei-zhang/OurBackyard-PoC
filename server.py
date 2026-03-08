@@ -293,6 +293,70 @@ async def get_room(room_id: str):
     }
 
 
+# ============ S3/OSS 上傳 ============
+import base64
+import uuid
+import hashlib
+import os
+
+BUCKET_PATH = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(BUCKET_PATH, exist_ok=True)
+
+@app.post("/api/upload/image")
+async def upload_image(data: dict):
+    """上傳圖片並返回 URL"""
+    try:
+        image_data = data.get("image")  # base64 encoded
+        if not image_data:
+            raise HTTPException(status_code=400, detail="No image data")
+        
+        # 解碼 base64
+        image_bytes = base64.b64decode(image_data)
+        
+        # 生成唯一文件名
+        file_ext = data.get("ext", "jpg")
+        file_id = hashlib.md5(str(uuid.uuid4()).encode()).hexdigest()[:12]
+        filename = f"{file_id}.{file_ext}"
+        filepath = os.path.join(BUCKET_PATH, filename)
+        
+        # 保存文件
+        with open(filepath, "wb") as f:
+            f.write(image_bytes)
+        
+        # 返回 URL
+        image_url = f"/uploads/{filename}"
+        
+        return {
+            "success": True,
+            "url": image_url,
+            "size": len(image_bytes)
+        }
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/uploads/{filename}")
+async def get_uploaded_image(filename: str):
+    """提供上傳的圖片"""
+    filepath = os.path.join(BUCKET_PATH, filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Image not found")
+    
+    # 根據擴展名判斷 content-type
+    ext = filename.split('.')[-1].lower()
+    content_type = {
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg", 
+        "png": "image/png",
+        "gif": "image/gif",
+        "webp": "image/webp"
+    }.get(ext, "image/jpeg")
+    
+    from fastapi.responses import FileResponse
+    return FileResponse(filepath, media_type=content_type)
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
