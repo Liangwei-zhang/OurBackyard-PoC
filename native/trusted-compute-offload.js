@@ -422,15 +422,25 @@ class TrustedComputeOffload extends EventEmitter {
         task.status = 'pending';
         task.assignedTo = null;
         
-        const newNode = await this._selectComputeNode(task.type, task.options);
-        if (newNode) {
-          task.assignedTo = newNode.peerId;
-          task.status = 'assigned';
-          await this._dispatchTask(task, newNode);
-        } else {
-          task.status = 'queued';
-        }
+        // 異步處理每個任務
+        this._reassignTask(task).catch(err => {
+          console.error(`[Compute] Failed to reassign task ${task.id}:`, err.message);
+        });
       }
+    }
+  }
+  
+  /**
+   * 重新分配任務
+   */
+  async _reassignTask(task) {
+    const newNode = await this._selectComputeNode(task.type, task.options);
+    if (newNode) {
+      task.assignedTo = newNode.peerId;
+      task.status = 'assigned';
+      await this._dispatchTask(task, newNode);
+    } else {
+      task.status = 'queued';
     }
   }
   
