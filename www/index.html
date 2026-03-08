@@ -1287,6 +1287,101 @@
       };
     }
 
+    // ============ Stability: Binary Image Transfer Protocol ============
+    // Binary transfer with backpressure control
+    
+    // Send binary image via P2P DataChannel
+    async function sendImageBinary(dc, blob, itemId) {
+      if (!dc || dc.readyState !== 'open') return false;
+      
+      const CHUNK_SIZE = 16384; // 16KB chunks
+      
+      try {
+        // Convert blob to ArrayBuffer
+        const buffer = await blob.arrayBuffer();
+        const totalSize = buffer.byteLength;
+        let offset = 0;
+        
+        // 1. Send metadata header first
+        const header = {
+          type: 'IMG_HEADER',
+          itemId: itemId,
+          size: totalSize,
+          mimeType: blob.type || 'image/jpeg'
+        };
+        dc.send(JSON.stringify(header));
+        
+        // 2. Send binary chunks with backpressure
+        while (offset < totalSize) {
+          // Wait if buffer is full (> 1MB)
+          while (dc.bufferedAmount > 1024 * 1024) {
+            await new Promise(r => setTimeout(r, 100));
+          }
+          
+          const chunk = buffer.slice(offset, offset + CHUNK_SIZE);
+          dc.send(chunk);
+          offset += CHUNK_SIZE;
+          
+          console.log('Sent chunk:', offset, '/', totalSize);
+        }
+        
+        // 3. Send end marker
+        dc.send(JSON.stringify({ type: 'IMG_END', itemId: itemId }));
+        console.log('Image sent complete:', itemId);
+        return true;
+        
+      } catch (e) {
+        console.error('Image send failed:', e);
+        return false;
+      }
+    }
+    
+    // Receive binary image chunks
+    const incomingImages = {}; // itemId -> { chunks:[], size:0, mimeType:'' }
+    
+    function handleBinaryImageChunk(itemId, chunk, isLastChunk) {
+      if (!incomingImages[itemId]) {
+        incomingImages[itemId] = { chunks: [], received: 0 };
+      }
+      
+      incomingImages[itemId].chunks.push(chunk);
+      incomingImages[itemId].received += chunk.byteLength;
+      
+      // If complete, assemble and save
+      if (isLastChunk) {
+        assembleAndSaveImage(itemId);
+      }
+    }
+    
+    async function assembleAndSaveImage(itemId) {
+      const img = incomingImages[itemId];
+      if (!img || img.chunks.length === 0) return;
+      
+      try {
+        // Assemble blob from chunks
+        const blob = new Blob(img.chunks, { type: img.mimeType || 'image/jpeg' });
+        
+        // Save to IndexedDB blobs table
+        await db.blobs.put({ itemId: itemId, blob: blob, timestamp: Date.now() });
+        
+        // Generate thumbnail
+        const thumbBlob = await compressImage(blob, 800, 0.7);
+        const thumbBase64 = await blobToBase64(thumbBlob);
+        await db.items.update(itemId, { thumbnail: thumbBase64 });
+        
+        console.log('Image saved to IndexedDB:', itemId);
+        
+        // Clear from memory
+        delete incomingImages[itemId];
+        
+        // Refresh display
+        loadItems();
+        
+      } catch (e) {
+        console.error('Failed to save image:', e);
+      }
+    }
+
     // ============ Stability: Backpressure Control ============
     async function sendWithBackpressure(dc, data) {
       return new Promise((resolve, reject) => {
@@ -1679,8 +1774,7 @@
     }
 
     async function broadcastNewItem(item) {
-      // Broadcast item without base64 (for WS efficiency)
-      // Images will transfer via P2P when connected
+      // Broadcast item - send image separately as binary if present
       const itemForBroadcast = { 
         ...item, 
         title: item.title,
@@ -1699,24 +1793,61 @@
       const signature = await DIDService.sign(message);
       const signedMsg = { ...message, signature, did: DIDService.getDID() };
       
-      // Via P2P (can send images) - with backpressure control
-      const connected = Object.entries(dataChannels).filter(([_, dc]) => dc.readyState === 'open');
-      if (connected.length > 0) {
-        // Send full item with base64 via P2P
-        const fullMsg = { type: 'NEW_ITEM', item: item, h3Index: currentH3Index, signature, did: DIDService.getDID() };
-        for (const [peerId, dc] of connected) {
-          // Use backpressure control for large messages
-          const msgData = JSON.stringify(fullMsg);
-          if (msgData.length > 50000) { // Large message - use backpressure
-            await sendWithBackpressure(dc, msgData);
-          }
-          dc.send(msgData);
+      // Send item metadata first via WebSocket
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(signedMsg));
+        
+        // If item has image, send as binary chunks
+        if (item.imageBase64) {
+          // Convert base64 to blob
+          const response = await fetch(item.imageBase64);
+          const blob = await response.blob();
+          
+          // Send binary image via WebSocket
+          await sendImageBinaryWS(ws, blob, item.id);
         }
       }
       
-      // Via WebSocket (without image for efficiency)
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify(signedMsg));
+      // Note: P2P DataChannel transfer would go here when WebRTC is fully implemented
+      console.log('Item broadcasted:', item.title);
+    }
+    
+    // Send image as binary via WebSocket
+    async function sendImageBinaryWS(ws, blob, itemId) {
+      const CHUNK_SIZE = 16384;
+      const buffer = await blob.arrayBuffer();
+      const totalSize = buffer.byteLength;
+      let offset = 0;
+      
+      try {
+        // Send header
+        ws.send(JSON.stringify({ 
+          type: 'IMG_HEADER', 
+          itemId: itemId, 
+          size: totalSize, 
+          mimeType: blob.type || 'image/jpeg' 
+        }));
+        
+        // Send binary chunks with backpressure
+        while (offset < totalSize) {
+          // Wait if send buffer is full
+          while (ws.bufferedAmount > 1024 * 1024) {
+            await new Promise(r => setTimeout(r, 100));
+          }
+          
+          const chunk = buffer.slice(offset, offset + CHUNK_SIZE);
+          ws.send(chunk);
+          offset += CHUNK_SIZE;
+          
+          console.log('WS image chunk:', offset, '/', totalSize);
+        }
+        
+        // Send end marker
+        ws.send(JSON.stringify({ type: 'IMG_END', itemId: itemId }));
+        console.log('WS image sent complete:', itemId);
+        
+      } catch (e) {
+        console.error('WS image send failed:', e);
       }
     }
 
@@ -1755,7 +1886,14 @@
         }, 10000);
       };
       
-      ws.onmessage = (e) => handleMessage(e.data);
+      ws.onmessage = (e) => {
+        // Handle binary data (image chunks)
+        if (e.data instanceof ArrayBuffer || e.data instanceof Blob) {
+          handleBinaryWSMessage(e.data);
+        } else {
+          handleMessage(e.data);
+        }
+      };
       ws.onerror = () => { 
         stopHeartbeat(); 
         updateStatus('', 'Disconnected'); 
@@ -1850,6 +1988,26 @@
               db.items.update(msg.itemId, { status: msg.status }).then(loadItems);
             }
             break;
+          case 'IMG_HEADER':
+            // Start receiving binary image
+            window._currentImageReceive = { 
+              itemId: msg.itemId, 
+              expectedSize: msg.size,
+              mimeType: msg.mimeType || 'image/jpeg'
+            };
+            incomingImages[msg.itemId] = { 
+              chunks: [], 
+              received: 0,
+              mimeType: msg.mimeType || 'image/jpeg'
+            };
+            console.log('IMG_HEADER received:', msg.itemId, 'size:', msg.size);
+            break;
+          case 'IMG_END':
+            // Assemble and save binary image
+            if (incomingImages[msg.itemId]) {
+              assembleAndSaveImage(msg.itemId);
+            }
+            break;
           case 'HEARTBEAT':
             onlineNeighbors.add(msg.peerId);
             console.log('Neighbor heartbeat:', msg.peerId);
@@ -1872,6 +2030,31 @@
             break;
         }
       } catch (e) {}
+    }
+    
+    // Handle binary WebSocket messages (image chunks)
+    async function handleBinaryWSMessage(data) {
+      try {
+        // Convert to ArrayBuffer if needed
+        const buffer = data instanceof Blob ? await data.arrayBuffer() : data;
+        
+        // Find which item this chunk belongs to by checking the last IMG_HEADER
+        // For simplicity, we'll track currentImageReceive
+        if (window._currentImageReceive) {
+          const { itemId, expectedSize } = window._currentImageReceive;
+          
+          if (!incomingImages[itemId]) {
+            incomingImages[itemId] = { chunks: [], received: 0, mimeType: 'image/jpeg' };
+          }
+          
+          incomingImages[itemId].chunks.push(buffer);
+          incomingImages[itemId].received += buffer.byteLength;
+          
+          console.log('Binary chunk received:', itemId, incomingImages[itemId].received, '/', expectedSize);
+        }
+      } catch (e) {
+        console.error('Binary message error:', e);
+      }
     }
 
     async function saveNeighborItem(item) {
