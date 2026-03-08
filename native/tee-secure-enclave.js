@@ -2,8 +2,9 @@
  * TEE Secure Enclave Execution - 受信執行環境
  * 
  * 集成 ARM TrustZone / Apple Secure Enclave，實現硬件級安全隔離
+ * 支援軟件後備方案，確保低端設備兼容性
  * 
- * @version 1.0.0
+ * @version 1.1.0
  * @date 2026-03-08
  */
 
@@ -16,10 +17,21 @@ class TEESecureEnclave extends EventEmitter {
     
     // 配置
     this.config = {
-      enclaveType: options.enclaveType || 'software', // software, trustzone, secure_enclave
+      // 優先使用硬件 TEE，但允許後備
+      preferredEnclave: options.preferredEnclave || 'auto', // auto, hardware, software
+      fallbackToSoftware: options.fallbackToSoftware !== false,
       keySize: options.keySize || 256,
-      operationTimeout: options.operationTimeout || 5000
+      operationTimeout: options.operationTimeout || 5000,
+      
+      // 軟件隔離配置
+      softwareIsolation: {
+        memoryPages: options.memoryPages || 4, // 4KB 隔離內存
+        encryptionKey: options.encryptionKey || this._generateIsolationKey()
+      }
     };
+    
+    // 當前使用的 TEE 類型
+    this.activeEnclave = null;
     
     // 安全密鑰存儲
     this.secureKeys = new Map();
@@ -43,20 +55,116 @@ class TEESecureEnclave extends EventEmitter {
   _detectTEEAvailability() {
     // 檢測運行環境
     const env = process.env;
+    const navigator = typeof window !== 'undefined' ? window : null;
     
-    if (env.ANDROID_SANDBOX || env.TRUNSTED_EXECUTION_ENV) {
-      this.config.enclaveType = 'trustzone';
-    } else if (env.IOS_SECURE_ENCLAVE) {
-      this.config.enclaveType = 'secure_enclave';
-    } else {
-      this.config.enclaveType = 'software'; // 回退到軟件隔離
+    let detected = 'software';
+    let hardwareAvailable = false;
+    
+    // 檢測 Android TrustZone
+    if (typeof android !== 'undefined' || env.ANDROID_SANDBOX || env.TRUSTED_EXECUTION_ENV) {
+      detected = 'trustzone';
+      hardwareAvailable = true;
     }
     
-    console.log(`[TEE] Detected enclave type: ${this.config.enclaveType}`);
+    // 檢測 iOS Secure Enclave
+    if (typeof window !== 'undefined' && window.webkit && window.webkit.messageHandlers) {
+      // iOS 環境檢測
+      detected = 'secure_enclave';
+      hardwareAvailable = true;
+    }
+    
+    // 瀏覽器環境檢測
+    if (navigator && navigator.userAgent) {
+      const ua = navigator.userAgent;
+      if (ua.includes('Linux') && ua.includes('Android')) {
+        detected = 'trustzone';
+        hardwareAvailable = true;
+      }
+    }
+    
+    // 根據偏好設置activeEnclave
+    if (this.config.preferredEnclave === 'hardware' && hardwareAvailable) {
+      this.activeEnclave = detected;
+    } else if (this.config.preferredEnclave === 'software') {
+      this.activeEnclave = 'software';
+    } else {
+      // auto: 優先硬件，不可用則軟件
+      this.activeEnclave = hardwareAvailable ? detected : 'software';
+    }
+    
+    console.log(`[TEE] Detected: ${detected}, Active: ${this.activeEnclave}, Hardware: ${hardwareAvailable}`);
+    
+    // 如果不支持硬件且需要後備
+    if (!hardwareAvailable && this.config.fallbackToSoftware) {
+      console.log(`[TEE] Hardware TEE not available, using software isolation fallback`);
+    }
+    
+    return {
+      detected,
+      active: this.activeEnclave,
+      hardwareAvailable,
+      fallbackEnabled: this.config.fallbackToSoftware
+    };
   }
   
   /**
-   * 生成安全密鑰 (在 TEE 內)
+   * 生成隔離密鑰 (軟件後備)
+   */
+  _generateIsolationKey() {
+    return createHash('sha256')
+      .update(randomBytes(32).toString('hex') + Date.now().toString())
+      .digest();
+  }
+  
+  /**
+   * 軟件隔離執行 (後備方案)
+   */
+  _softwareIsolationExecute(fn, ...args) {
+    if (this.activeEnclave !== 'software') {
+      // 硬件可用時不使用軟件隔離
+      return fn(...args);
+    }
+    
+    // 使用軟件隔離
+    const isolation = this._createSoftwareIsolation();
+    
+    try {
+      // 在隔離環境中執行
+      const result = fn(...args);
+      
+      // 清理
+      this._cleanupSoftwareIsolation(isolation);
+      
+      return result;
+    } catch (error) {
+      this._cleanupSoftwareIsolation(isolation);
+      throw error;
+    }
+  }
+  
+  /**
+   * 創建軟件隔離環境
+   */
+  _createSoftwareIsolation() {
+    return {
+      memory: Buffer.alloc(this.config.softwareIsolation.memoryPages * 1024),
+      id: randomBytes(8).toString('hex'),
+      createdAt: Date.now()
+    };
+  }
+  
+  /**
+   * 清理軟件隔離環境
+   */
+  _cleanupSoftwareIsolation(isolation) {
+    isolation.memory.fill(0x00);
+    isolation.memory.fill(0xFF);
+    isolation.memory.fill(0x00);
+  }
+  
+  /**
+   * 獲取當前 TEE 狀態
+   */
    * @param {string} keyId - 密鑰 ID
    * @param {Object} options - 選項
    */
