@@ -25,14 +25,28 @@
 - [x] 實現 Blob + 懟加載 + revokeObjectURL
 - [x] 分離存儲 (元數據 vs 圖片)
 
-## 🟢 低優先級
+## 🟢 完全分布式 P2P 架構 (進行中)
 
-### E. 電量優化
-- [ ] 檢測電量低時減少同步
+### E. Libp2p 集成 🔄
+- [x] Libp2p 服務模塊 (native/libp2p.js)
+- [ ] 配置 bootstrap 節點
+- [ ] 實現 DHT 發現
+- [ ] 集成到主應用
 
-### F. 地圖視圖
-- [ ] Leaflet 集成
-- [ ] 物品位置標記
+### F. UCAN 身份驗證 🔄
+- [x] UCAN 服務模塊 (native/ucan.js)
+- [ ] 離線授權鏈
+- [ ] 能力委託
+
+### G. Hypercore 存儲 🔄
+- [x] Hypercore 存儲模塊 (native/hypercore.js)
+- [ ] Append-only 日誌
+- [ ] Merkle 樹驗證
+- [ ] 增量同步
+
+### H. GossipSub 協議
+- [ ] H3-Topic 訂閱
+- [ ] 地理路由優化
 
 ---
 
@@ -41,3 +55,7 @@
 1. ✅ mDNS 離線發現
 2. ✅ Adaptive Heartbeat
 3. ✅ DID 身份驗證
+4. ✅ 二進制圖片傳輸
+5. ✅ Libp2p 模塊
+6. ✅ UCAN 身份模塊
+7. ✅ Hypercore 存儲模塊
