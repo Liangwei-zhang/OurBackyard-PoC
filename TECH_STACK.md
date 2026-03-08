@@ -14,7 +14,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                    OurBackyard (T0 核彈級商業 P2P - 29 模塊)                   │
+│                    OurBackyard (T0 核彈級商業 P2P - 34 模塊)                   │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
@@ -34,11 +34,12 @@
 │  │  │  CRDT   │ │   Rep   │ │ Adaptive│ │Compact  │ │Prefetch │   │   │
 │  │  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘   │   │
 │  │       └────────────┴───────────┴───────────┴────────────┘         │   │
-│  │              ⚡ ZK-Storage Proofs (可驗證存儲證明) 🆕              │   │
+│  │              ⚡ Intent-Based Routing (意圖導向) 🆕              │   │
+│  │              ⚡ Holographic Self-Healing (全息自癒合) 🆕       │   │
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │                    Trust Layer                                        │   │
+│  │                    Trust Layer + Liquid Democracy 🆕                 │   │
 │  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │   │
 │  │  │   UCAN  │ │    ZK   │ │   PoW   │ │   WoT   │ │  DAO    │   │   │
 │  │  │         │ │         │ │         │ │         │ │Governance│  │   │
@@ -47,20 +48,22 @@
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │                    AI Layer + Federated Learning 🆕                  │   │
+│  │                    AI Layer + DP-Federated Learning 🆕               │   │
 │  │  ┌─────────────────────────────────────────────────────────────┐   │   │
 │  │  │  Semantic Search + Local RAG + LLM Filter + Geo-Prefetch  │   │   │
-│  │  │         🤖 Federated Edge Learning (隱私保護集體智能)       │   │   │
+│  │  │  🤖 Federated Edge Learning (隱私保護集體智能)             │   │   │
+│  │  │  🔒 DP-FL: Differential Privacy (數學級不可逆隱私) 🆕      │   │   │
 │  │  └─────────────────────────────────────────────────────────────┘   │   │
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │                    Security Layer + HE Search 🆕                    │   │
+│  │                    Security Layer + TEE 🆕                           │   │
 │  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │   │
 │  │  │ X25519  │ │AES-GCM  │ │ Forward │ │Post-    │ │Homomor- │   │   │
 │  │  │         │ │         │ │ Secrecy │ │Quantum  │ │phic Enc │   │   │
 │  │  └────────┬┘ └────────┘ └─────────┘ └────────┬┘ └────────┬┘   │   │
 │  │           └─────────────┴─────────────────────┴────────────┘       │   │
+│  │              🔐 TEE Secure Enclave (硬件級隔離) 🆕                │   │
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
@@ -90,6 +93,7 @@
 | **BLE** | 藍牙發現 | ✅ |
 | **Wi-Fi Direct** | 設備直連 | ✅ |
 | **Circuit Relay V2** | 中繼連接 | ✅ |
+| **Intent-Based Routing** | 意圖導向路由 | ✅ 🆕 |
 
 ### 2. 數據層
 
@@ -102,9 +106,10 @@
 | **Sponsor Node** | 鄰居備份 | ✅ |
 | **Hypercore** | Append-only | ✅ |
 | **P2P Worker** | 後台計算 | ✅ |
-| **Geo-Prefetch** | AI 驅動預緩存 | ✅ 🆕 |
+| **Geo-Prefetch** | AI 驅動預緩存 | ✅ |
+| **Holographic Storage** | 全息自癒合存儲 | ✅ 🆕 |
 
-### 3. 信任層
+### 3. 信任層 + 治理
 
 | 技術 | 用途 | 狀態 |
 |------|------|------|
@@ -113,8 +118,9 @@
 | **PoW** | 工作量證明 | ✅ |
 | **WoT** | 信任網 | ✅ |
 | **DID** | 去中心化身份 | ✅ |
-| **DAO Governance** | ZK 社區投票治理 | ✅ 🆕 |
-| **Resource Quota** | 聲譽激勵配額 | ✅ 🆕 |
+| **DAO Governance** | ZK 社區投票治理 | ✅ |
+| **Resource Quota** | 聲譽激勵配額 | ✅ |
+| **Liquid Democracy** | 液態民主治理 | ✅ 🆕 |
 
 ### 4. AI 層
 
@@ -123,7 +129,8 @@
 | **Semantic Search** | 語義搜索 | ✅ |
 | **Local RAG** | 隱私保護 AI | ✅ |
 | **LLM Filter** | 內容過濾 | ✅ |
-| **Federated Learning** | 聯邦邊緣學習 | ✅ 🆕 |
+| **Federated Learning** | 聯邦邊緣學習 | ✅ |
+| **DP-Federated Learning** | 差分隱私聯邦學習 | ✅ 🆕 |
 
 ### 5. 安全層
 
@@ -133,14 +140,15 @@
 | **AES-GCM** | 對稱加密 | ✅ |
 | **Forward Secrecy** | 前向保密 | ✅ |
 | **Post-Quantum Crypto** | Kyber + X25519 混合 | ✅ |
-| **Homomorphic Encryption** | 全同態加密語義搜索 | ✅ 🆕 |
+| **Homomorphic Encryption** | 全同態加密語義搜索 | ✅ |
+| **TEE Secure Enclave** | 硬件級安全隔離 | ✅ 🆕 |
 
-### 6. 數據層 (ZK-Storage)
+### 6. 存儲驗證層
 
 | 技術 | 用途 | 狀態 |
 |------|------|------|
-| **ZK-Storage Proofs** | 可驗證存儲證明 | ✅ 🆕 |
-| **Merkle Tree** | 完整性驗證 | ✅ 🆕 |
+| **ZK-Storage Proofs** | 可驗證存儲證明 | ✅ |
+| **Merkle Tree** | 完整性驗證 | ✅ |
 
 ### 6. 桌面節點
 
@@ -160,7 +168,7 @@
 
 ---
 
-## 📁 項目模塊 (29個)
+## 📁 項目模塊 (34個)
 
 ```
 native/
@@ -169,28 +177,33 @@ native/
 ├── hypercore.js               # Hypercore 存儲
 ├── sponsor-node.js            # 分布式冗餘
 ├── crdt-store.js             # CRDT 實時同步
-├── p2p-store.js             # 統一 P2P API
+├── p2p-store.js              # 統一 P2P API
 ├── geo-replication.js        # 地理優先複製
 ├── zk-reputation-complete.js # ZK 聲譽系統
-├── local-ai-complete.js       # 本地 AI 搜索
-├── hyperswarm-dht.js        # DHT 發現
-├── ble-wifi-direct.js       # BLE + WiFi
-├── p2p-worker.js           # 後台 Worker
-├── e2e-encryption.js       # 端到端加密
-├── pow-spam-protection.js   # PoW 防垃圾
-├── wot-trust.js            # WoT 信任網
-├── desktop-full-node.js     # 桌面全節點
-├── circuit-relay.js        # 中繼連接
-├── log-compaction.js       # 日誌壓縮
-├── adaptive-redundancy.js  # 動態冗餘
-├── resource-quota.js       # 聲譽激勵配額
-├── geo-prefetch.js         # AI 驅動預緩存
-├── post-quantum-crypto.js  # 後量子加密
-├── dead-drop.js            # 異步消息投遞
-├── dao-governance.js       # ZK 社區投票治理
-├── federated-learning.js   # 聯邦邊緣學習 🆕
-├── zk-storage-proof.js     # ZK 存儲可用性證明 🆕
-└── homomorphic-search.js  # 全同態加密語義搜索 🆕
+├── local-ai-complete.js      # 本地 AI 搜索
+├── hyperswarm-dht.js         # DHT 發現
+├── ble-wifi-direct.js        # BLE + WiFi
+├── p2p-worker.js             # 後台 Worker
+├── e2e-encryption.js         # 端到端加密
+├── pow-spam-protection.js    # PoW 防垃圾
+├── wot-trust.js              # WoT 信任網
+├── desktop-full-node.js      # 桌面全節點
+├── circuit-relay.js          # 中繼連接
+├── log-compaction.js         # 日誌壓縮
+├── adaptive-redundancy.js    # 動態冗餘
+├── resource-quota.js         # 聲譽激勵配額
+├── geo-prefetch.js           # AI 驅動預緩存
+├── post-quantum-crypto.js    # 後量子加密
+├── dead-drop.js              # 異步消息投遞
+├── dao-governance.js         # ZK 社區投票治理
+├── federated-learning.js     # 聯邦邊緣學習
+├── zk-storage-proof.js      # ZK 存儲可用性證明
+├── homomorphic-search.js     # 全同態加密語義搜索
+├── intent-routing.js         # 意圖導向路由 🆕
+├── dp-federated-learning.js  # 差分隱私聯邦學習 🆕
+├── holographic-storage.js    # 全息自癒合存儲 🆕
+├── tee-secure-enclave.js    # TEE 受信執行環境 🆕
+└── liquid-democracy.js      # 液態民主治理 🆕
 ```
 
 ---
@@ -310,6 +323,77 @@ heSearch.encryptVector(itemEmbedding, 'item:123');
 const results = await heSearch.search(queryEmbedding);
 ```
 
+### Intent-Based Routing
+```javascript
+// 意圖導向路由
+const ibr = new IntentBasedRouting(libp2p);
+
+// 註冊意圖
+await ibr.registerIntent('need:snowblower', {
+  keywords: ['snow', 'machine'],
+  urgency: 'critical',
+  location: { lat: 51.0447, lng: -114.0719 },
+  priceRange: [50, 200]
+});
+```
+
+### DP-Federated Learning
+```javascript
+// 差分隱私聯邦學習
+const dpfl = new DPFederatedLearning(libp2p, {
+  epsilon: 1.0, // 隱私預算
+  noiseScale: 1.0
+});
+
+// 本地訓練 + DP
+const result = await dpfl.trainLocalDP(localData);
+console.log(`Privacy spent: ${result.privacyCost}`);
+```
+
+### Holographic Storage
+```javascript
+// 全息自癒合存儲
+const holographic = new HolographicSelfHealing({ redundancyFactor: 3 });
+await holographic.initializeHolographic('item:123', itemData);
+
+// 自動修復
+holographic.startAutoHealing();
+
+// 分布式修復
+await holographic.distributedHealing('item:123');
+```
+
+### TEE Secure Enclave
+```javascript
+// TEE 受信執行環境
+const tee = new TEESecureEnclave();
+
+// 生成安全密鑰
+await tee.generateSecureKey('transaction-key', {
+  purposes: ['encryption', 'signing']
+});
+
+// 在 TEE 中執行安全操作
+const signature = await tee.executeInEnclave('sign', async () => {
+  return await tee.secureSign('transaction-key', transactionData);
+});
+```
+
+### Liquid Democracy
+```javascript
+// 液態民主治理
+const liquid = new LiquidDemocracy(libp2p);
+
+// 委託投票權
+await liquid.delegate(expertPeerId, 'environmental', 10);
+
+// 創建提案
+await liquid.createProposal('Community Solar Project', '...', 'environmental');
+
+// 專業化轉移
+await liquid.transferProposal(proposalId, expertPeerId);
+```
+
 ---
 
 ## 📊 性能指標
@@ -325,29 +409,29 @@ const results = await heSearch.search(queryEmbedding);
 
 ---
 
-## ✅ 項目狀態: T0 核彈級完成 (29 模塊)
+## ✅ 項目狀態: 終極形態 (34 模塊)
 
-所有 29 個模塊已完成，涵蓋：
-- P2P 通訊 (6 項) + Mesh Interop
-- 數據持久化 (8 項) + ZK-Storage Proofs
-- 信任與安全 (7 項) + Homomorphic Encryption
-- AI 與治理 (8 項) + Federated Learning
+所有 34 個模塊已完成，涵蓋：
+- P2P 通訊 (7 項) + IBR
+- 數據持久化 (9 項) + 自癒合
+- 信任與安全 (8 項) + TEE
+- AI 與治理 (10 項) + DP-FL + Liquid Democracy
 
-### 🚀 商業價值：P2P 無人區
+### 🚀 極限指標跨越
 
-| 特性 | OurBackyard | 傳統 P2P |
-|------|-------------|----------|
-| 後量子加密 | ✅ Kyber+X25519 | ❌ |
-| 異步 Dead Drop | ✅ 離線消息 | ❌ |
-| AI 預緩存 | ✅ Geo-Prefetch | ❌ |
-| 聯邦學習 | ✅ 隱私集體智能 | ❌ |
-| ZK 存儲證明 | ✅ 確定性備份 | ❌ |
-| 同態加密搜索 | ✅ 金融級隱私 | ❌ |
+| 指標 | 當前 (29) | 終極 (34) |
+|---|---|---|
+| 數據安全性 | 硬件隔離 + 差分隱私 | 數學級不可逆隱私 |
+| 數據可靠性 | 靜態冗餘 + ZK 挑戰 | 全息主動自癒合 |
+| 交互延遲 | AI 預緩存 | 意圖導向主動推送 |
+| 社區治理 | 單人單票 ZK 投票 | 專業權重動態流轉 |
+| 執行隔離 | 軟件隔離 | TEE 硬件級 |
 
-### 💡 Backyard Hub 硬件化
+### 💡 數字主權社區
 
-推出專屬桌面全節點硬件，內置 29 模塊：
-- 24/7 Dead Drop 存儲站
-- Circuit Relay 中繼站
-- ZK-Storage 驗證節點
-- Federated Learning 聚合節點
+OurBackyard 已從「技術領先的應用」進化為「具備生物特徵的、不可摧毀的數字主權社區」：
+- **意圖導向**: 數據自動流向需求端，零延遲物資交換
+- **差分隱私**: 數學級不可逆隱私保障
+- **全息存儲**: 數據像活的生物組織，能夠自我修復
+- **硬件隔離**: 即使手機被 root，核心數據依然安全
+- **液態民主**: 社區治理從低頻投票轉向專業化協作
