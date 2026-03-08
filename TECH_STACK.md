@@ -28,38 +28,46 @@
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
 │  │                    Data Layer                                        │   │
-│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐                 │   │
-│  │  │   Yjs   │ │   Geo   │ │ Erasure │ │  Log    │                 │   │
-│  │  │  CRDT   │ │   Rep   │ │ Adaptive│ │Compact  │                 │   │
-│  │  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘                 │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │   │
+│  │  │   Yjs   │ │   Geo   │ │ Erasure │ │  Log    │ │  Geo    │   │   │
+│  │  │  CRDT   │ │   Rep   │ │ Adaptive│ │Compact  │ │Prefetch │   │   │
+│  │  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘   │   │
 │  │       └────────────┴───────────┴───────────┴────────────┘         │   │
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
 │  │                    Trust Layer                                        │   │
-│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐                 │   │
-│  │  │   UCAN  │ │    ZK   │ │   PoW   │ │   WoT   │                 │   │
-│  │  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘                 │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │   │
+│  │  │   UCAN  │ │    ZK   │ │   PoW   │ │   WoT   │ │  DAO    │   │   │
+│  │  │         │ │         │ │         │ │         │ │Governance│  │   │
+│  │  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘   │   │
 │  │       └────────────┴───────────┴───────────┴────────────┘         │   │
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
 │  │                    AI Layer                                          │   │
 │  │  ┌─────────────────────────────────────────────────────────────┐   │   │
-│  │  │  Semantic Search + Local RAG + LLM Filter                │   │   │
+│  │  │  Semantic Search + Local RAG + LLM Filter + Geo-Prefetch  │   │   │
 │  │  └─────────────────────────────────────────────────────────────┘   │   │
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
 │  │                    Security Layer                                   │   │
-│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐                             │   │
-│  │  │ X25519  │ │AES-GCM  │ │ Forward │                             │   │
-│  │  └─────────┘ └─────────┘ └─────────┘                             │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐                 │   │
+│  │  │ X25519  │ │AES-GCM  │ │ Forward │ │Post-    │                 │   │
+│  │  │         │ │         │ │ Secrecy │ │Quantum  │                 │   │
+│  │  └────────┬┘ └────────┘ └─────────┘ └────────┬┘                 │   │
+│  │           └─────────────┴────────────────────┘                   │   │
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │                    Desktop Node                                     │   │
-│  │  Data Proxy + 24/7 Sync + LLM Filter + NAT Traversal            │   │
+│  │                    Desktop Node + Resource Quota                    │   │
+│  │  Data Proxy + 24/7 Sync + NAT Traversal + Reputation Incentives   │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                    Dead Drop Layer                                   │   │
+│  │  Async Message Delivery + Offline Communication                    │   │
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
@@ -91,6 +99,7 @@
 | **Sponsor Node** | 鄰居備份 | ✅ |
 | **Hypercore** | Append-only | ✅ |
 | **P2P Worker** | 後台計算 | ✅ |
+| **Geo-Prefetch** | AI 驅動預緩存 | ✅ 🆕 |
 
 ### 3. 信任層
 
@@ -101,6 +110,8 @@
 | **PoW** | 工作量證明 | ✅ |
 | **WoT** | 信任網 | ✅ |
 | **DID** | 去中心化身份 | ✅ |
+| **DAO Governance** | ZK 社區投票治理 | ✅ 🆕 |
+| **Resource Quota** | 聲譽激勵配額 | ✅ 🆕 |
 
 ### 4. AI 層
 
@@ -117,6 +128,7 @@
 | **X25519** | 密鑰交換 | ✅ |
 | **AES-GCM** | 對稱加密 | ✅ |
 | **Forward Secrecy** | 前向保密 | ✅ |
+| **Post-Quantum Crypto** | Kyber + X25519 混合 | ✅ 🆕 |
 
 ### 6. 桌面節點
 
@@ -125,10 +137,18 @@
 | **Data Proxy** | 數據代理 | ✅ |
 | **24/7 Sync** | 持續同步 | ✅ |
 | **NAT Traversal** | 穿透 | ✅ |
+| **Resource Quota** | 聲譽激勵 | ✅ 🆕 |
+
+### 7. 異步通信層 (Dead Drop)
+
+| 技術 | 用途 | 狀態 |
+|------|------|------|
+| **Dead Drop** | 離線消息傳遞 | ✅ 🆕 |
+| **Async Delivery** | 異步投遞 | ✅ 🆕 |
 
 ---
 
-## 📁 項目模塊 (21個)
+## 📁 項目模塊 (26個)
 
 ```
 native/
@@ -148,9 +168,14 @@ native/
 ├── pow-spam-protection.js   # PoW 防垃圾
 ├── wot-trust.js            # WoT 信任網
 ├── desktop-full-node.js     # 桌面全節點
-├── circuit-relay.js        # 中繼連接 🆕
-├── log-compaction.js       # 日誌壓縮 🆕
-└── adaptive-redundancy.js  # 動態冗餘 🆕
+├── circuit-relay.js        # 中繼連接
+├── log-compaction.js       # 日誌壓縮
+├── adaptive-redundancy.js  # 動態冗餘
+├── resource-quota.js       # 聲譽激勵配額 🆕
+├── geo-prefetch.js         # AI 驅動預緩存 🆕
+├── post-quantum-crypto.js  # 後量子加密 🆕
+├── dead-drop.js            # 異步消息投遞 🆕
+└── dao-governance.js       # ZK 社區投票治理 🆕
 ```
 
 ---
@@ -179,6 +204,53 @@ const settings = await AdaptiveRedundancy.calculateRedundancy({
 });
 ```
 
+### Resource Quota
+```javascript
+// 基於聲譽的資源分配
+const quota = await ResourceQuota.calculate({
+  reputation: userReputation,
+  storage贡献: storageContribution,
+  bandwidth贡献: bandwidthContribution
+});
+```
+
+### Geo-Prefetch
+```javascript
+// AI 驅動的智能預緩存
+const prefetch = await GeoPrefetch.predict({
+  userLocation: [51.0447, -114.0719],
+  timeOfDay: new Date().getHours(),
+  historicalPattern: userPatterns
+});
+```
+
+### Post-Quantum Crypto
+```javascript
+// Kyber + X25519 混合後量子加密
+const keyPair = await PostQuantumCrypto.generateKeyPair();
+const encrypted = await PostQuantumCrypto.encrypt(message, keyPair);
+```
+
+### Dead Drop
+```javascript
+// 離線消息投遞
+await DeadDrop.deposit({
+  recipient: peerId,
+  message: encryptedData,
+  expiresIn: '24h'
+});
+```
+
+### DAO Governance
+```javascript
+// ZK 驗證的社區投票
+await DAOGovernance.propose({
+  title: 'Community Budget Allocation',
+  zkProof: zkProof,
+  votingPeriod: '7d'
+});
+```
+
 ---
 
 ## 📊 性能指標
@@ -196,8 +268,8 @@ const settings = await AdaptiveRedundancy.calculateRedundancy({
 
 ## ✅ 項目狀態: 100% 完成
 
-所有 21 個模塊已完成，涵蓋：
+所有 26 個模塊已完成，涵蓋：
 - P2P 通訊 (6 項)
-- 數據持久化 (7 項)
-- 信任與安全 (5 項)
-- AI 與治理 (3 項)
+- 數據持久化 (8 項)
+- 信任與安全 (7 項)
+- AI 與治理 (5 項)
