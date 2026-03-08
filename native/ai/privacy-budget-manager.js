@@ -264,6 +264,54 @@ class PrivacyBudgetManager extends EventEmitter {
   }
   
   /**
+   * 獲取用戶儀表板 (UI 展示用)
+   * @param {string} userId - 用戶 ID
+   */
+  getUserDashboard(userId) {
+    const status = this.getUserBudgetStatus(userId);
+    
+    if (!status.exists) {
+      return {
+        initialized: false,
+        message: 'Privacy budget not initialized'
+      };
+    }
+    
+    // 計算安全級別
+    let safetyLevel = 'high';
+    let recommendation = '';
+    
+    if (status.dailyRemaining < 0.1) {
+      safetyLevel = 'critical';
+      recommendation = '建議切換到低隱私模式或等待明天重置';
+    } else if (status.dailyRemaining < 0.3) {
+      safetyLevel = 'medium';
+      recommendation = '今天還能安全使用 30% 隱私額度';
+    } else {
+      safetyLevel = 'high';
+      recommendation = '隱私預算充足，可正常使用';
+    }
+    
+    // 格式化輸出
+    return {
+      initialized: true,
+      remaining: status.dailyRemaining.toFixed(2),
+      spentToday: status.dailySpent.toFixed(2),
+      dailyLimit: this.config.dailyBudget,
+      totalRemaining: status.totalRemaining.toFixed(2),
+      dailyUsagePercent: Math.round(status.dailyUsage * 100),
+      safetyLevel,
+      recommendation,
+      // 與 Timebank 集成選項
+      timebankExchange: {
+        available: status.totalRemaining > 1.0,
+        cost: 0.5, // 0.5 epsilon = 1 小時時間信用
+        earnRate: '每提供 1 小時服務可獲得 0.5 epsilon'
+      }
+    };
+  }
+  
+  /**
    * 獲取系統預算狀態
    */
   getSystemBudgetStatus() {

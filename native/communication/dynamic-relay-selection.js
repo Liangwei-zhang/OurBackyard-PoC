@@ -131,11 +131,30 @@ class DynamicRelaySelection extends EventEmitter {
   }
   
   /**
-   * 計算綜合分數
+   * 計算綜合分數 - 整合 WoT + ZK Reputation
    */
-  _calculateScore(relay, preferLocal = false) {
-    // 聲譽分數 (0-1)
-    const reputationScore = Math.min(1, relay.reputation / 100);
+  async _calculateScore(relay, preferLocal = false) {
+    // 獲取 WoT 信任分數
+    let wotScore = 0.5;
+    try {
+      const { WoTTrust } = await import('./wot-trust.js');
+      wotScore = await WoTTrust.getTrustScore(relay.peerId) / 100;
+    } catch (e) {
+      // WoT 不可用時使用 relay 自身 reputation
+      wotScore = relay.reputation / 100;
+    }
+    
+    // 獲取 ZK Reputation 分數
+    let zkScore = 0.5;
+    try {
+      const { ZKReputation } = await import('./zk-reputation-complete.js');
+      zkScore = await ZKReputation.getScore(relay.peerId) / 100;
+    } catch (e) {
+      zkScore = relay.reputation / 100;
+    }
+    
+    // 聲譽分數 (0-1) - 加權組合
+    const reputationScore = (wotScore * 0.4 + zkScore * 0.4 + (relay.reputation / 100) * 0.2);
     
     // 延遲分數 (0-1, 越低越好)
     const avgLatency = this._getAverageLatency(relay.peerId);
@@ -147,13 +166,16 @@ class DynamicRelaySelection extends EventEmitter {
     // 正常運行時間分數 (0-1)
     const uptimeScore = relay.uptime / 100;
     
+    // 緊急度權重
+    const urgencyWeight = relay.isUrgent ? 1.3 : 1.0;
+    
     // 計算加權分數
     let totalScore = (
       reputationScore * this.config.weightReputation +
       latencyScore * this.config.weightLatency +
       capacityScore * this.config.weightCapacity +
       uptimeScore * this.config.weightUptime
-    );
+    ) * urgencyWeight;
     
     // 本地偏好加成
     if (preferLocal && relay.location) {
