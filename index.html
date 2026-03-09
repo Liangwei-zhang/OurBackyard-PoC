@@ -1819,23 +1819,18 @@
       // Micro-thumbnail placeholder (blur effect)
       const microPlaceholder = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><rect fill="%23444" width="50" height="50"/></svg>');
       
+      // Render items first without images, then load from IndexedDB
       container.innerHTML = items.map(item => {
         const statusClass = item.status === 'available' ? 'status-available' : 
                           item.status === 'pending' ? 'status-pending' : 'status-gone';
         const priceText = item.price === 0 ? '🎁 Free' : 
                         item.price === 'swap' ? '☕ Swap' : `$${item.price}`;
         
-        // Use micro-thumbnail or load from IndexedDB
-        const microSrc = item.microThumbnail && !item.microThumbnail.startsWith('blob:') 
-          ? item.microThumbnail 
-          : microPlaceholder;
-        
         return `
           <div class="item-card ${item.status}" onclick="showItemDetail(${item.id})">
             <img class="item-image lazy" 
                  data-item-id="${item.id}" 
-                 data-micro-src="${microSrc}" 
-                 src="${microSrc}" 
+                 src="${microPlaceholder}" 
                  alt="${item.title}"
                  style="filter: blur(3px)"
                  onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 x=%2250%22 y=%2255%22 text-anchor=%22middle%22>📷</text></svg>'">
@@ -1849,6 +1844,21 @@
           </div>
         `;
       }).join('');
+      
+      // Load images from IndexedDB asynchronously
+      for (const item of items) {
+        try {
+          const blobs = await db.blobs.where('itemId').equals(item.id).toArray();
+          if (blobs.length > 0) {
+            const img = container.querySelector(`img[data-item-id="${item.id}"]`);
+            if (img) {
+              const url = URL.createObjectURL(blobs[0].blob);
+              img.src = url;
+              img.style.filter = 'none';
+            }
+          }
+        } catch(e) {}
+      }
       
       // Initialize lazy loading with binary-first loader
       setTimeout(() => {
