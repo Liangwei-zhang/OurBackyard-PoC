@@ -312,7 +312,7 @@ document.querySelectorAll('.chip').forEach(c=>{c.onclick=function(){
   App.category=this.dataset.cat;
   renderProducts();
 }});
-document.querySelectorAll('.tab-item').forEach(t=>{t.onclick=function(){goToPage(['mall','chat','add','stats','profile','settings'].indexOf(this.dataset.page)+1);});
+document.querySelectorAll('.tab-item').forEach(t=>{t.onclick=function(){goToPage(['mall','chat','add','stats','profile','settings'].indexOf(this.dataset.page)+1);}});
 document.getElementById('aiBtn').onclick=()=>{renderProducts();toast('AI搜索開發中');};
 document.getElementById('submitBtn').onclick=function(){
   const name=document.getElementById('productName').value;
