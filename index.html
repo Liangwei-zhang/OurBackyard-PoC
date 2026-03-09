@@ -1721,9 +1721,11 @@
           return;
         }
         
-        // Save to IndexedDB BY HASH (content-addressable)
+        // Save to IndexedDB - include itemId for keyPath compatibility
+        const storeItemId = itemId || img.itemId;
         await db.blobs.put({ 
-          hash: imageHash,  // Key by hash!
+          itemId: storeItemId,
+          hash: imageHash,
           blob: blob, 
           timestamp: Date.now() 
         });
@@ -2155,8 +2157,8 @@
             imageHash: imageHash  // Content ID for P2P
           });
           
-          // Save blob to IndexedDB by hash (content-addressable)
-          await db.blobs.put({ hash: imageHash, blob: imageBlob, timestamp: Date.now() });
+          // Save blob to IndexedDB - include itemId as key for backwards compatibility
+          await db.blobs.put({ itemId: itemId, hash: imageHash, blob: imageBlob, timestamp: Date.now() });
           
           // Register in ImageRegistry
           ImageRegistry.register(itemId, imageHash);
