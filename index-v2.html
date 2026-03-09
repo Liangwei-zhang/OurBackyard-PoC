@@ -10,9 +10,9 @@
 body.dark{--bg:#1a1a1a;--bg2:#333;--border:#444;--text:#fff;--text2:#aaa}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh}
-.container{display:flex;height:100vh;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+.container{display:flex;height:100vh;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
 .container::-webkit-scrollbar{display:none}
-.page{min-width:100vw;height:100vh;overflow-y:auto;padding-bottom:80px}
+.page{min-width:100vw;height:100vh;scroll-snap-align:start;overflow-y:auto;padding-bottom:80px}
 .header{background:var(--bg);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border)}
 .logo{font-size:22px;font-weight:700;display:flex;align-items:center;gap:8px}
 .logo-i{width:36px;height:36px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff}
@@ -104,8 +104,7 @@ body{font-family:-apple-system,sans-serif;background:var(--bg);color:var(--text)
 .stat-good{color:var(--green)}
 .stat-warn{color:var(--orange)}
 .tab-bar{position:fixed;bottom:0;left:0;right:0;background:var(--bg);display:flex;justify-content:space-around;padding:12px 0 24px;border-top:1px solid var(--border);z-index:100}
-.tab-item{display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--text2);font-size:10px;cursor:pointer;padding:4px 8px;transition:transform 0.1s}
-.tab-item:active{transform:scale(0.9)}
+.tab-item{display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--text2);font-size:10px;cursor:pointer;padding:4px 8px}
 .tab-item.on{color:var(--primary)}
 .tab-icon{font-size:20px}
 .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;padding:12px 24px;font-weight:600;z-index:1000;opacity:0;transition:opacity 0.3s}
@@ -286,7 +285,7 @@ function closeChatDetail(){document.getElementById('chatDetail').style.display='
 
 function goToPage(page){
   currentPage=page;
-  document.getElementById('container').scrollTo({left:page*window.innerWidth,behavior:'auto'});
+  document.getElementById('container').scrollTo({left:page*window.innerWidth,behavior:'smooth'});
   document.querySelectorAll('.tab-item').forEach(x=>x.classList.remove('on'));
   const pages=['mall','chat','add','stats','profile','settings'];
   if(page>=1&&page<=5){document.querySelector('[data-page="'+pages[page-1]+'"]').classList.add('on');}
@@ -357,7 +356,6 @@ App.chats=[
 renderChats();
 connect();
 renderProducts();
-document.getElementById('container').scrollTo(window.innerWidth,0);
 </script>
 </body>
 </html>
