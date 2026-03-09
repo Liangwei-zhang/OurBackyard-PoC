@@ -2167,6 +2167,7 @@
       let imageUrl = null;
       let imageBlob = null;
       let microThumbnail = null;
+      let imageHash = null; // Move outside the if block
       
       if (selectedPhotos.length > 0) {
         // Generate micro-thumbnail (50px) for instant display - use Object URL
@@ -2187,7 +2188,7 @@
           imageUrl = 'p2p://' + tempItemId;
           
           // Compute image hash for content-addressable storage
-          const imageHash = await ImageRegistry.computeHash(imageBlob);
+          imageHash = await ImageRegistry.computeHash(imageBlob);
           
           // Store item with imageHash (content-addressable)
           const itemId = await db.items.add({
