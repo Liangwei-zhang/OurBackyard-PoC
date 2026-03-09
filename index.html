@@ -2261,6 +2261,8 @@
     }
 
     async function broadcastNewItem(item) {
+      console.log('[broadcastNewItem] Input item:', { title: item.title, imageUrl: item.imageUrl, imageHash: item.imageHash });
+      
       // Broadcast item - send image separately as binary if present
       const itemForBroadcast = { 
         ...item, 
@@ -2272,8 +2274,11 @@
         sellerId: item.sellerId,
         sellerName: item.sellerName,
         status: item.status,
-        hasImage: !!(item.thumbnail || item.imageHash)
+        hasImage: !!(item.thumbnail || item.imageHash),
+        imageHash: item.imageHash  // Make sure this is included!
       };
+      
+      console.log('[broadcastNewItem] Broadcasting:', { hasImage: itemForBroadcast.hasImage, imageHash: itemForBroadcast.imageHash });
       
       // Sign the item with DID
       const message = { type: 'NEW_ITEM', item: itemForBroadcast, h3Index: currentH3Index, timestamp: Date.now() };
@@ -2473,7 +2478,8 @@
             else updatePeerCount(Math.max(0, connectedPeers - 1));
             break;
           case 'NEW_ITEM':
-            console.log('Received NEW_ITEM:', msg.item ? 'has item' : 'no item', 
+            console.log('📥 Received NEW_ITEM:', msg.item ? 'has item' : 'no item', 
+              msg.item ? 'imageHash=' + msg.item.imageHash : '',
               msg.item && (msg.item.thumbnail || msg.item.imageHash) ? 'has image' : 'no image');
             saveNeighborItem(msg.item);
             break;
