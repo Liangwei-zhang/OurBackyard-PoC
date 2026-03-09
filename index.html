@@ -749,8 +749,8 @@
     </div>
   </div>
 
-  <!-- Setup -->
-  <div id="setup">
+  <!-- Setup - hidden by default, auto-logins -->
+  <div id="setup" class="hidden">
     <div class="setup-title">Welcome Home</div>
     <div class="setup-subtitle">Connect with your neighbors</div>
     
@@ -1534,13 +1534,17 @@
     });
     console.log('IndexedDB initialized v2');
 
-    // Auto-login if displayName saved
+    // Auto-login - generate display name if not saved
     db.userData.get('displayName').then(record => {
       if (record && record.value) {
         displayName = record.value;
-        document.getElementById('input-name').value = displayName;
-        connect(); // Auto-connect
+      } else {
+        // Generate random display name
+        displayName = 'User' + Math.floor(Math.random() * 10000);
+        db.userData.put({ key: 'displayName', value: displayName });
       }
+      document.getElementById('input-name').value = displayName;
+      connect(); // Auto-connect
     });
 
     // ============ Initialize OPFS ============
