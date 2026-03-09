@@ -1048,6 +1048,19 @@
       });
     }
     
+    // Create Object URL from blob (MORE EFFICIENT than base64!)
+    // No +33% overhead, instant display
+    const objectUrlCache = new Map(); // itemId -> objectUrl
+    function blobToObjectURL(blob, itemId) {
+      // 清理舊的 URL
+      if (objectUrlCache.has(itemId)) {
+        URL.revokeObjectURL(objectUrlCache.get(itemId));
+      }
+      const url = URL.createObjectURL(blob);
+      objectUrlCache.set(itemId, url);
+      return url;
+    }
+    
     // Convert blob to ArrayBuffer for P2P transfer
     function blobToArrayBuffer(blob) {
       return blob.arrayBuffer();
@@ -1856,8 +1869,10 @@
         imagesHtml = `<img src="${item.imageUrl}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
       } else if (item.thumbnail) {
         imagesHtml = `<img src="${item.thumbnail}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
-      } else if (item.imageBase64) {
-        imagesHtml = `<img src="${item.imageBase64}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
+      } else if (item.thumbnail) {
+        // 使用 Object URL 或 base64
+        const imgSrc = item.thumbnail.startsWith('data:') ? item.thumbnail : item.thumbnail;
+        imagesHtml = `<img src="${imgSrc}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
       } else {
         // Try blob from OPFS/IndexedDB
         try {
@@ -1976,22 +1991,23 @@
         // Compress first image to 800px for storage
         imageBlob = await compressImage(selectedPhotos[0], 800, 0.7);
         if (imageBlob) {
-          imageBase64 = await blobToBase64(imageBlob);
+          // 使用 Object URL 替代 base64 (更高效，無 +33% 開銷)
+          const objectUrl = blobToObjectURL(imageBlob, tempItemId || 'temp_' + Date.now());
           
-          // 完全 P2P 模式：跳過 HTTP 上傳，直接用 base64 + CID
+          // 完全 P2P 模式：跳過 HTTP 上傳
           const tempItemId = 'p2p_' + Date.now();
           imageUrl = 'p2p://' + tempItemId;
           
           // 保存 CID 到本地 (內容尋址，去重)
           const cid = await CIDResolver.store(tempItemId, imageBlob);
           
-          // Store item with base64 thumbnail (instant display)
+          // Store item with Object URL thumbnail (instant display, no base64 overhead)
           const itemId = await db.items.add({
             type: 'marketplace', status: 'available', category, price, condition,
             title, description, sellerId: peerId, sellerName: displayName,
             h3Index: currentH3Index, timestamp: Date.now(),
             imageUrl: imageUrl,  // P2P marker
-            thumbnail: imageBase64,  // Base64 for instant display
+            thumbnail: objectUrl,  // Object URL (efficient!)
             microThumbnail: microThumbnail,  // Micro thumbnail (50px)
             cid: cid  // Content ID for P2P lookup
           });
@@ -2002,7 +2018,7 @@
           // 保存 blob 到 IndexedDB (P2P 傳輸用)
           await db.blobs.add({ itemId, blob: imageBlob });
           
-          // 通過 P2P 廣播圖片
+          // 通過 P2P 廣播圖片 (二進制，無 base64)
           console.log('[P2P] Broadcasting image via WebRTC...');
           if (P2PStreamer.getPeers().length > 0) {
             await P2PStreamer.sendImage(itemId, imageBlob);
