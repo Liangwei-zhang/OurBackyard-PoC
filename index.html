@@ -921,6 +921,10 @@
       itemToCid: new Map(),
       
       async hash(blob) {
+        // 如果傳入的是字符串（temp ID），直接返回
+        if (typeof blob === 'string') {
+          return 'qm1-' + this.base36(blob.split('').map(c => c.charCodeAt(0).toString(16).padStart(2,'0')).join('').slice(0,64));
+        }
         const buf = await blob.arrayBuffer();
         const hash = await crypto.subtle.digest('SHA-256', buf);
         const arr = Array.from(new Uint8Array(hash));
@@ -931,12 +935,17 @@
       base36(hex) { return BigInt('0x' + hex).toString(36); },
       
       async save(itemId, blob) {
-        const cid = await this.hash(blob);
-        this.cidMap.set(cid, { blob, itemId, timestamp: Date.now() });
+        // 如果 blob 不存在，創建一個虛擬的內容標記
+        let content = blob;
+        if (!blob || typeof blob === 'string') {
+          content = new Blob([itemId], { type: 'text/plain' });
+        }
+        const cid = await this.hash(content);
+        this.cidMap.set(cid, { blob: content, itemId, timestamp: Date.now() });
         this.itemToCid.set(itemId, cid);
         
         // 保存到 IndexedDB
-        await db.blobs.put({ itemId, blob, cid, timestamp: Date.now() });
+        await db.blobs.put({ itemId, blob: content, cid, timestamp: Date.now() });
         console.log('[CID] Saved:', cid);
         return cid;
       },
@@ -1897,6 +1906,10 @@
           imageBase64 = await blobToBase64(imageBlob);
           
           // Upload to server and get URL
+          // 生成臨時 ID 用於 P2P 標記
+          const tempItemId = 'temp_' + Date.now();
+          var useP2P = false;
+          
           try {
             const uploadResponse = await fetch('/api/upload/image', {
               method: 'POST',
@@ -1908,25 +1921,28 @@
             });
             if (!uploadResponse.ok) {
               console.error('Upload failed with status:', uploadResponse.status);
-              // HTTP 上傳失敗，標記需要 P2P 傳輸
-              imageUrl = 'p2p://' + itemId; // 標記為 P2P 模式
+              useP2P = true;
             } else {
               const uploadResult = await uploadResponse.json();
               if (uploadResult.success && uploadResult.url) {
                 imageUrl = uploadResult.url;
                 console.log('Image uploaded successfully:', imageUrl);
               } else {
-                imageUrl = 'p2p://' + itemId;
+                useP2P = true;
               }
             }
           } catch (e) {
             console.error('Upload error:', e);
-            // 網絡錯誤，啟用 P2P 傳輸
-            imageUrl = 'p2p://' + itemId;
+            useP2P = true;
+          }
+          
+          // 如果使用 P2P，標記 URL
+          if (useP2P) {
+            imageUrl = 'p2p://' + tempItemId;
           }
           
           // 保存 CID 到本地
-          const cid = await CIDResolver.save('pending-' + Date.now(), imageBlob);
+          const cid = await CIDResolver.save(tempItemId, imageBlob);
           
           // Store with URL first, fallback to base64
           const itemId = await db.items.add({
@@ -1943,7 +1959,7 @@
           await CIDResolver.save(itemId, imageBlob);
           
           // 通過 P2P 廣播圖片 (如果 HTTP 失敗或使用 P2P 模式)
-          if (imageUrl.startsWith('p2p://')) {
+          if (useP2P) {
             console.log('[P2P] Broadcasting image via WebRTC...');
             if (P2PStreamer.getPeers().length > 0) {
               await P2PStreamer.sendImage(itemId, imageBlob);
