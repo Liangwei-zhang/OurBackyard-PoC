@@ -1776,6 +1776,31 @@
       }));
     }
     
+    // Request image from neighbors (On-Demand Pull)
+    function requestImageFromNeighbors(imageHash, sellerId) {
+      console.log('[P2P] Requesting image from neighbors:', imageHash);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'REQ_IMAGE',
+          imageHash: imageHash,
+          requesterId: peerId,
+          sellerId: sellerId
+        }));
+      }
+    }
+    
+    // Handle incoming image request from neighbor
+    async function handleImageRequest(imageHash, requesterId) {
+      console.log('[P2P] Image request received:', imageHash, 'from:', requesterId);
+      const blobs = await db.blobs.where('hash').equals(imageHash).toArray();
+      if (blobs.length > 0) {
+        console.log('[P2P] Found image, sending to:', requesterId);
+        await sendImageBinaryWS(ws, blobs[0].blob, null, imageHash);
+      } else {
+        console.log('[P2P] Image not found:', imageHash);
+      }
+    }
+    
     // Auto-refresh items when image arrives
     window.addEventListener('p2p-image-ready', (e) => {
       console.log('[ImageReady] Refreshing items for hash:', e.detail.imageHash);
@@ -2011,6 +2036,8 @@
               console.log('[List] ✅ Loaded by hash:', item.imageHash);
             } else {
               console.log('[List] ❌ No blob for hash:', item.imageHash);
+              // REQUEST IMAGE FROM NEIGHBORS!
+              requestImageFromNeighbors(item.imageHash, item.sellerId);
             }
           } else {
             console.log('[List] ❌ No imageHash for item:', item.title);
@@ -2595,6 +2622,11 @@
                 }
               } catch(e) { console.error('[IMG_END] error:', e); }
             })();
+            break;
+          case 'REQ_IMAGE':
+            // On-Demand Pull: Neighbor is requesting an image we might have
+            console.log('[P2P] REQ_IMAGE received:', msg.imageHash, 'from:', msg.requesterId);
+            await handleImageRequest(msg.imageHash, msg.requesterId);
             break;
           case 'HEARTBEAT':
             onlineNeighbors.add(msg.peerId);
