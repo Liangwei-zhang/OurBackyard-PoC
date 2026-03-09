@@ -2864,10 +2864,11 @@
                         },
                         (err) => {
                             // Update badge: red = failed
-                            const badge =
-                                document.getElementById("location-badge");
-                            badge.textContent = "";
-                            badge.className = "location-badge error";
+                            const badge = document.getElementById("location-badge");
+                            if (badge) {
+                                badge.textContent = "";
+                                badge.className = "location-badge error";
+                            }
 
                             console.log(
                                 "Location unavailable, using default room",
@@ -4203,11 +4204,11 @@
                                     );
 
                                     // Auto-assemble when all chunks received
-                                    const expectedSize = msg.expectedSize || 999999999;
-                                    if (
-                                        incomingImages[imageHash].received >=
-                                        expectedSize
-                                    ) {
+                                    const currentImg = window._currentImageReceive;
+                                    const expectedSize = currentImg && currentImg.imageHash === imageHash 
+                                        ? currentImg.expectedSize 
+                                        : 999999999;
+                                    if (incomingImages[imageHash].received >= expectedSize) {
                                         console.log(
                                             "[IMG_CHUNK] All chunks received, auto-assembling...",
                                         );
