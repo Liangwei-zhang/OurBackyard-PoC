@@ -2331,7 +2331,7 @@
         
         console.log('[WS] Sending image with hash:', hash);
         
-        // Send binary chunks with backpressure
+        // Send binary chunks as BASE64 (Cloudflare Tunnel strips binary!)
         while (offset < totalSize) {
           // Wait if send buffer is full
           while (ws.bufferedAmount > 1024 * 1024) {
@@ -2339,10 +2339,16 @@
           }
           
           const chunk = buffer.slice(offset, offset + CHUNK_SIZE);
-          ws.send(chunk);
+          // Encode as base64 string for WebSocket transport
+          const chunkBase64 = btoa(String.fromCharCode(...new Uint8Array(chunk)));
+          ws.send(JSON.stringify({ 
+            type: 'IMG_CHUNK', 
+            data: chunkBase64,
+            imageHash: hash
+          }));
           offset += CHUNK_SIZE;
           
-          console.log('WS image chunk:', offset, '/', totalSize);
+          console.log('WS image chunk (base64):', offset, '/', totalSize);
         }
         
         // Send end marker
@@ -2393,14 +2399,9 @@
       };
       
       ws.onmessage = (e) => {
-        console.log('[WS] Message type:', typeof e.data, e.data instanceof ArrayBuffer, e.data instanceof Blob, e.data?.constructor?.name);
-        // Handle binary data (image chunks)
-        if (e.data instanceof ArrayBuffer || e.data instanceof Blob) {
-          console.log('[WS] Binary data received, size:', e.data.byteLength || e.data.size);
-          handleBinaryWSMessage(e.data);
-        } else {
-          handleMessage(e.data);
-        }
+        // Binary chunks are now sent as base64 JSON, not raw binary
+        // This is because Cloudflare Tunnel strips binary WebSocket data
+        handleMessage(e.data);
       };
       ws.onerror = () => { 
         stopHeartbeat(); 
@@ -2505,6 +2506,7 @@
               title: msg.title
             }));
             // Use hash-based content addressing!
+            // Note: Binary chunks now come as base64 strings!
             const himg = msg;
             (async () => {
               try {
@@ -2541,6 +2543,34 @@
                 };
               } catch(e) { console.error('[IMG_HEADER] error:', e); }
             })();
+            break;
+          case 'IMG_CHUNK':
+            // Decode base64 chunk back to binary
+            try {
+              const chunkData = msg.data;
+              const binaryString = atob(chunkData);
+              const bytes = new Uint8Array(binaryString.length);
+              for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+              }
+              const buffer = bytes.buffer;
+              
+              if (window._currentImageReceive) {
+                const { imageHash, expectedSize } = window._currentImageReceive;
+                console.log('[IMG_CHUNK] Decoded chunk for hash:', imageHash, 'size:', buffer.byteLength);
+                
+                if (!incomingImages[imageHash]) {
+                  incomingImages[imageHash] = { chunks: [], received: 0, mimeType: 'image/jpeg' };
+                }
+                
+                incomingImages[imageHash].chunks.push(buffer);
+                incomingImages[imageHash].received += buffer.byteLength;
+                
+                console.log('[IMG_CHUNK] Progress:', incomingImages[imageHash].received, '/', expectedSize);
+              }
+            } catch(e) {
+              console.error('[IMG_CHUNK] decode error:', e);
+            }
             break;
           case 'IMG_END':
             // Assemble and save binary image BY HASH
