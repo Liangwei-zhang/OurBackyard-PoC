@@ -162,6 +162,14 @@
       font-size: 12px;
       font-weight: 600;
     }
+    .sync-status {
+      background: var(--surface);
+      color: #aaa;
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      margin-left: 8px;
+    }
 
     /* Info Card */
     .info-card {
@@ -541,6 +549,7 @@
         <span class="status-text" id="status-text">Disconnected</span>
       </div>
       <div class="peer-count" id="peer-count">0 online</div>
+      <div class="sync-status" id="sync-status">Last sync: --</div>
     </div>
   </div>
 
@@ -1449,6 +1458,7 @@
       // Update last sync timestamp
       async setLastSync() {
         await db.sync.put({ key: 'lastSync', value: Date.now() });
+        updateSyncStatus();
       },
       
       // Check if item already synced (by title + seller + timestamp)
@@ -1932,12 +1942,34 @@
       if (count === 0 && localCount === 0) {
         el.innerHTML = '<span style="color:#666">○ No neighbors</span>';
       } else if (count > 0) {
-        el.innerHTML = `<span style="color:#4caf50">● ${count} peers (${localCount} nearby)</span>`;
+        el.innerHTML = `<span style="color:#4caf50">● ${count} peers</span>`;
       } else if (localCount > 0) {
         el.innerHTML = `<span style="color:#ff9800">◐ ${localCount} nearby</span>`;
       } else {
         el.innerHTML = '<span style="color:#666">○ Searching...</span>';
       }
+    }
+    
+    // Update sync time display
+    function updateSyncStatus() {
+      const el = document.getElementById('sync-status');
+      db.sync.get('lastSync').then(record => {
+        if (record && record.value) {
+          const diff = Date.now() - record.value;
+          const mins = Math.floor(diff / 60000);
+          if (mins < 1) {
+            el.innerHTML = '🔄 Just now';
+          } else if (mins === 1) {
+            el.innerHTML = '🔄 1 min ago';
+          } else if (mins < 60) {
+            el.innerHTML = `🔄 ${mins} mins ago`;
+          } else {
+            el.innerHTML = '🔄 Offline';
+          }
+        } else {
+          el.innerHTML = '🔄 Never';
+        }
+      });
     }
 
     // ============ UX: Optimistic UI - Instant Feedback ============
