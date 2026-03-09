@@ -1407,14 +1407,35 @@
           return false;
         }
         
-        const newId = await db.items.add({
+        // Use original itemId from neighbor if exists, otherwise let DB generate
+        const itemData = {
           ...item,
-          id: undefined,
-          syncedAt: Date.now()
-        });
+          id: item.id, // Preserve original ID from neighbor
+          syncedAt: Date.now(),
+          originalId: item.id // Store original ID for image mapping
+        };
+        delete itemData.id; // Let IndexedDB auto-generate
         
-        console.log('Synced new item:', item.title);
-        return true;
+        const newId = await db.items.add(itemData);
+        
+        // Map original itemId to new local id for image association
+        if (item.id && item.id !== newId) {
+          // Store mapping for image retrieval
+          await db.sync.put({ 
+            key: 'itemIdMap_' + item.id, 
+            value: newId 
+          });
+        }
+        
+        console.log('Synced new item:', item.title, 'with local id:', newId);
+        return newId;
+      },
+      
+      // Get local id from original itemId
+      async getLocalId(originalId) {
+        if (!originalId) return null;
+        const record = await db.sync.get('itemIdMap_' + originalId);
+        return record ? record.value : originalId;
       },
       
       // Request sync from peer
@@ -1632,13 +1653,8 @@
         // Assemble blob from chunks
         const blob = new Blob(img.chunks, { type: img.mimeType || 'image/jpeg' });
         
-        // Save to IndexedDB blobs table
+        // Save to IndexedDB blobs table (binary, efficient!)
         await db.blobs.put({ itemId: itemId, blob: blob, timestamp: Date.now() });
-        
-        // Generate thumbnail
-        const thumbBlob = await compressImage(blob, 800, 0.7);
-        const thumbBase64 = await blobToBase64(thumbBlob);
-        await db.items.update(itemId, { thumbnail: thumbBase64 });
         
         console.log('Image saved to IndexedDB:', itemId);
         
@@ -2305,18 +2321,24 @@
             }
             break;
           case 'IMG_HEADER':
+            // Map original itemId to local itemId
+            let localItemId = msg.itemId;
+            if (window._itemIdMapping && window._itemIdMapping[msg.itemId]) {
+              localItemId = window._itemIdMapping[msg.itemId];
+            }
+            
             // Start receiving binary image
             window._currentImageReceive = { 
-              itemId: msg.itemId, 
+              itemId: localItemId, 
               expectedSize: msg.size,
               mimeType: msg.mimeType || 'image/jpeg'
             };
-            incomingImages[msg.itemId] = { 
+            incomingImages[localItemId] = { 
               chunks: [], 
               received: 0,
               mimeType: msg.mimeType || 'image/jpeg'
             };
-            console.log('IMG_HEADER received:', msg.itemId, 'size:', msg.size);
+            console.log('IMG_HEADER received:', msg.itemId, '-> local:', localItemId, 'size:', msg.size);
             break;
           case 'IMG_END':
             // Assemble and save binary image
@@ -2406,9 +2428,14 @@
     }
 
     async function saveNeighborItem(item) {
-      // Use Sync Controller to avoid duplicates
-      const synced = await SyncController.syncItem(item);
-      if (synced) {
+      // Use Sync Controller to avoid duplicates, get local ID back
+      const localId = await SyncController.syncItem(item);
+      if (localId) {
+        // Map original itemId to local id for image association
+        if (item.id && item.id !== localId) {
+          window._itemIdMapping = window._itemIdMapping || {};
+          window._itemIdMapping[item.id] = localId;
+        }
         loadItems();
       }
     }
