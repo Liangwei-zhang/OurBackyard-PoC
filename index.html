@@ -1121,7 +1121,7 @@
                         if (blob?.blob) {
                             return URL.createObjectURL(blob.blob);
                         }
-                    } catch {}
+                    } catch (err) {}
 
                     // Fallback: return null (will show placeholder)
                     return null;
@@ -1289,7 +1289,7 @@
                             );
                             this.handleImageRequestDC(msg.imageHash, msg.responderId);
                         }
-                    } catch {}
+                    } catch (err) {}
                 },
 
                 async handleBinaryChunk(peerId, data) {
@@ -1462,7 +1462,7 @@
                 base36(hex) {
                     try {
                         return BigInt("0x" + hex).toString(36);
-                    } catch {
+                    } catch (err) {
                         return hex.substring(0, 32);
                     }
                 },
@@ -1499,8 +1499,8 @@
                             cid,
                             timestamp: Date.now(),
                         });
-                    } catch {
-                        console.error("[CID] DB save error:", e);
+                    } catch (err) {
+                        console.error("[CID] DB save error:", err);
                     }
 
                     // 廣告到網絡
@@ -1539,8 +1539,8 @@
                             await this.store("temp_" + Date.now(), stored.blob);
                             return stored.blob;
                         }
-                    } catch {
-                        console.error("[CID] DB load error:", e);
+                    } catch (err) {
+                        console.error("[CID] DB load error:", err);
                     }
 
                     // 3. 網絡請求
@@ -1671,8 +1671,8 @@
                         }
                         // Reload to get new version
                         window.location.reload();
-                    } catch {
-                        console.error("[Update] SW update failed:", e);
+                    } catch (err) {
+                        console.error("[Update] SW update failed:", err);
                         // Fallback: direct reload
                         window.location.reload();
                     }
@@ -2000,7 +2000,7 @@
                         }
                         console.log("OPFS not supported, using fallback");
                         return false;
-                    } catch {
+                    } catch (err) {
                         console.log("OPFS init failed:", e);
                         return false;
                     }
@@ -2022,8 +2022,8 @@
                         // Return a URL for the file
                         const file = await fileHandle.getFile();
                         return URL.createObjectURL(file);
-                    } catch {
-                        console.error("OPFS save error:", e);
+                    } catch (err) {
+                        console.error("OPFS save error:", err);
                         return null;
                     }
                 },
@@ -2037,7 +2037,7 @@
                             await this.dirHandle.getFileHandle(fileName);
                         const file = await fileHandle.getFile();
                         return URL.createObjectURL(file);
-                    } catch {
+                    } catch (err) {
                         return null;
                     }
                 },
@@ -2047,7 +2047,7 @@
 
                     try {
                         await this.dirHandle.removeEntry(`img_${itemId}.jpg`);
-                    } catch {}
+                    } catch (err) {}
                 },
             };
 
@@ -2155,8 +2155,8 @@
                             data,
                             signatureBuffer,
                         );
-                    } catch {
-                        console.error("[DID] Verify failed:", e);
+                    } catch (err) {
+                        console.error("[DID] Verify failed:", err);
                         return false;
                     }
                 },
@@ -2646,8 +2646,8 @@
                     );
                     console.log("Image sent complete:", itemId);
                     return true;
-                } catch {
-                    console.error("Image send failed:", e);
+                } catch (err) {
+                    console.error("Image send failed:", err);
                     return false;
                 }
             }
@@ -2754,8 +2754,8 @@
 
                     // Refresh display
                     loadItems();
-                } catch {
-                    console.error("[Image] Failed to save:", e);
+                } catch (err) {
+                    console.error("[Image] Failed to save:", err);
                 }
             }
 
@@ -2864,7 +2864,7 @@
                             }
                         }
                     }
-                } catch {}
+                } catch (err) {}
             }, 3000); // Check every 3 seconds
 
             // ============ Stability: Backpressure Control ============
@@ -3487,8 +3487,8 @@
                                 img.style.filter = "none";
                             }
                         }
-                    } catch {
-                        console.error("[List] Error:", e);
+                    } catch (err) {
+                        console.error("[List] Error:", err);
                     }
                 }
 
@@ -3542,7 +3542,7 @@
                                     item.imageHash,
                                 );
                             }
-                        } catch {
+                        } catch (err) {
                             console.log("[Detail] Hash query failed:", e);
                         }
                     }
@@ -3973,8 +3973,8 @@
                         JSON.stringify({ type: "IMG_END", itemId: itemId }),
                     );
                     console.log("WS image sent complete:", itemId);
-                } catch {
-                    console.error("WS image send failed:", e);
+                } catch (err) {
+                    console.error("WS image send failed:", err);
                 }
             }
 
@@ -4231,8 +4231,8 @@
                                         received: 0,
                                         mimeType: himg.mimeType || "image/jpeg",
                                     };
-                                } catch {
-                                    console.error("[IMG_HEADER] error:", e);
+                                } catch (err) {
+                                    console.error("[IMG_HEADER] error:", err);
                                 }
                             })();
                             break;
@@ -4309,8 +4309,8 @@
                                         }
                                     }
                                 } // End if(imageHash)
-                            } catch {
-                                console.error("[IMG_CHUNK] decode error:", e);
+                            } catch (err) {
+                                console.error("[IMG_CHUNK] decode error:", err);
                             }
                             break;
                         case "IMG_END":
@@ -4340,8 +4340,8 @@
                                             );
                                         }
                                     }
-                                } catch {
-                                    console.error("[IMG_END] error:", e);
+                                } catch (err) {
+                                    console.error("[IMG_END] error:", err);
                                 }
                             })();
                             break;
@@ -4440,7 +4440,7 @@
                             );
                             break;
                     }
-                } catch {}
+                } catch (err) {}
             }
 
             // Handle binary WebSocket messages (image chunks)
@@ -4494,8 +4494,8 @@
                     } else {
                         console.log("[Binary] ❌ No _currentImageReceive set!");
                     }
-                } catch {
-                    console.error("Binary message error:", e);
+                } catch (err) {
+                    console.error("Binary message error:", err);
                 }
             }
 
@@ -4832,7 +4832,7 @@
                             "mDNS_" + peerId,
                             JSON.stringify(presence),
                         );
-                    } catch {}
+                    } catch (err) {}
                 },
 
                 scanForPeers() {
@@ -4864,10 +4864,10 @@
                                             lastSeen: now,
                                         });
                                     }
-                                } catch {}
+                                } catch (err) {}
                             }
                         }
-                    } catch {}
+                    } catch (err) {}
 
                     // Clean stale
                     for (const [id, p] of this.peerList) {
