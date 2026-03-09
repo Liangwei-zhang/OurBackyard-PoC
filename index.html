@@ -1868,13 +1868,10 @@
       if (item.imageUrl && (item.imageUrl.startsWith('/uploads/') || item.imageUrl.startsWith('http'))) {
         imagesHtml = `<img src="${item.imageUrl}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
       } else if (item.thumbnail) {
+        // Object URL or base64 - both work
         imagesHtml = `<img src="${item.thumbnail}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
-      } else if (item.thumbnail) {
-        // 使用 Object URL 或 base64
-        const imgSrc = item.thumbnail.startsWith('data:') ? item.thumbnail : item.thumbnail;
-        imagesHtml = `<img src="${imgSrc}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
       } else {
-        // Try blob from OPFS/IndexedDB
+        // Try blob from OPFS/IndexedDB via CID
         try {
           const blobs = await db.blobs.where('itemId').equals(id).toArray();
           if (blobs.length > 0) {
@@ -1976,16 +1973,15 @@
       }
 
       // Compress images before storing
-      let imageBase64 = null;
       let imageUrl = null;
       let imageBlob = null;
       let microThumbnail = null;
       
       if (selectedPhotos.length > 0) {
-        // Generate micro-thumbnail (50px) for instant display
+        // Generate micro-thumbnail (50px) for instant display - use Object URL
         const microBlob = await generateMicroThumbnail(selectedPhotos[0]);
         if (microBlob) {
-          microThumbnail = await blobToBase64(microBlob);
+          microThumbnail = blobToObjectURL(microBlob, 'micro_' + Date.now());
         }
         
         // Compress first image to 800px for storage
@@ -2027,7 +2023,7 @@
         }
       }
       
-      if (!imageBase64 && !imageUrl) {
+      if (!imageBlob && !imageUrl) {
         await db.items.add({
           type: 'marketplace', status: 'available', category, price, condition,
           title, description, sellerId: peerId, sellerName: displayName,
@@ -2041,7 +2037,7 @@
         sellerId: peerId, sellerName: displayName,
         status: 'available', timestamp: Date.now(),
         imageUrl,
-        imageBase64
+        cid: cid || null
       };
       broadcastNewItem(fullItem);
 
@@ -2083,7 +2079,7 @@
         sellerId: item.sellerId,
         sellerName: item.sellerName,
         status: item.status,
-        hasImage: !!item.imageBase64
+        hasImage: !!(item.thumbnail || item.cid)
       };
       
       // Sign the item with DID
@@ -2095,14 +2091,14 @@
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify(signedMsg));
         
-        // If item has image, send as binary chunks
-        if (item.imageBase64) {
-          // Convert base64 to blob
-          const response = await fetch(item.imageBase64);
-          const blob = await response.blob();
-          
-          // Send binary image via WebSocket
-          await sendImageBinaryWS(ws, blob, item.id);
+        // If item has image, send as binary chunks via P2P (not base64)
+        if (item.thumbnail || item.cid) {
+          // Get blob from IndexedDB
+          const blobs = await db.blobs.where('itemId').equals(item.id).toArray();
+          if (blobs.length > 0) {
+            // Send binary image via WebSocket
+            await sendImageBinaryWS(ws, blobs[0].blob, item.id);
+          }
         }
       }
       
@@ -2272,7 +2268,7 @@
             break;
           case 'NEW_ITEM':
             console.log('Received NEW_ITEM:', msg.item ? 'has item' : 'no item', 
-              msg.item && msg.item.imageBase64 ? 'has image' : 'no image');
+              msg.item && (msg.item.thumbnail || msg.item.cid) ? 'has image' : 'no image');
             saveNeighborItem(msg.item);
             break;
           case 'CHAT':
