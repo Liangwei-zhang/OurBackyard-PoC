@@ -1949,19 +1949,19 @@
         try {
           let imgSrc = null;
           
-          // Try by imageHash first (content-addressable)
-          if (item.imageHash) {
+          // Try by itemId FIRST (most reliable for local items)
+          const blobs = await db.blobs.where('itemId').equals(item.id).toArray();
+          if (blobs.length > 0) {
+            imgSrc = URL.createObjectURL(blobs[0].blob);
+            console.log('[List] Loaded image by itemId:', item.id);
+          }
+          
+          // Fallback: try by imageHash (content-addressable)
+          if (!imgSrc && item.imageHash) {
             const hashBlobs = await db.blobs.where('hash').equals(item.imageHash).toArray();
             if (hashBlobs.length > 0) {
               imgSrc = URL.createObjectURL(hashBlobs[0].blob);
-            }
-          }
-          
-          // Fallback: try by itemId
-          if (!imgSrc) {
-            const blobs = await db.blobs.where('itemId').equals(item.id).toArray();
-            if (blobs.length > 0) {
-              imgSrc = URL.createObjectURL(blobs[0].blob);
+              console.log('[List] Loaded image by hash:', item.imageHash);
             }
           }
           
@@ -1972,7 +1972,9 @@
               img.style.filter = 'none';
             }
           }
-        } catch(e) {}
+        } catch(e) { 
+          console.error('[List] Image load error:', e); 
+        }
       }
       
       // Initialize lazy loading with binary-first loader
@@ -2002,22 +2004,21 @@
         if (item.thumbnail && (item.thumbnail.startsWith('http') || item.thumbnail.startsWith('/uploads/'))) {
           imgSrc = item.thumbnail;
         } 
-        // 2. Try loading from IndexedDB by IMAGE HASH (content-addressable)
+        // 2. Try loading from IndexedDB - by itemId FIRST (most reliable)
         else {
           try {
-            // Try to find by hash first
-            if (item.imageHash) {
-              const blobs = await db.blobs.where('hash').equals(item.imageHash).toArray();
-              if (blobs.length > 0) {
-                imgSrc = URL.createObjectURL(blobs[0].blob);
-                console.log('[Detail] Loaded image by hash:', item.imageHash);
-              }
+            // Try by itemId first (most reliable for local items)
+            const blobs = await db.blobs.where('itemId').equals(id).toArray();
+            if (blobs.length > 0) {
+              imgSrc = URL.createObjectURL(blobs[0].blob);
+              console.log('[Detail] Loaded image by itemId:', id);
             }
-            // Fallback: try by itemId
-            if (!imgSrc) {
-              const blobs = await db.blobs.where('itemId').equals(id).toArray();
-              if (blobs.length > 0) {
-                imgSrc = URL.createObjectURL(blobs[0].blob);
+            // Fallback: try by imageHash
+            else if (item.imageHash) {
+              const hashBlobs = await db.blobs.where('hash').equals(item.imageHash).toArray();
+              if (hashBlobs.length > 0) {
+                imgSrc = URL.createObjectURL(hashBlobs[0].blob);
+                console.log('[Detail] Loaded image by hash:', item.imageHash);
               }
             }
           } catch(e) {
