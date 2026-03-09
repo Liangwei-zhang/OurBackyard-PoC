@@ -224,6 +224,24 @@
       font-weight: 600;
       margin-left: 8px;
     }
+    .uptime {
+      background: var(--surface);
+      color: #8bc34a;
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    .location {
+      background: var(--surface);
+      color: #ff9800;
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
 
     /* Info Card */
     .info-card {
@@ -611,6 +629,8 @@
       <div class="encryption" id="encryption">🔒 E2E</div>
       <div class="items-count" id="items-count">📦 0</div>
       <div class="unread" id="unread">📬 0</div>
+      <div class="uptime" id="uptime">🌟 0m</div>
+      <div class="location" id="location">📍 --</div>
     </div>
   </div>
 
@@ -1989,6 +2009,8 @@
       updateStorageUsage();
       updateItemsCount();
       updateUnreadCount();
+      updateUptime();
+      updateLocationDisplay();
     });
 
     // ============ UI Functions ============
@@ -2130,6 +2152,30 @@
       }
       const el = document.getElementById('unread');
       el.innerHTML = `📬 ${unread}`;
+    }
+    
+    // Update uptime
+    const startTime = Date.now();
+    function updateUptime() {
+      const diff = Math.floor((Date.now() - startTime) / 60000);
+      const el = document.getElementById('uptime');
+      if (diff < 60) {
+        el.innerHTML = `🌟 ${diff}m`;
+      } else {
+        const hours = Math.floor(diff / 60);
+        el.innerHTML = `🌟 ${hours}h ${diff % 60}m`;
+      }
+    }
+    setInterval(updateUptime, 60000);
+    
+    // Update location / H3 zone display
+    function updateLocationDisplay() {
+      const el = document.getElementById('location');
+      if (currentH3Index) {
+        el.innerHTML = `📍 ${currentH3Index.slice(-6)}`;
+      } else {
+        el.innerHTML = '📍 --';
+      }
     }
 
     // ============ UX: Optimistic UI - Instant Feedback ============
