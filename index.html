@@ -881,8 +881,17 @@
         const total = buffer.byteLength;
         const CHUNK = 16384;
         
-        // 發送 header
-        this.broadcast({ type: 'IMG_HEADER', itemId, size: total });
+        // Get item info for matching on receiver side
+        const item = await db.items.get(itemId);
+        
+        // 發送 header with seller info
+        this.broadcast({ 
+          type: 'IMG_HEADER', 
+          itemId, 
+          size: total,
+          sellerId: item?.sellerId,
+          title: item?.title
+        });
         
         // 分片發送
         for (let offset = 0; offset < total; offset += CHUNK) {
@@ -2152,12 +2161,17 @@
       let offset = 0;
       
       try {
-        // Send header
+        // Get item details for matching on receiver side
+        const item = await db.items.get(itemId);
+        
+        // Send header with seller info for matching
         ws.send(JSON.stringify({ 
           type: 'IMG_HEADER', 
           itemId: itemId, 
           size: totalSize, 
-          mimeType: blob.type || 'image/jpeg' 
+          mimeType: blob.type || 'image/jpeg',
+          sellerId: item?.sellerId,
+          title: item?.title
         }));
         
         // Send binary chunks with backpressure
@@ -2189,6 +2203,9 @@
       updateStatus('connecting', 'Connecting...');
       
       ws = new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws/${roomId}`);
+      
+      // Enable binary data for image transfer
+      ws.binaryType = 'arraybuffer';
       
       ws.onopen = () => {
         updateStatus('connected', 'Connected');
@@ -2321,24 +2338,29 @@
             }
             break;
           case 'IMG_HEADER':
-            // Map original itemId to local itemId
-            let localItemId = msg.itemId;
-            if (window._itemIdMapping && window._itemIdMapping[msg.itemId]) {
-              localItemId = window._itemIdMapping[msg.itemId];
-            }
-            
-            // Start receiving binary image
-            window._currentImageReceive = { 
-              itemId: localItemId, 
-              expectedSize: msg.size,
-              mimeType: msg.mimeType || 'image/jpeg'
-            };
-            incomingImages[localItemId] = { 
-              chunks: [], 
-              received: 0,
-              mimeType: msg.mimeType || 'image/jpeg'
-            };
-            console.log('IMG_HEADER received:', msg.itemId, '-> local:', localItemId, 'size:', msg.size);
+            // Find local item by matching sellerId and title - store in global
+            const hMsg = msg;
+            (async () => {
+              try {
+                const localItems = await db.items.toArray();
+                const matchingItem = localItems.find(i => 
+                  i.sellerId === hMsg.sellerId && i.title === hMsg.title
+                );
+                
+                const targetId = matchingItem ? matchingItem.id : hMsg.itemId;
+                console.log('IMG_HEADER: mapped to local id:', targetId, 'title:', hMsg.title);
+                
+                window._currentImageReceive = { 
+                  itemId: targetId, 
+                  expectedSize: hMsg.size,
+                  mimeType: hMsg.mimeType || 'image/jpeg'
+                };
+                incomingImages[targetId] = { 
+                  chunks: [], received: 0,
+                  mimeType: hMsg.mimeType || 'image/jpeg'
+                };
+              } catch(e) { console.error('IMG_HEADER error:', e); }
+            })();
             break;
           case 'IMG_END':
             // Assemble and save binary image
