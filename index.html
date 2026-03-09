@@ -2325,7 +2325,7 @@
                     };
                     delete itemData.id; // Let IndexedDB auto-generate
 
-                    const newId = await db.items.add(itemData);
+                    const newId = await db.items.put({...itemData, itemId: item.id, updatedAt: item.updatedAt || Date.now()}); // Idempotent write
 
                     // Map original itemId to new local id for image association
                     if (item.id && item.id !== newId) {
@@ -3291,6 +3291,15 @@
             }
 
             async function renderMarketGrid(items, container) {
+                // ===== Layer 3: UI Deduplication =====
+                const seenIds = new Set();
+                items = items.filter(item => {
+                    const id = item.id || item.itemId;
+                    if (seenIds.has(id)) return false;
+                    seenIds.add(id);
+                    return true;
+                });
+
                 if (items.length === 0) {
                     container.innerHTML =
                         '<div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-text">No items nearby</div></div>';
@@ -4002,6 +4011,19 @@
             async function handleMessage(data) {
                 try {
                     const msg = JSON.parse(data);
+
+                    // ===== Layer 1: Message Deduplication =====
+                    const msgId = msg.type + (msg.item?.id || msg.itemId || msg.hash || msg.imageHash || '') + (msg.timestamp || Date.now());
+                    if (window._seenMsgIds && window._seenMsgIds.has(msgId)) {
+                        console.log('[Dedupe] Already processed:', msg.type);
+                        return;
+                    }
+                    if (!window._seenMsgIds) window._seenMsgIds = new Set();
+                    window._seenMsgIds.add(msgId);
+                    if (window._seenMsgIds.size > 500) {
+                        const first = window._seenMsgIds.values().next().value;
+                        window._seenMsgIds.delete(first);
+                    }
 
                     switch (msg.type) {
                         case "sys":
