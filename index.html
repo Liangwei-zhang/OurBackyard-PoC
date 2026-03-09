@@ -225,6 +225,51 @@
     .toggle-label { font-size: 10px; color: #666; display: flex; align-items: center; gap: 2px; }
     .toggle-label input { width: 12px; height: 12px; }
     
+    /* AI Recommendations */
+    .ai-recommendations {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      padding: 12px;
+      margin: 12px;
+    }
+    .ai-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 8px;
+   -icon { font-size }
+    .ai: 18px; }
+    .ai-items {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .ai-item {
+      min-width: 100px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 8px;
+      padding: 8px;
+      cursor: pointer;
+    }
+    .ai-item-img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+    .ai-item-title {
+      color: white;
+      font-size: 11px;
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
     /* Hide old status-bar */
     .status-bar, .peer-count, .network-type, .sync-status, .reputation, .timebank, .storage, .encryption, .items-count, .unread, .uptime, .location {
       display: none !important;
@@ -716,6 +761,14 @@
 
     <!-- Browse -->
     <div id="tab-browse">
+      <!-- AI Recommendations -->
+      <div class="ai-recommendations" id="ai-recommendations">
+        <div class="ai-header">
+          <span class="ai-icon">🎯</span>
+          <span>AI Picks for You</span>
+        </div>
+        <div class="ai-items" id="ai-items"></div>
+      </div>
       <div class="category-bar" id="category-bar"></div>
       <div class="market-grid" id="market-grid">
         <div class="empty-state">
@@ -2280,6 +2333,29 @@
         items = items.filter(i => i.category === selectedCategory);
       }
       renderMarketGrid(items, document.getElementById('market-grid'));
+      // Load AI recommendations
+      loadAIRecommendations();
+    }
+    
+    // ============ AI Recommendations ============
+    async function loadAIRecommendations() {
+      const items = await db.items.where('status').equals('available').toArray();
+      if (items.length === 0) {
+        document.getElementById('ai-recommendations').style.display = 'none';
+        return;
+      }
+      
+      // Simple AI: Random picks for now (can be upgraded to semantic search)
+      const shuffled = items.sort(() => 0.5 - Math.random());
+      const picks = shuffled.slice(0, 5);
+      
+      const container = document.getElementById('ai-items');
+      container.innerHTML = picks.map(item => `
+        <div class="ai-item" onclick="showItemDetail(${item.id})">
+          <img class="ai-item-img" src="${item.thumbnail || item.imageUrl || ''}" alt="${item.title}" onerror="this.style.display='none'">
+          <div class="ai-item-title">${item.title}</div>
+        </div>
+      `).join('');
     }
 
     async function loadMyItems() {
