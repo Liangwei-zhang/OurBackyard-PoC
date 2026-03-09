@@ -262,8 +262,11 @@
                border-bottom: 1px solid var(--border);
              }
              .stats-drawer.open {
-               max-height: 500px;
+               max-height: 80vh;
                padding: 12px;
+             }
+             .stats-drawer::-webkit-scrollbar {
+               display: none;
              }
              .stats-grid {
                display: grid;
