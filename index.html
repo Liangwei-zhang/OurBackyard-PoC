@@ -1690,7 +1690,7 @@
                 }
             };
             
-            AppUpdater.init();
+            // AppUpdater.init() - moved after db
 
             // ============ Module 58: P2P Content Moderation ============
             const ContentModerator = {
@@ -2132,6 +2132,7 @@
                 blocklist: "itemHash, reason, timestamp",
             });
             console.log("IndexedDB initialized v4 with blocklist");
+            AppUpdater.init();
 
             // Auto-login - generate display name if not saved
             db.userData.get("displayName").then((record) => {
