@@ -1778,14 +1778,18 @@
     
     // Request image from neighbors (On-Demand Pull)
     function requestImageFromNeighbors(imageHash, sellerId) {
-      console.log('[P2P] Requesting image from neighbors:', imageHash);
+      console.log('[P2P] Requesting image from neighbors:', imageHash, 'seller:', sellerId);
       if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
+        const msg = {
           type: 'REQ_IMAGE',
           imageHash: imageHash,
           requesterId: peerId,
           sellerId: sellerId
-        }));
+        };
+        console.log('[P2P] Sending REQ_IMAGE:', JSON.stringify(msg));
+        ws.send(JSON.stringify(msg));
+      } else {
+        console.log('[P2P] WS not connected, cannot request image');
       }
     }
     

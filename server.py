@@ -194,6 +194,25 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
                 print(f"[SYNC] Broadcasting response from {peer_id}")
                 await broadcast_to_room(room_id, message, exclude_peer=peer_id)
             
+            elif msg_type == "REQ_IMAGE":
+                # 圖片請求 - 廣播給所有 Peers
+                print(f"[REQ_IMAGE] Broadcasting image request from {peer_id}: {message.get('imageHash')}")
+                await broadcast_to_room(room_id, message, exclude_peer=peer_id)
+                
+            elif msg_type == "IMG_HEADER":
+                # 圖片頭部 - 廣播給所有 Peers
+                print(f"[IMG_HEADER] Broadcasting from {peer_id}")
+                await broadcast_to_room(room_id, message, exclude_peer=peer_id)
+                
+            elif msg_type == "IMG_CHUNK":
+                # 圖片數據塊 - 廣播給所有 Peers
+                await broadcast_to_room(room_id, message, exclude_peer=peer_id)
+                
+            elif msg_type == "IMG_END":
+                # 圖片結束 - 廣播給所有 Peers
+                print(f"[IMG_END] Broadcasting from {peer_id}")
+                await broadcast_to_room(room_id, message, exclude_peer=peer_id)
+            
             elif msg_type == "CHAT":
                 # Chat message - route to specific peer or broadcast
                 target = msg_data.get('to')
