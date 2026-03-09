@@ -1707,19 +1707,28 @@
     
     // Assemble and save image by HASH (content-addressable)
     async function assembleAndSaveImage(imageHash, itemId) {
+      console.log('[Image] 💾 assembleAndSaveImage called, hash:', imageHash, 'itemId:', itemId);
       const img = incomingImages[imageHash];
-      if (!img || img.chunks.length === 0) return;
+      if (!img || img.chunks.length === 0) {
+        console.log('[Image] ❌ No chunks for hash:', imageHash);
+        return;
+      }
       
       try {
+        console.log('[Image] 📦 Assembling', img.chunks.length, 'chunks, size:', img.chunks.reduce((a,b) => a + b.byteLength, 0));
+        
         // Assemble blob from chunks
         const blob = new Blob(img.chunks, { type: img.mimeType || 'image/jpeg' });
+        console.log('[Image] 🔧 Created blob, size:', blob.size, 'type:', blob.type);
         
         // Verify hash matches
         const computedHash = await ImageRegistry.computeHash(blob);
         if (computedHash !== imageHash) {
-          console.error('[Image] Hash mismatch! Expected:', imageHash, 'Got:', computedHash);
+          console.error('[Image] ❌ Hash mismatch! Expected:', imageHash, 'Got:', computedHash);
           return;
         }
+        
+        console.log('[Image] ✅ Hash verified, saving to DB...');
         
         // Save to IndexedDB - include itemId for keyPath compatibility
         const storeItemId = itemId || img.itemId;
@@ -1729,6 +1738,8 @@
           blob: blob, 
           timestamp: Date.now() 
         });
+        
+        console.log('[Image] 💾 Saved to IndexedDB, hash:', imageHash);
         
         // Update item with imageHash if provided
         if (itemId) {
@@ -1986,16 +1997,23 @@
       
       // Load images from IndexedDB asynchronously (by hash - content-addressable)
       for (const item of items) {
+        console.log('[List] Processing item:', item.title, 'hash:', item.imageHash);
         try {
           let imgSrc = null;
           
           // Use ONLY imageHash (content-addressable) - DO NOT use itemId
           if (item.imageHash) {
+            console.log('[List] Looking for hash:', item.imageHash);
             const hashBlobs = await db.blobs.where('hash').equals(item.imageHash).toArray();
+            console.log('[List] Found blobs:', hashBlobs.length);
             if (hashBlobs.length > 0) {
               imgSrc = URL.createObjectURL(hashBlobs[0].blob);
-              console.log('[List] Loaded by hash:', item.imageHash);
+              console.log('[List] ✅ Loaded by hash:', item.imageHash);
+            } else {
+              console.log('[List] ❌ No blob for hash:', item.imageHash);
             }
+          } else {
+            console.log('[List] ❌ No imageHash for item:', item.title);
           }
           
           if (imgSrc) {
@@ -2469,6 +2487,12 @@
             }
             break;
           case 'IMG_HEADER':
+            console.log('[WS] 📥 IMG_HEADER received:', JSON.stringify({
+              imageHash: msg.imageHash,
+              size: msg.size,
+              sellerId: msg.sellerId,
+              title: msg.title
+            }));
             // Use hash-based content addressing!
             const himg = msg;
             (async () => {
