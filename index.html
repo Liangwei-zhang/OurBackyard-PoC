@@ -3946,6 +3946,7 @@
                         }
 
                         const chunk = buffer.slice(offset, offset + CHUNK_SIZE);
+                        const chunkIndex = offset / CHUNK_SIZE;
                         // Encode as base64 string for WebSocket transport
                         const chunkBase64 = btoa(
                             String.fromCharCode(...new Uint8Array(chunk)),
@@ -3955,6 +3956,7 @@
                                 type: "IMG_CHUNK",
                                 data: chunkBase64,
                                 imageHash: hash,
+                                chunkIndex: chunkIndex,
                                 expectedSize: totalSize,
                             }),
                         );
@@ -4092,9 +4094,17 @@
                     const msg = JSON.parse(data);
 
                     // ===== Layer 1: Message Deduplication =====
-                    const msgId = msg.type + (msg.item?.id || msg.itemId || msg.hash || msg.imageHash || '') + (msg.timestamp || Date.now());
+                    // For IMG_CHUNK, use imageHash + chunkIndex for deduplication
+                    let msgId;
+                    if (msg.type === "IMG_CHUNK") {
+                        msgId = "IMG_CHUNK_" + msg.imageHash + "_" + (msg.chunkIndex || msg.offset || "0");
+                    } else if (msg.type === "IMG_HEADER") {
+                        msgId = "IMG_HEADER_" + msg.imageHash;
+                    } else {
+                        msgId = msg.type + (msg.item?.id || msg.itemId || msg.hash || msg.imageHash || '') + (msg.timestamp || Date.now());
+                    }
                     if (window._seenMsgIds && window._seenMsgIds.has(msgId)) {
-                        console.log('[Dedupe] Already processed:', msg.type);
+                        console.log('[Dedupe] Already processed:', msg.type, msg.imageHash ? ("hash:" + msg.imageHash) : "");
                         return;
                     }
                     if (!window._seenMsgIds) window._seenMsgIds = new Set();
