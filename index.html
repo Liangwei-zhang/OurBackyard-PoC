@@ -215,6 +215,15 @@
       font-weight: 600;
       margin-left: 8px;
     }
+    .unread {
+      background: var(--surface);
+      color: #f44336;
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
 
     /* Info Card */
     .info-card {
@@ -601,6 +610,7 @@
       <div class="storage" id="storage">💾 0MB</div>
       <div class="encryption" id="encryption">🔒 E2E</div>
       <div class="items-count" id="items-count">📦 0</div>
+      <div class="unread" id="unread">📬 0</div>
     </div>
   </div>
 
@@ -1978,6 +1988,7 @@
       updateNetworkStatus();
       updateStorageUsage();
       updateItemsCount();
+      updateUnreadCount();
     });
 
     // ============ UI Functions ============
@@ -2107,6 +2118,18 @@
         const el = document.getElementById('items-count');
         el.innerHTML = `📦 ${count}`;
       });
+    }
+    
+    // Update unread messages count
+    function updateUnreadCount() {
+      // Check for unread chat messages
+      db.chatMessages = db.chatMessages || [];
+      let unread = 0;
+      for (const msg of (db.chatMessages || [])) {
+        if (!msg.read && msg.to === peerId) unread++;
+      }
+      const el = document.getElementById('unread');
+      el.innerHTML = `📬 ${unread}`;
     }
 
     // ============ UX: Optimistic UI - Instant Feedback ============
