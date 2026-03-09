@@ -3551,6 +3551,7 @@
                                 type: "IMG_CHUNK",
                                 data: chunkBase64,
                                 imageHash: hash,
+                                expectedSize: totalSize,
                             }),
                         );
                         offset += CHUNK_SIZE;
@@ -3811,7 +3812,9 @@
                         case "IMG_CHUNK":
                             // Decode base64 chunk back to binary
                             try {
+                                const msg = JSON.parse(e.data);
                                 const chunkData = msg.data;
+                                const imageHash = msg.imageHash; // Use hash from message!
                                 const binaryString = atob(chunkData);
                                 const bytes = new Uint8Array(
                                     binaryString.length,
@@ -3821,9 +3824,8 @@
                                 }
                                 const buffer = bytes.buffer;
 
-                                if (window._currentImageReceive) {
-                                    const { imageHash, expectedSize } =
-                                        window._currentImageReceive;
+                                // Use hash from message, not global state
+                                if (imageHash) {
                                     console.log(
                                         "[IMG_CHUNK] Decoded chunk for hash:",
                                         imageHash,
@@ -3849,10 +3851,12 @@
                                         "[IMG_CHUNK] Progress:",
                                         incomingImages[imageHash].received,
                                         "/",
-                                        expectedSize,
+                                        msg.expectedSize || "unknown",
                                     );
+                                }
 
                                     // Auto-assemble when all chunks received
+                                    const expectedSize = msg.expectedSize || 999999999; // fallback
                                     if (
                                         incomingImages[imageHash].received >=
                                         expectedSize
