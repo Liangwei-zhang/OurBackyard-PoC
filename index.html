@@ -2393,8 +2393,10 @@
       };
       
       ws.onmessage = (e) => {
+        console.log('[WS] Message type:', typeof e.data, e.data instanceof ArrayBuffer, e.data instanceof Blob, e.data?.constructor?.name);
         // Handle binary data (image chunks)
         if (e.data instanceof ArrayBuffer || e.data instanceof Blob) {
+          console.log('[WS] Binary data received, size:', e.data.byteLength || e.data.size);
           handleBinaryWSMessage(e.data);
         } else {
           handleMessage(e.data);
@@ -2616,23 +2618,28 @@
     
     // Handle binary WebSocket messages (image chunks)
     async function handleBinaryWSMessage(data) {
+      console.log('[Binary] handleBinaryWSMessage called, data type:', typeof data, data?.constructor?.name);
       try {
         // Convert to ArrayBuffer if needed
         const buffer = data instanceof Blob ? await data.arrayBuffer() : data;
+        
+        console.log('[Binary] Buffer type:', buffer?.constructor?.name, 'byteLength:', buffer?.byteLength);
         
         // Find which image this chunk belongs to by checking the last IMG_HEADER
         // Use imageHash for content-addressable storage
         if (window._currentImageReceive) {
           const { imageHash, expectedSize } = window._currentImageReceive;
+          console.log('[Binary] Current receive:', imageHash, 'expected:', expectedSize);
           
           if (!incomingImages[imageHash]) {
             incomingImages[imageHash] = { chunks: [], received: 0, mimeType: 'image/jpeg' };
           }
           
           incomingImages[imageHash].chunks.push(buffer);
-          incomingImages[imageHash].received += buffer.byteLength;
-          
+          incomingImages[imageHash].received += buffer.byteLength;          
           console.log('[Binary] Chunk for hash:', imageHash, incomingImages[imageHash].received, '/', expectedSize);
+        } else {
+          console.log('[Binary] ❌ No _currentImageReceive set!');
         }
       } catch (e) {
         console.error('Binary message error:', e);
