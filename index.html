@@ -4178,9 +4178,9 @@
                                         "/",
                                         msg.expectedSize || "unknown",
                                     );
-                                }
+
                                     // Auto-assemble when all chunks received
-                                    const expectedSize = msg.expectedSize || 999999999; // fallback
+                                    const expectedSize = msg.expectedSize || 999999999;
                                     if (
                                         incomingImages[imageHash].received >=
                                         expectedSize
@@ -4188,7 +4188,6 @@
                                         console.log(
                                             "[IMG_CHUNK] All chunks received, auto-assembling...",
                                         );
-                                        // Find the item by hash - use filter since imageHash is not indexed
                                         const items = await db.items
                                             .filter(
                                                 (i) =>
