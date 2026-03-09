@@ -917,51 +917,124 @@
     
     // ============ CID Resolver - Content Addressable Storage ============
     const CIDResolver = {
-      cidMap: new Map(),
-      itemToCid: new Map(),
+      cidMap: new Map(),      // cid -> { blob, timestamp, refs }
+      itemToCid: new Map(),  // itemId -> cid
+      pending: new Map(),     // cid -> { resolve, timeout }
       
-      async hash(blob) {
-        // 如果傳入的是字符串（temp ID），直接返回
-        if (typeof blob === 'string') {
-          return 'qm1-' + this.base36(blob.split('').map(c => c.charCodeAt(0).toString(16).padStart(2,'0')).join('').slice(0,64));
-        }
+      // 計算內容的 CID (SHA-256)
+      async computeCID(blob) {
+        if (!blob) return null;
         const buf = await blob.arrayBuffer();
         const hash = await crypto.subtle.digest('SHA-256', buf);
         const arr = Array.from(new Uint8Array(hash));
         const hex = arr.map(b => b.toString(16).padStart(2,'0')).join('');
-        return 'qm1-' + this.base36(hex);
+        // multiformat 風格: cid1-<base36(sha256)>
+        return 'cid1-' + this.base36(hex);
       },
       
-      base36(hex) { return BigInt('0x' + hex).toString(36); },
+      base36(hex) {
+        try { return BigInt('0x' + hex).toString(36); }
+        catch { return hex.substring(0, 32); }
+      },
       
-      async save(itemId, blob) {
-        // 如果 blob 不存在，創建一個虛擬的內容標記
-        let content = blob;
-        if (!blob || typeof blob === 'string') {
-          content = new Blob([itemId], { type: 'text/plain' });
+      // 存儲內容 (去重)
+      async store(itemId, blob) {
+        if (!blob) return null;
+        
+        const cid = await this.computeCID(blob);
+        
+        // 檢查是否已存在 (去重)
+        if (this.cidMap.has(cid)) {
+          console.log('[CID] Already exists:', cid);
+          this.itemToCid.set(itemId, cid);
+          const entry = this.cidMap.get(cid);
+          entry.refs = (entry.refs || 0) + 1;
+          return cid;
         }
-        const cid = await this.hash(content);
-        this.cidMap.set(cid, { blob: content, itemId, timestamp: Date.now() });
+        
+        // 存儲到內存
+        this.cidMap.set(cid, {
+          blob,
+          timestamp: Date.now(),
+          size: blob.size,
+          refs: 1
+        });
         this.itemToCid.set(itemId, cid);
         
-        // 保存到 IndexedDB
-        await db.blobs.put({ itemId, blob: content, cid, timestamp: Date.now() });
-        console.log('[CID] Saved:', cid);
+        // 持久化到 IndexedDB
+        try {
+          await db.blobs.put({ itemId, blob, cid, timestamp: Date.now() });
+        } catch(e) { console.error('[CID] DB save error:', e); }
+        
+        // 廣告到網絡
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'CID_PROVIDE', cid, from: peerId }));
+        }
+        
+        console.log('[CID] Stored:', cid, 'size:', blob.size);
         return cid;
       },
       
-      async load(cid) {
-        // 從 IndexedDB 加載
-        const stored = await db.blobs.where('cid').equals(cid).first();
-        if (stored?.blob) return stored.blob;
+      // 檢索內容
+      async retrieve(cid) {
+        // 1. 內存
+        const cached = this.cidMap.get(cid);
+        if (cached) {
+          console.log('[CID] Hit memory:', cid);
+          return cached.blob;
+        }
         
-        // 請求網絡
-        this.broadcastCIDRequest(cid);
-        return null;
+        // 2. IndexedDB
+        try {
+          const stored = await db.blobs.where('cid').equals(cid).first();
+          if (stored?.blob) {
+            console.log('[CID] Hit IndexedDB:', cid);
+            // 還原到內存
+            await this.store('temp_' + Date.now(), stored.blob);
+            return stored.blob;
+          }
+        } catch(e) { console.error('[CID] DB load error:', e); }
+        
+        // 3. 網絡請求
+        console.log('[CID] Requesting from network:', cid);
+        return this.requestNetwork(cid);
       },
       
-      broadcastCIDRequest(cid) {
-        P2PStreamer.broadcast({ type: 'CID_REQUEST', cid });
+      // 網絡請求
+      requestNetwork(cid) {
+        return new Promise((resolve) => {
+          const timeout = setTimeout(() => {
+            this.pending.delete(cid);
+            resolve(null);
+          }, 15000);
+          
+          this.pending.set(cid, { resolve, timeout });
+          
+          // 廣播請求
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'CID_REQUEST', cid, from: peerId }));
+          }
+        });
+      },
+      
+      // 處理網絡響應
+      handleResponse(cid, blob) {
+        const pending = this.pending.get(cid);
+        if (pending) {
+          clearTimeout(pending.timeout);
+          pending.resolve(blob);
+          this.pending.delete(cid);
+          // 緩存
+          if (blob) this.store('net_' + Date.now(), blob);
+        }
+      },
+      
+      // 獲取統計
+      getStats() {
+        return {
+          memory: this.cidMap.size,
+          mapping: this.itemToCid.size
+        };
       }
     };
     
@@ -1909,8 +1982,8 @@
           const tempItemId = 'p2p_' + Date.now();
           imageUrl = 'p2p://' + tempItemId;
           
-          // 保存 CID 到本地 (內容尋址)
-          const cid = await CIDResolver.save(tempItemId, imageBlob);
+          // 保存 CID 到本地 (內容尋址，去重)
+          const cid = await CIDResolver.store(tempItemId, imageBlob);
           
           // Store item with base64 thumbnail (instant display)
           const itemId = await db.items.add({
@@ -1922,6 +1995,9 @@
             microThumbnail: microThumbnail,  // Micro thumbnail (50px)
             cid: cid  // Content ID for P2P lookup
           });
+          
+          // 廣告到網絡 (CID_PROVIDE)
+          console.log('[CID] Advertising:', cid);
           
           // 保存 blob 到 IndexedDB (P2P 傳輸用)
           await db.blobs.add({ itemId, blob: imageBlob });
@@ -2240,13 +2316,30 @@
             }
             break;
           case 'CID_REQUEST':
-            // Handle CID content request
-            if (msg.cid) {
-              const blob = await CIDResolver.load(msg.cid);
+            // Handle CID content request - respond if we have it
+            if (msg.cid && msg.from !== peerId) {
+              const blob = await CIDResolver.retrieve(msg.cid);
               if (blob) {
-                P2PStreamer.broadcast({ type: 'CID_RESPONSE', cid: msg.cid });
+                // 回應請求
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({ 
+                    type: 'CID_RESPONSE', 
+                    cid: msg.cid, 
+                    from: peerId 
+                  }));
+                }
               }
             }
+            break;
+          case 'CID_RESPONSE':
+            // Handle CID content response from peer
+            if (msg.cid) {
+              CIDResolver.handleResponse(msg.cid, null); // Blob will come separately
+            }
+            break;
+          case 'CID_PROVIDE':
+            // 記住誰有這個內容
+            console.log('[CID] Peer', msg.from, 'has:', msg.cid);
             break;
         }
       } catch (e) {}
