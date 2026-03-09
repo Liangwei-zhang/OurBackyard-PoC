@@ -751,22 +751,23 @@
                         <span class="stat-label">Your ID</span>
                         <span class="stat-value" id="peer-id-drawer" style="font-size:9px;word-break:break-all">-</span>
                     </div>
-                    <!-- Zone & Network -->
-                    <div class="stat-item">
+                    <!-- Zone -->
+                    <div class="stat-item full-width">
                         <span class="stat-icon">📍</span>
                         <span class="stat-label">Zone (H3)</span>
                         <span class="stat-value" id="h3-index-drawer">-</span>
                     </div>
-                    <div class="stat-item">
-                        <span class="stat-icon">📡</span>
-                        <span class="stat-label">Network</span>
-                        <span class="stat-value" id="network-type">Online</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-icon">🔄</span>
-                        <span class="stat-label">Sync</span>
-                        <span class="stat-value" id="sync-status">--</span>
-                    </div>
+                    <!-- P2P Mode Toggle -->
+                    <div class="stat-item full-width">
+                        <span class="stat-icon">🔀</span>
+                        <span class="stat-label">P2P Mode</span>
+                        <div class="p2p-toggles">
+                            <label class="toggle-label"
+                                ><input
+                                    type="checkbox"
+                                    id="dhtToggle"
+                                    checked
+                                />
                                 DHT</label
                             >
                             <label class="toggle-label"
