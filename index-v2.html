@@ -239,6 +239,10 @@
       object-fit: cover;
       border-radius: 10px;
       background: rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
     }
     .ai-card-title {
       color: white;
@@ -278,6 +282,19 @@
       aspect-ratio: 1;
       object-fit: cover;
       background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+    }
+    .product-image.loading {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--bg-card) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: skeleton-loading 1.5s infinite;
+    }
+    @keyframes skeleton-loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
     }
     .product-info {
       padding: 12px;
@@ -315,8 +332,13 @@
       padding: 2px 6px;
       border-radius: 6px;
     }
+    .product-seller {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
 
-    /* Placeholder States */
+    /* Empty State */
     .empty-state {
       text-align: center;
       padding: 60px 20px;
@@ -352,64 +374,6 @@
     .tab-icon { font-size: 20px; }
     .tab-label { font-size: 10px; font-weight: 500; }
 
-    /* Connection Modal */
-    .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 200;
-    }
-    .modal-overlay.show { display: flex; }
-    .modal {
-      background: var(--bg-card);
-      border-radius: 20px;
-      padding: 24px;
-      width: 90%;
-      max-width: 360px;
-    }
-    .modal-title {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 16px;
-    }
-    .connection-options {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .conn-option {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 14px;
-      background: var(--surface);
-      border-radius: 12px;
-      cursor: pointer;
-      border: 2px solid transparent;
-    }
-    .conn-option.selected {
-      border-color: var(--primary);
-    }
-    .conn-icon { font-size: 24px; }
-    .conn-info { flex: 1; }
-    .conn-name { font-weight: 500; font-size: 14px; }
-    .conn-desc { font-size: 11px; color: var(--text-muted); }
-
-    /* Loading Skeleton */
-    .skeleton {
-      background: linear-gradient(90deg, var(--surface) 25%, var(--bg-card) 50%, var(--surface) 75%);
-      background-size: 200% 100%;
-      animation: skeleton-loading 1.5s infinite;
-      border-radius: 8px;
-    }
-    @keyframes skeleton-loading {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-
     /* Debug Panel (Hidden by default) */
     .debug-panel {
       display: none;
@@ -433,6 +397,24 @@
       border-bottom: 1px solid var(--border);
     }
     .debug-label { color: var(--text-muted); }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent-green);
+      color: #000;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .toast.show { opacity: 1; }
+    .toast.error { background: #f44336; color: white; }
   </style>
 </head>
 <body>
@@ -459,6 +441,7 @@
         <span id="connectionText">連接中...</span>
       </div>
       <span class="peer-count" id="peerCount">0 在線</span>
+      <span class="latency" id="latency">--</span>
     </div>
     <div class="status-right">
       <div class="user-reputation">
@@ -520,6 +503,7 @@
   <div class="debug-panel" id="debugPanel">
     <div class="debug-title">🔧 調試信息</div>
     <div class="debug-row"><span class="debug-label">連接狀態:</span><span id="debugStatus">--</span></div>
+    <div class="debug-row"><span class="debug-label">WebSocket:</span><span id="debugWS">--</span></div>
     <div class="debug-row"><span class="debug-label">房間ID:</span><span id="debugRoom">--</span></div>
     <div class="debug-row"><span class="debug-label">節點數:</span><span id="debugPeers">--</span></div>
     <div class="debug-row"><span class="debug-label">商品數:</span><span id="debugProducts">--</span></div>
@@ -527,6 +511,9 @@
     <div class="debug-row"><span class="debug-label">聲譽分:</span><span id="debugReputation">--</span></div>
     <div class="debug-row"><span class="debug-label">時間銀行:</span><span id="debugTimebank">--</span></div>
   </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
 
   <!-- Tab Bar -->
   <nav class="tab-bar">
@@ -557,6 +544,7 @@
     // V2 App State
     // ============================
     const AppState = {
+      ws: null,
       connected: false,
       peerId: '',
       roomId: 'ourbackyard.h3.8912ccd5083ffff',
@@ -564,22 +552,244 @@
       products: [],
       userReputation: 95,
       timebankBalance: 12,
-      latency: 0
+      latency: 0,
+      dataChannels: {},
+      heartbeatInterval: null
     };
 
     // ============================
-    // Mock Data for V2 Testing
+    // Toast Notification
     // ============================
-    const mockProducts = [
-      { id: 1, name: '山地自行車', price: 150, image: '', reputation: 4.8, distance: 0.3, seller: 'Alice' },
-      { id: 2, name: '二手電視 32寸', price: 80, image: '', reputation: 4.5, distance: 0.5, seller: 'Bob' },
-      { id: 3, name: '燒烤爐', price: 45, image: '', reputation: 5.0, distance: 0.8, seller: 'Carol' },
-      { id: 4, name: '兒童玩具箱', price: 25, image: '', reputation: 4.2, distance: 1.2, seller: 'Dave' },
-      { id: 5, name: '園藝工具套裝', price: 35, image: '', reputation: 4.7, distance: 1.5, seller: 'Eve' },
-      { id: 6, name: '咖啡機', price: 60, image: '', reputation: 4.9, distance: 2.0, seller: 'Frank' },
-      { id: 7, name: '書籍角落', price: 20, image: '', reputation: 4.6, distance: 2.3, seller: 'Grace' },
-      { id: 8, name: '健身器材', price: 100, image: '', reputation: 4.4, distance: 2.8, seller: 'Henry' }
-    ];
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = 'toast' + (isError ? ' error' : '');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // ============================
+    // IndexedDB Setup for P2P Images
+    // ============================
+    let db = null;
+    
+    async function initDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open('ourbackyard-v2', 1);
+        
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          db = request.result;
+          console.log('[DB] IndexedDB initialized');
+          resolve(db);
+        };
+        
+        request.onupgradeneeded = (e) => {
+          const database = e.target.result;
+          if (!database.objectStoreNames.contains('blobs')) {
+            database.createObjectStore('blobs', { keyPath: 'hash' });
+          }
+          if (!database.objectStoreNames.contains('items')) {
+            database.createObjectStore('items', { keyPath: 'id' });
+          }
+        };
+      });
+    }
+
+    async function saveBlob(hash, blob) {
+      if (!db) await initDB();
+      const tx = db.transaction('blobs', 'readwrite');
+      await tx.objectStore('blobs').put({ hash, blob, timestamp: Date.now() });
+    }
+
+    async function getBlob(hash) {
+      if (!db) await initDB();
+      const tx = db.transaction('blobs', 'readonly');
+      const store = tx.objectStore('blobs');
+      return new Promise((resolve) => {
+        const request = store.get(hash);
+        request.onsuccess = () => resolve(request.result?.blob || null);
+        request.onerror = () => resolve(null);
+      });
+    }
+
+    // ============================
+    // WebSocket Connection
+    // ============================
+    function connect() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws/${AppState.roomId}`;
+      
+      console.log('[WS] Connecting to:', wsUrl);
+      AppState.ws = new WebSocket(wsUrl);
+      
+      AppState.ws.onopen = () => {
+        console.log('[WS] Connected');
+        AppState.connected = true;
+        updateStatus('connected');
+        
+        // Send join message
+        AppState.ws.send(JSON.stringify({
+          type: 'JOIN',
+          peerId: AppState.peerId,
+          roomId: AppState.roomId
+        }));
+        
+        // Request sync
+        AppState.ws.send(JSON.stringify({
+          type: 'SYNC_REQUEST',
+          peerId: AppState.peerId
+        }));
+        
+        startHeartbeat();
+        showToast('已連接到網絡');
+      };
+      
+      AppState.ws.onclose = () => {
+        console.log('[WS] Disconnected');
+        AppState.connected = false;
+        updateStatus('disconnected');
+        
+        // Reconnect after 3 seconds
+        setTimeout(connect, 3000);
+      };
+      
+      AppState.ws.onerror = (e) => {
+        console.error('[WS] Error:', e);
+        updateStatus('disconnected');
+      };
+      
+      AppState.ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          handleMessage(msg);
+        } catch (e) {
+          console.error('[WS] Parse error:', e);
+        }
+      };
+    }
+
+    function handleMessage(msg) {
+      console.log('[WS] Message:', msg.type);
+      
+      switch (msg.type) {
+        case 'JOIN':
+          // New peer joined
+          AppState.peerCount = msg.peerCount || AppState.peerCount + 1;
+          updatePeerCount(AppState.peerCount);
+          break;
+          
+        case 'LEAVE':
+          AppState.peerCount = Math.max(0, (msg.peerCount || AppState.peerCount) - 1);
+          updatePeerCount(AppState.peerCount);
+          break;
+          
+        case 'SYNC_RESPONSE':
+          if (msg.items && Array.isArray(msg.items)) {
+            AppState.products = msg.items;
+            renderProducts();
+            renderAIRecommendations();
+          }
+          break;
+          
+        case 'NEW_ITEM':
+          // New item broadcast
+          if (msg.item) {
+            const exists = AppState.products.find(p => p.id === msg.item.id);
+            if (!exists) {
+              AppState.products.unshift(msg.item);
+              renderProducts();
+              renderAIRecommendations();
+            }
+          }
+          break;
+          
+        case 'HEARTBEAT':
+          // Update latency
+          if (msg.timestamp) {
+            AppState.latency = Date.now() - msg.timestamp;
+            document.getElementById('latency').textContent = AppState.latency + 'ms';
+          }
+          break;
+          
+        case 'IMG_CHUNK':
+          // Handle image chunk
+          handleImageChunk(msg);
+          break;
+          
+        case 'IMG_HEADER':
+          // Start receiving image
+          console.log('[IMG] Header:', msg);
+          break;
+      }
+      
+      document.getElementById('debugWS').textContent = AppState.ws?.readyState || '--';
+    }
+
+    // ============================
+    // Image Chunk Handler
+    // ============================
+    const imageChunks = {};
+    
+    function handleImageChunk(msg) {
+      const { imageHash, data, chunkIndex, totalChunks } = msg;
+      
+      if (!imageChunks[imageHash]) {
+        imageChunks[imageHash] = {
+          chunks: new Array(totalChunks),
+          received: 0
+        };
+      }
+      
+      imageChunks[imageHash].chunks[chunkIndex] = data;
+      imageChunks[imageHash].received++;
+      
+      // Check if complete
+      if (imageChunks[imageHash].received === totalChunks) {
+        const fullBase64 = imageChunks[imageHash].chunks.join('');
+        const binaryString = atob(fullBase64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: 'image/jpeg' });
+        
+        // Save to IndexedDB
+        saveBlob(imageHash, blob);
+        
+        // Update UI
+        updateProductImage(imageHash, blob);
+        
+        delete imageChunks[imageHash];
+      }
+    }
+
+    function updateProductImage(imageHash, blob) {
+      const objectUrl = URL.createObjectURL(blob);
+      document.querySelectorAll(`[data-imagehash="${imageHash}"]`).forEach(img => {
+        img.src = objectUrl;
+        img.classList.remove('loading');
+      });
+    }
+
+    // ============================
+    // Heartbeat
+    // ============================
+    function startHeartbeat() {
+      if (AppState.heartbeatInterval) {
+        clearInterval(AppState.heartbeatInterval);
+      }
+      
+      AppState.heartbeatInterval = setInterval(() => {
+        if (AppState.ws && AppState.ws.readyState === WebSocket.OPEN) {
+          AppState.ws.send(JSON.stringify({
+            type: 'HEARTBEAT',
+            peerId: AppState.peerId,
+            timestamp: Date.now()
+          }));
+        }
+      }, 15000);
+    }
 
     // ============================
     // UI Functions
@@ -588,43 +798,78 @@
       const grid = document.getElementById('productsGrid');
       const empty = document.getElementById('emptyState');
       
-      if (mockProducts.length === 0) {
+      if (AppState.products.length === 0) {
         grid.style.display = 'none';
         empty.style.display = 'block';
+        document.getElementById('debugProducts').textContent = 0;
         return;
       }
       
       grid.style.display = 'grid';
       empty.style.display = 'none';
       
-      grid.innerHTML = mockProducts.map(p => `
+      grid.innerHTML = AppState.products.map(p => `
         <div class="product-card" data-id="${p.id}">
-          <div class="product-image skeleton"></div>
+          <div class="product-image loading" data-imagehash="${p.imageHash || ''}">
+            ${p.imageHash ? '' : '📦'}
+          </div>
           <div class="product-info">
-            <div class="product-name">${p.name}</div>
+            <div class="product-name">${p.title || p.name || '未命名'}</div>
             <div class="product-meta">
-              <span class="product-price">$${p.price}</span>
+              <span class="product-price">$${p.price || 0}</span>
               <div class="product-stats">
-                <span class="product-reputation">⭐${p.reputation}</span>
-                <span class="product-distance">${p.distance}km</span>
+                <span class="product-reputation">⭐${p.sellerReputation || '--'}</span>
+                <span class="product-distance">${p.distance || '--'}km</span>
               </div>
             </div>
+            <div class="product-seller">👤 ${p.sellerName || '匿名'}</div>
           </div>
         </div>
       `).join('');
       
-      document.getElementById('debugProducts').textContent = mockProducts.length;
+      document.getElementById('debugProducts').textContent = AppState.products.length;
+      
+      // Try to load images
+      loadProductImages();
+    }
+
+    async function loadProductImages() {
+      for (const p of AppState.products) {
+        if (p.imageHash) {
+          // Try to get from IndexedDB first
+          const blob = await getBlob(p.imageHash);
+          if (blob) {
+            updateProductImage(p.imageHash, blob);
+          } else if (AppState.ws && AppState.ws.readyState === WebSocket.OPEN) {
+            // Request image from network
+            AppState.ws.send(JSON.stringify({
+              type: 'REQ_IMAGE',
+              imageHash: p.imageHash,
+              peerId: AppState.peerId
+            }));
+          }
+        }
+      }
     }
 
     function renderAIRecommendations() {
       const container = document.getElementById('aiRecommendations');
-      const recommendations = mockProducts.slice(0, 4);
+      
+      // Use top 4 products for AI recommendations
+      const recommendations = AppState.products.slice(0, 4);
+      
+      if (recommendations.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-muted); padding: 20px;">暫無推薦</div>';
+        return;
+      }
       
       container.innerHTML = recommendations.map(p => `
         <div class="ai-card" data-id="${p.id}">
-          <div class="ai-card-img">🖼️</div>
-          <div class="ai-card-title">${p.name}</div>
-          <div class="ai-card-price">$${p.price}</div>
+          <div class="ai-card-img" data-imagehash="${p.imageHash || ''}">
+            ${p.imageHash ? '' : '🛍️'}
+          </div>
+          <div class="ai-card-title">${p.title || p.name || '商品'}</div>
+          <div class="ai-card-price">$${p.price || 0}</div>
         </div>
       `).join('');
     }
@@ -670,6 +915,7 @@
       document.body.classList.toggle('day-mode');
       const isDay = document.body.classList.contains('day-mode');
       document.getElementById('themeToggle').textContent = isDay ? '☀️' : '🌙';
+      localStorage.setItem('ourbackyard_v2_daymode', isDay);
     });
 
     document.getElementById('debugToggle').addEventListener('click', () => {
@@ -677,7 +923,31 @@
     });
 
     document.getElementById('aiSearchBtn').addEventListener('click', () => {
-      alert('🤖 AI 語義搜索 - 開發中\n\n將支持：\n• 自然語言搜索\n• 語義匹配\n• 智能推薦');
+      const query = document.getElementById('searchInput').value;
+      if (query) {
+        // Semantic search - filter products
+        const filtered = AppState.products.filter(p => 
+          (p.title || '').toLowerCase().includes(query.toLowerCase()) ||
+          (p.description || '').toLowerCase().includes(query.toLowerCase()) ||
+          (p.category || '').toLowerCase().includes(query.toLowerCase())
+        );
+        
+        if (filtered.length > 0) {
+          AppState.products = filtered;
+          renderProducts();
+          showToast(`找到 ${filtered.length} 個結果`);
+        } else {
+          showToast('沒有找到匹配的結果', true);
+        }
+      } else {
+        showToast('🤖 AI 語義搜索 - 開發中');
+      }
+    });
+
+    document.getElementById('searchInput').addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('aiSearchBtn').click();
+      }
     });
 
     document.querySelectorAll('.tab-item').forEach(tab => {
@@ -690,29 +960,38 @@
     // ============================
     // Initialize V2
     // ============================
-    function initV2() {
-      renderProducts();
-      renderAIRecommendations();
+    async function initV2() {
+      // Load peer ID
+      AppState.peerId = localStorage.getItem('ourbackyard_v2_peerId');
+      if (!AppState.peerId) {
+        AppState.peerId = 'peer_' + Math.random().toString(36).substr(2, 8);
+        localStorage.setItem('ourbackyard_v2_peerId', AppState.peerId);
+      }
+      
+      // Load theme
+      const isDayMode = localStorage.getItem('ourbackyard_v2_daymode') === 'true';
+      if (isDayMode) {
+        document.body.classList.add('day-mode');
+        document.getElementById('themeToggle').textContent = '☀️';
+      }
+      
+      // Initialize IndexedDB
+      await initDB();
+      
+      // Update UI
       updateStatus('connecting');
       updatePeerCount(0);
       updateUserInfo();
       updateDebug();
       
-      // Simulate connection
-      setTimeout(() => {
-        updateStatus('connected');
-        updatePeerCount(Math.floor(Math.random() * 20) + 5);
-      }, 1500);
+      // Connect to WebSocket
+      connect();
       
-      // Generate random peer ID
-      AppState.peerId = 'peer_' + Math.random().toString(36).substr(2, 8);
-      updateDebug();
+      console.log('🏡 OurBackyard V2 initialized');
     }
 
     // Start V2
     initV2();
-    
-    console.log('🏡 OurBackyard V2 initialized');
   </script>
 </body>
 </html>
