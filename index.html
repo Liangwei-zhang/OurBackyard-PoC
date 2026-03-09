@@ -4227,6 +4227,7 @@
                                     incomingImages[imageHash] = {
                                         // Key by hash!
                                         itemId: targetId,
+                                        expectedSize: himg.size,
                                         chunks: [],
                                         received: 0,
                                         mimeType: himg.mimeType || "image/jpeg",
@@ -4262,6 +4263,7 @@
 
                                     if (!incomingImages[imageHash]) {
                                         incomingImages[imageHash] = {
+                                            expectedSize: 999999999, // Will be updated when header arrives
                                             chunks: [],
                                             received: 0,
                                             mimeType: "image/jpeg",
@@ -4282,11 +4284,10 @@
                                     );
 
                                     // Auto-assemble when all chunks received
-                                    const currentImg = window._currentImageReceive;
-                                    const expectedSize = currentImg && currentImg.imageHash === imageHash 
-                                        ? currentImg.expectedSize 
-                                        : 999999999;
-                                    if (incomingImages[imageHash].received >= expectedSize) {
+                                    // Track expectedSize per-image in incomingImages
+                                    const imgData = incomingImages[imageHash];
+                                    const expectedSize = imgData && imgData.expectedSize ? imgData.expectedSize : 999999999;
+                                    if (imgData && imgData.received >= expectedSize) {
                                         console.log(
                                             "[IMG_CHUNK] All chunks received, auto-assembling...",
                                         );
