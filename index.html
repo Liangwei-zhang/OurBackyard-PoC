@@ -865,6 +865,12 @@
                         <span class="stat-label">Rank</span>
                         <span class="stat-value" id="leader-rank">#--</span>
                     </div>
+                    <!-- App Update -->
+                    <div class="stat-item full-width" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+                        <span class="stat-icon">🔄</span>
+                        <span class="stat-label">Version</span>
+                        <button class="btn btn-sm" onclick="AppUpdater.checkForUpdates()">檢查更新</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1515,6 +1521,72 @@
                 },
             };
 
+            // ============ P2P App Update System ============
+            const AppUpdater = {
+                currentVersion: "1.0.0",
+                currentBundleHash: null,
+                
+                async init() {
+                    const saved = await db.systemAssets.get("app-bundle");
+                    if (saved) {
+                        this.currentVersion = saved.version || "1.0.0";
+                        this.currentBundleHash = saved.hash;
+                        console.log("[Update] Current version:", this.currentVersion);
+                    }
+                },
+                
+                async checkForUpdates() {
+                    console.log("[Update] Broadcasting APP_UPDATE_CHECK...");
+                    broadcast({ type: "APP_UPDATE_CHECK", version: this.currentVersion, peerId: peerId });
+                },
+                
+                async handleUpdateMessage(msg) {
+                    if (msg.type === "APP_UPDATE_AVAILABLE") {
+                        console.log("[Update] New version available:", msg.version);
+                        if (this.compareVersion(msg.version, this.currentVersion) > 0) {
+                            broadcast({ type: "REQ_APP_BUNDLE", version: msg.version, bundleHash: msg.bundleHash, peerId: peerId });
+                        }
+                    }
+                    if (msg.type === "APP_BUNDLE") {
+                        console.log("[Update] Received app bundle:", msg.bundleHash);
+                        await this.saveBundle(msg.bundle, msg.bundleHash, msg.version);
+                    }
+                },
+                
+                async saveBundle(bundleBlob, bundleHash, version) {
+                    await db.systemAssets.put({ url: "app-bundle", blob: bundleBlob, hash: bundleHash, version: version, timestamp: Date.now() });
+                    this.currentVersion = version;
+                    this.currentBundleHash = bundleHash;
+                    console.log("[Update] Bundle saved, version:", version);
+                    if (confirm("新版本 " + version + " 已下載完成，是否重載應用？")) {
+                        location.reload();
+                    }
+                },
+                
+                compareVersion(v1, v2) {
+                    const p1 = v1.split(".").map(Number);
+                    const p2 = v2.split(".").map(Number);
+                    for (let i = 0; i < 3; i++) {
+                        if (p1[i] > p2[i]) return 1;
+                        if (p1[i] < p2[i]) return -1;
+                    }
+                    return 0;
+                },
+                
+                async publishUpdate(bundleBlob) {
+                    const version = prompt("輸入新版本號 (例如 1.0.1):");
+                    if (!version) return;
+                    const hashBuffer = await bundleBlob.arrayBuffer();
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    const hash = "app1-" + hashArray.slice(0, 20).map(b => b.toString(16).padStart(2, "0")).join("");
+                    await this.saveBundle(bundleBlob, hash, version);
+                    broadcast({ type: "APP_UPDATE_AVAILABLE", version: version, bundleHash: hash, peerId: peerId });
+                    alert("版本 " + version + " 已發布！");
+                }
+            };
+            
+            AppUpdater.init();
+
             // ============ Image Hash Registry (Content Addressable) ============
             // Maps items to their image hashes (CID)
             const ImageRegistry = {
@@ -1811,13 +1883,14 @@
 
             // ============ Initialize IndexedDB (Dexie) ============
             const db = new Dexie("OurBackyardDB");
-            db.version(2).stores({
+            db.version(3).stores({
                 items: "++id, title, category, price, status, sellerId, h3Index, timestamp",
                 blobs: "itemId, hash",
                 sync: "key",
                 userData: "key",
+                systemAssets: "url, hash, version",
             });
-            console.log("IndexedDB initialized v2");
+            console.log("IndexedDB initialized v3 with systemAssets");
 
             // Auto-login - generate display name if not saved
             db.userData.get("displayName").then((record) => {
@@ -3714,6 +3787,10 @@
                                 updatePeerCount(
                                     Math.max(0, connectedPeers - 1),
                                 );
+                            break;
+                        case "APP_UPDATE_AVAILABLE":
+                        case "APP_BUNDLE":
+                            AppUpdater.handleUpdateMessage(msg);
                             break;
                         case "NEW_ITEM":
                             console.log(
