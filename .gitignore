@@ -13,3 +13,4 @@ ios/App/Pods/
 android/app/build/
 android/.gradle/
 calgary_sg/
+server.log
