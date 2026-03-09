@@ -2141,10 +2141,10 @@
           
           imageUrl = 'p2p://' + tempItemId;
           
-          // 保存 CID 到本地 (內容尋址，去重)
-          const cid = await CIDResolver.store(tempItemId, imageBlob);
+          // Compute image hash for content-addressable storage
+          const imageHash = await ImageRegistry.computeHash(imageBlob);
           
-          // Store item with Object URL thumbnail (instant display, no base64 overhead)
+          // Store item with imageHash (content-addressable)
           const itemId = await db.items.add({
             type: 'marketplace', status: 'available', category, price, condition,
             title, description, sellerId: peerId, sellerName: displayName,
@@ -2152,17 +2152,18 @@
             imageUrl: imageUrl,  // P2P marker
             thumbnail: objectUrl,  // Object URL (efficient!)
             microThumbnail: microThumbnail,  // Micro thumbnail (50px)
-            cid: cid  // Content ID for P2P lookup
+            imageHash: imageHash  // Content ID for P2P
           });
           
-          // 廣告到網絡 (CID_PROVIDE)
-          console.log('[CID] Advertising:', cid);
+          // Save blob to IndexedDB by hash (content-addressable)
+          await db.blobs.put({ hash: imageHash, blob: imageBlob, timestamp: Date.now() });
           
-          // 保存 blob 到 IndexedDB (P2P 傳輸用)
-          await db.blobs.add({ itemId, blob: imageBlob });
+          // Register in ImageRegistry
+          ImageRegistry.register(itemId, imageHash);
+          
+          console.log('[P2P] Broadcasting image with hash:', imageHash);
           
           // 通過 P2P 廣播圖片 (二進制，無 base64)
-          console.log('[P2P] Broadcasting image via WebRTC...');
           if (P2PStreamer.getPeers().length > 0) {
             await P2PStreamer.sendImage(itemId, imageBlob);
           }
@@ -2182,8 +2183,7 @@
         title, category, price, condition, description,
         sellerId: peerId, sellerName: displayName,
         status: 'available', timestamp: Date.now(),
-        imageUrl,
-        cid: cid || null
+        imageUrl
       };
       broadcastNewItem(fullItem);
 
@@ -2225,7 +2225,7 @@
         sellerId: item.sellerId,
         sellerName: item.sellerName,
         status: item.status,
-        hasImage: !!(item.thumbnail || item.cid)
+        hasImage: !!(item.thumbnail || item.imageHash)
       };
       
       // Sign the item with DID
@@ -2238,7 +2238,7 @@
         ws.send(JSON.stringify(signedMsg));
         
         // If item has image, send as binary chunks via P2P (not base64)
-        if (item.thumbnail || item.cid) {
+        if (item.thumbnail || item.imageHash) {
           // Get blob from IndexedDB
           const blobs = await db.blobs.where('itemId').equals(item.id).toArray();
           if (blobs.length > 0) {
@@ -2428,7 +2428,7 @@
             break;
           case 'NEW_ITEM':
             console.log('Received NEW_ITEM:', msg.item ? 'has item' : 'no item', 
-              msg.item && (msg.item.thumbnail || msg.item.cid) ? 'has image' : 'no image');
+              msg.item && (msg.item.thumbnail || msg.item.imageHash) ? 'has image' : 'no image');
             saveNeighborItem(msg.item);
             break;
           case 'CHAT':
