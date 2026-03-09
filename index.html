@@ -1271,11 +1271,12 @@
                         if (msg.type === "IMG_HEADER") {
                             this.incomingTransfers.set(msg.itemId, {
                                 itemId: msg.itemId,
+                                imageHash: msg.imageHash, // Track hash for content-addressable storage!
                                 total: msg.size,
                                 received: 0,
                                 chunks: [],
                             });
-                            console.log("[P2P] Receiving image:", msg.itemId);
+                            console.log("[P2P] Receiving image:", msg.itemId, "hash:", msg.imageHash);
                         }
                         // Handle REQ_IMAGE - "Selfless Neighbor" fix!
                         // Any peer with cached image should serve it, not just the original seller
@@ -1310,12 +1311,14 @@
                         const blob = new Blob(transfer.chunks, {
                             type: "image/jpeg",
                         });
+                        // Store by IMAGE HASH (content-addressable), not itemId!
+                        const hash = transfer.imageHash || transfer.itemId;
                         await db.blobs.put({
-                            itemId: transfer.itemId,
+                            hash: hash, // Content-addressable key!
                             blob: blob,
                             timestamp: Date.now(),
                         });
-                        console.log("[P2P] Image received:", transfer.itemId);
+                        console.log("[P2P] Image received, stored by hash:", hash);
                         this.incomingTransfers.delete(transfer.itemId);
                         loadItems();
                     }
