@@ -1277,6 +1277,17 @@
                             });
                             console.log("[P2P] Receiving image:", msg.itemId);
                         }
+                        // Handle REQ_IMAGE - "Selfless Neighbor" fix!
+                        // Any peer with cached image should serve it, not just the original seller
+                        if (msg.type === "REQ_IMAGE") {
+                            console.log(
+                                "[P2P] REQ_IMAGE received via DC:",
+                                msg.imageHash,
+                                "from:",
+                                msg.responderId,
+                            );
+                            this.handleImageRequestDC(msg.imageHash, msg.responderId);
+                        }
                     } catch {}
                 },
 
@@ -1308,6 +1319,60 @@
                         this.incomingTransfers.delete(transfer.itemId);
                         loadItems();
                     }
+                },
+
+                // Handle REQ_IMAGE from data channel peers (Selfless Neighbor)
+                async handleImageRequestDC(imageHash, requesterId) {
+                    console.log(
+                        "[P2P DC] Image request:",
+                        imageHash,
+                        "requester:",
+                        requesterId,
+                    );
+                    // Check if we have this image in blobs table (by hash!)
+                    const blobs = await db.blobs.where("hash").equals(imageHash).toArray();
+                    if (blobs.length > 0) {
+                        console.log(
+                            "[P2P DC] 🎯 Found cached image, sending to:",
+                            requesterId,
+                        );
+                        const blob = blobs[0].blob;
+                        // Send via data channel to specific peer
+                        await this.sendImageToPeer(requesterId, imageHash, blob);
+                    } else {
+                        console.log("[P2P DC] No cached image:", imageHash);
+                    }
+                },
+
+                // Send image to specific peer via data channel
+                async sendImageToPeer(targetPeerId, imageHash, blob) {
+                    const buffer = await blob.arrayBuffer();
+                    const total = buffer.byteLength;
+                    const CHUNK_SIZE = 16384;
+
+                    const dc = this.dataChannels.get(targetPeerId);
+                    if (!dc || dc.readyState !== "open") {
+                        console.log("[P2P DC] Cannot send - channel not open:", targetPeerId);
+                        return;
+                    }
+
+                    // Send header
+                    dc.send(
+                        JSON.stringify({
+                            type: "IMG_HEADER",
+                            imageHash: imageHash,
+                            size: total,
+                            mimeType: "image/jpeg",
+                        }),
+                    );
+
+                    // Send chunks
+                    for (let offset = 0; offset < total; offset += CHUNK_SIZE) {
+                        const chunk = buffer.slice(offset, offset + CHUNK_SIZE);
+                        dc.send(chunk);
+                    }
+
+                    console.log("[P2P DC] Sent image to:", targetPeerId, "size:", total);
                 },
 
                 // 通過 DataChannel 發送圖片
@@ -2704,13 +2769,23 @@
             }
 
             // Request image from neighbors (On-Demand Pull)
+            // Broadcast to ALL connected peers, not just the original seller!
             function requestImageFromNeighbors(imageHash, sellerId) {
                 console.log(
-                    "[P2P] Requesting image from neighbors:",
+                    "[P2P] Requesting image from ALL neighbors:",
                     imageHash,
-                    "seller:",
-                    sellerId,
                 );
+
+                // Broadcast via P2P data channels (Selfless Neighbor!)
+                if (p2p && p2p.broadcast) {
+                    p2p.broadcast({
+                        type: "REQ_IMAGE",
+                        imageHash: imageHash,
+                        requesterId: peerId,
+                    });
+                }
+
+                // Also send via WebSocket for broader reach
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     const msg = {
                         type: "REQ_IMAGE",
@@ -2719,7 +2794,7 @@
                         sellerId: sellerId,
                     };
                     console.log(
-                        "[P2P] Sending REQ_IMAGE:",
+                        "[P2P] Sending REQ_IMAGE via WS:",
                         JSON.stringify(msg),
                     );
                     ws.send(JSON.stringify(msg));
