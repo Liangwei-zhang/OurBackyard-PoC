@@ -681,6 +681,17 @@
     <!-- Collapsible Stats Drawer (Facebook-style) -->
     <div class="stats-drawer" id="statsDrawer">
       <div class="stats-grid">
+        <!-- Zone & ID -->
+        <div class="stat-item full-width">
+          <span class="stat-icon">📍</span>
+          <span class="stat-label">Zone (H3)</span>
+          <span class="stat-value" id="h3-index-drawer">-</span>
+        </div>
+        <div class="stat-item full-width">
+          <span class="stat-icon">🆔</span>
+          <span class="stat-label">Your ID</span>
+          <span class="stat-value" id="peer-id-drawer" style="font-size:10px">-</span>
+        </div>
         <!-- P2P Mode Toggle -->
         <div class="stat-item full-width">
           <span class="stat-icon">🔀</span>
@@ -1767,6 +1778,7 @@
       localStorage.setItem('ourbackyard_peerId', peerId);
     }
     document.getElementById('peer-id').textContent = peerId.substring(0, 12) + '...';
+            document.getElementById('peer-id-drawer').textContent = peerId.substring(0, 12) + '...';
     
     // Load theme preference
     const isDayMode = localStorage.getItem('ourbackyard_daymode') === 'true';
@@ -2138,6 +2150,7 @@
             currentH3Index = h3.latLngToCell(latitude, longitude, 9);
             
             document.getElementById('h3-index').textContent = currentH3Index;
+            document.getElementById('h3-index-drawer').textContent = currentH3Index;
             
             // Update badge: green = success
             const badge = document.getElementById('location-badge');
