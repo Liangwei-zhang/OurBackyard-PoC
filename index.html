@@ -740,22 +740,22 @@
         <!-- Collapsible Stats Drawer (Facebook-style) -->
             <div class="stats-drawer" id="statsDrawer">
                 <div class="stats-grid">
-                    <!-- Theme Toggle -->
-                    <div class="stat-item full-width">
+                    <!-- Theme & ID -->
+                    <div class="stat-item">
                         <span class="stat-icon">🌙</span>
                         <span class="stat-label">Theme</span>
                         <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">🌙</button>
                     </div>
-                    <!-- Zone & ID -->
+                    <div class="stat-item">
+                        <span class="stat-icon">🆔</span>
+                        <span class="stat-label">Your ID</span>
+                        <span class="stat-value" id="peer-id-drawer" style="font-size:9px;word-break:break-all">-</span>
+                    </div>
+                    <!-- Zone -->
                     <div class="stat-item full-width">
                         <span class="stat-icon">📍</span>
                         <span class="stat-label">Zone (H3)</span>
                         <span class="stat-value" id="h3-index-drawer">-</span>
-                    </div>
-                    <div class="stat-item full-width">
-                        <span class="stat-icon">🆔</span>
-                        <span class="stat-label">Your ID</span>
-                        <span class="stat-value" id="peer-id-drawer" style="font-size:9px;word-break:break-all">-</span>
                     </div>
                     <!-- P2P Mode Toggle -->
                     <div class="stat-item full-width">
