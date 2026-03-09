@@ -1989,8 +1989,6 @@
                 peerId = "peer_" + Math.random().toString(36).substr(2, 9);
                 localStorage.setItem("ourbackyard_peerId", peerId);
             }
-            document.getElementById("peer-id").textContent =
-                peerId.substring(0, 12) + "...";
 
             // Load theme preference
             const isDayMode =
@@ -2463,9 +2461,6 @@
                                 longitude,
                                 9,
                             );
-
-                            document.getElementById("h3-index").textContent =
-                                currentH3Index;
 
                             // Update badge: green = success
                             const badge =
