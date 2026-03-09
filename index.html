@@ -4297,17 +4297,34 @@
                                                     i.imageHash === imageHash,
                                             )
                                             .toArray();
-                                        if (items.length > 0) {
-                                            await assembleAndSaveImage(
-                                                imageHash,
-                                                items[0].id,
-                                            );
-                                        } else {
-                                            await assembleAndSaveImage(
-                                                imageHash,
-                                                null,
-                                            );
+                                        const targetItemId = items.length > 0 ? items[0].id : null;
+                                        
+                                        // Directly assemble and save here (don't call assembleAndSaveImage recursively!)
+                                        if (imgData.chunks.length > 0) {
+                                            try {
+                                                const blob = new Blob(imgData.chunks, { type: imgData.mimeType || "image/jpeg" });
+                                                await db.blobs.put({
+                                                    hash: imageHash,
+                                                    blob: blob,
+                                                    timestamp: Date.now(),
+                                                });
+                                                console.log("[IMG_CHUNK] 💾 Saved blob to DB, hash:", imageHash);
+                                                
+                                                // Update item if found
+                                                if (targetItemId) {
+                                                    await db.items.update(targetItemId, { imageHash: imageHash });
+                                                }
+                                                
+                                                // Notify and refresh
+                                                notifyImageReady(imageHash);
+                                                loadItems();
+                                            } catch (err) {
+                                                console.error("[IMG_CHUNK] Save error:", err);
+                                            }
                                         }
+                                        
+                                        // Clear the received chunks
+                                        delete incomingImages[imageHash];
                                     }
                                 } // End if(imageHash)
                             } catch (err) {
