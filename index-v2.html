@@ -6,50 +6,50 @@
   <meta name="theme-color" content="#ffffff">
   <title>OurBackyard - 社區微商城</title>
   <style>
-    :root { --primary: #4169E1; --primary-light: #E8EEFF; --bg-main: #ffffff; --bg-card: #ffffff; --surface: #f5f5f5; --border: #e9ecef; --text: #1a1a1a; --text-secondary: #6c757d; --text-muted: #adb5bd; --accent-green: #22c55e; --accent-orange: #f97316; --shadow-sm: 0 1px 3px rgba(0,0,0,0.08); --shadow-md: 0 4px 12px rgba(0,0,0,0.1); --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-full: 9999px; }
+    :root { --primary: #4169E1; --primary-light: #E8EEFF; --bg-main: #ffffff; --bg-card: #ffffff; --surface: #f5f5f5; --border: #e9ecef; --text: #1a1a1a; --text-secondary: #6c757d; --text-muted: #adb5bd; --accent-green: #22c55e; --accent-orange: #f97316; --shadow-sm: 0 1px 3px rgba(0,0,0,0.08); --shadow-md: 0 4px 12px rgba(0,0,0,0.1); --radius-sm: 0px; --radius-md: 0px; --radius-lg: 0px; --radius-full: 9999px; }
     body.dark { --bg-main: #0f0f23; --bg-card: #1a1a2e; --surface: #252540; --border: rgba(255,255,255,0.1); --text: #ffffff; --text-secondary: #a0a0a0; --text-muted: #666; --shadow-sm: 0 1px 3px rgba(0,0,0,0.3); --shadow-md: 0 4px 12px rgba(0,0,0,0.4); }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-main); color: var(--text); min-height: 100vh; padding-bottom: 80px; transition: background 0.3s, color 0.3s; }
     .header { background: var(--bg-card); padding: 16px 20px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-sm); display: flex; justify-content: space-between; align-items: center; }
     .logo { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-    .logo-icon { width: 36px; height: 36px; background: var(--primary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; color: white; }
-    .icon-btn { background: var(--surface); border: none; width: 36px; height: 36px; border-radius: var(--radius-full); font-size: 16px; cursor: pointer; }
+    .logo-icon { width: 36px; height: 36px; background: var(--primary); border-radius: 0; display: flex; align-items: center; justify-content: center; color: white; }
+    .icon-btn { background: var(--surface); border: none; width: 36px; height: 36px; border-radius: 0; font-size: 16px; cursor: pointer; }
     .status-bar { background: var(--bg-card); padding: 12px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-orange); }
     .status-dot.connected { background: var(--accent-green); }
     .status-text { font-size: 12px; color: var(--text-secondary); }
-    .peer-badge { background: var(--primary-light); color: var(--primary); padding: 4px 10px; border-radius: var(--radius-full); font-size: 11px; font-weight: 600; }
-    .rep-badge { background: var(--surface); padding: 4px 10px; border-radius: var(--radius-full); font-size: 11px; }
-    .time-badge { background: var(--primary); color: white; padding: 4px 10px; border-radius: var(--radius-full); font-size: 11px; font-weight: 500; }
+    .peer-badge { background: var(--primary-light); color: var(--primary); padding: 4px 10px; border-radius: 0; font-size: 11px; font-weight: 600; }
+    .rep-badge { background: var(--surface); padding: 4px 10px; border-radius: 0; font-size: 11px; }
+    .time-badge { background: var(--primary); color: white; padding: 4px 10px; border-radius: 0; font-size: 11px; font-weight: 500; }
     .search-container { background: var(--bg-card); padding: 0 20px 16px; }
-    .search-bar { display: flex; align-items: center; background: var(--surface); border-radius: var(--radius-full); padding: 12px 16px; gap: 10px; }
+    .search-bar { display: flex; align-items: center; background: var(--surface); border-radius: 0; padding: 12px 16px; gap: 10px; }
     .search-icon { font-size: 16px; opacity: 0.5; }
     .search-input { flex: 1; background: transparent; border: none; color: var(--text); font-size: 15px; outline: none; }
-    .ai-btn { background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: var(--radius-full); font-size: 12px; font-weight: 500; cursor: pointer; }
+    .ai-btn { background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 0; font-size: 12px; font-weight: 500; cursor: pointer; }
     .category-scroll { display: flex; gap: 8px; padding: 12px 20px; overflow-x: auto; scrollbar-width: none; }
     .category-scroll::-webkit-scrollbar { display: none; }
-    .category-chip { background: var(--surface); padding: 8px 16px; border-radius: var(--radius-full); font-size: 13px; white-space: nowrap; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
+    .category-chip { background: var(--surface); padding: 8px 16px; border-radius: 0; font-size: 13px; white-space: nowrap; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
     .category-chip.active { background: var(--primary); color: white; }
     .section { padding: 16px 20px; }
     .section-header { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
     .products-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-    .product-card { background: var(--bg-card); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); cursor: pointer; transition: transform 0.2s; }
+    .product-card { background: var(--bg-card); border-radius: 0; overflow: hidden; box-shadow: var(--shadow-sm); cursor: pointer; transition: transform 0.2s; }
     .product-card:active { transform: scale(0.98); }
     .product-image { width: 100%; aspect-ratio: 1; background: var(--surface); display: flex; align-items: center; justify-content: center; font-size: 48px; position: relative; }
-    .product-badge { position: absolute; top: 8px; right: 8px; background: var(--accent-green); color: white; padding: 3px 8px; border-radius: var(--radius-sm); font-size: 10px; font-weight: 500; }
+    .product-badge { position: absolute; top: 8px; right: 8px; background: var(--accent-green); color: white; padding: 3px 8px; border-radius: 0; font-size: 10px; font-weight: 500; }
     .product-info { padding: 12px; }
     .product-name { font-size: 14px; font-weight: 500; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .product-price { font-size: 18px; font-weight: 700; color: var(--primary); }
     .product-meta { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
     .ai-scroll { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none; }
     .ai-scroll::-webkit-scrollbar { display: none; }
-    .ai-card { min-width: 140px; background: linear-gradient(135deg, var(--primary), #6366f1); border-radius: var(--radius-lg); padding: 12px; cursor: pointer; }
-    .ai-card-img { width: 100px; height: 100px; border-radius: var(--radius-md); background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto 8px; }
+    .ai-card { min-width: 140px; background: linear-gradient(135deg, var(--primary), #6366f1); border-radius: 0; padding: 12px; cursor: pointer; }
+    .ai-card-img { width: 100px; height: 100px; border-radius: 0; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto 8px; }
     .ai-card-title { color: white; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ai-card-price { color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 600; margin-top: 4px; }
     .chat-list { background: var(--bg-card); }
     .chat-item { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border); cursor: pointer; }
-    .chat-avatar { width: 48px; height: 48px; border-radius: var(--radius-full); background: var(--surface); display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative; }
+    .chat-avatar { width: 48px; height: 48px; border-radius: 0; background: var(--surface); display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative; }
     .online-dot { position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: var(--accent-green); border-radius: 50%; border: 2px solid var(--bg-card); }
     .chat-info { flex: 1; overflow: hidden; }
     .chat-name { font-size: 14px; font-weight: 500; }
@@ -58,47 +58,47 @@
     .chat-detail-header { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: var(--bg-card); border-bottom: 1px solid var(--border); }
     .chat-back { background: none; border: none; color: var(--text); font-size: 20px; cursor: pointer; }
     .chat-messages { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-    .message { max-width: 75%; padding: 10px 14px; border-radius: var(--radius-lg); font-size: 14px; }
+    .message { max-width: 75%; padding: 10px 14px; border-radius: 0; font-size: 14px; }
     .message.sent { align-self: flex-end; background: var(--primary); color: white; border-bottom-right-radius: 4px; }
     .message.received { align-self: flex-start; background: var(--surface); border-bottom-left-radius: 4px; }
     .chat-input-area { display: flex; gap: 8px; padding: 12px 20px; background: var(--bg-card); border-top: 1px solid var(--border); position: fixed; bottom: 70px; left: 0; right: 0; }
-    .chat-input { flex: 1; background: var(--surface); border: none; color: var(--text); padding: 12px 16px; border-radius: var(--radius-full); font-size: 14px; outline: none; }
-    .chat-send { background: var(--primary); border: none; width: 40px; height: 40px; border-radius: var(--radius-full); color: white; font-size: 16px; cursor: pointer; }
+    .chat-input { flex: 1; background: var(--surface); border: none; color: var(--text); padding: 12px 16px; border-radius: 0; font-size: 14px; outline: none; }
+    .chat-send { background: var(--primary); border: none; width: 40px; height: 40px; border-radius: 0; color: white; font-size: 16px; cursor: pointer; }
     .form-group { padding: 0 20px; margin-bottom: 16px; }
     .form-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; display: block; }
-    .form-input { width: 100%; background: var(--surface); border: none; color: var(--text); padding: 14px 16px; border-radius: var(--radius-md); font-size: 15px; outline: none; }
+    .form-input { width: 100%; background: var(--surface); border: none; color: var(--text); padding: 14px 16px; border-radius: 0; font-size: 15px; outline: none; }
     .form-price { font-size: 24px; font-weight: 700; color: var(--primary); }
-    .submit-btn { width: calc(100% - 40px); margin: 20px; background: var(--primary); color: white; border: none; padding: 16px; border-radius: var(--radius-md); font-size: 16px; font-weight: 600; cursor: pointer; }
+    .submit-btn { width: calc(100% - 40px); margin: 20px; background: var(--primary); color: white; border: none; padding: 16px; border-radius: 0; font-size: 16px; font-weight: 600; cursor: pointer; }
     .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 0 20px; }
-    .stats-card { background: var(--bg-card); padding: 20px; border-radius: var(--radius-lg); text-align: center; box-shadow: var(--shadow-sm); }
+    .stats-card { background: var(--bg-card); padding: 20px; border-radius: 0; text-align: center; box-shadow: var(--shadow-sm); }
     .stats-value { font-size: 28px; font-weight: 700; color: var(--primary); }
     .stats-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
     .profile-header { background: linear-gradient(135deg, var(--primary), #6366f1); padding: 40px 20px; text-align: center; }
-    .profile-avatar { width: 80px; height: 80px; border-radius: var(--radius-full); background: white; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 36px; border: 3px solid white; }
+    .profile-avatar { width: 80px; height: 80px; border-radius: 0; background: white; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 36px; border: 3px solid white; }
     .profile-name { font-size: 20px; font-weight: 600; color: white; }
     .profile-id { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 4px; }
     .profile-stats { display: flex; justify-content: center; gap: 32px; margin-top: 20px; }
     .profile-stat-value { font-size: 24px; font-weight: 700; color: white; }
     .profile-stat-label { font-size: 11px; color: rgba(255,255,255,0.8); }
-    .profile-menu { background: var(--bg-card); margin: 16px; border-radius: var(--radius-lg); overflow: hidden; }
+    .profile-menu { background: var(--bg-card); margin: 16px; border-radius: 0; overflow: hidden; }
     .profile-menu-item { display: flex; align-items: center; gap: 12px; padding: 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
-    .profile-menu-icon { width: 36px; height: 36px; background: var(--surface); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; }
+    .profile-menu-icon { width: 36px; height: 36px; background: var(--surface); border-radius: 0; display: flex; align-items: center; justify-content: center; }
     .profile-menu-title { font-size: 14px; font-weight: 500; }
-    .settings-section { background: var(--bg-card); margin: 16px; border-radius: var(--radius-lg); overflow: hidden; }
+    .settings-section { background: var(--bg-card); margin: 16px; border-radius: 0; overflow: hidden; }
     .settings-title { font-size: 12px; color: var(--text-muted); padding: 12px 16px 8px; font-weight: 500; }
     .settings-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
     .settings-label { font-size: 14px; }
-    .toggle { width: 44px; height: 24px; background: var(--surface); border-radius: var(--radius-full); position: relative; cursor: pointer; }
+    .toggle { width: 44px; height: 24px; background: var(--surface); border-radius: 0; position: relative; cursor: pointer; }
     .toggle.active { background: var(--primary); }
     .toggle::after { content: ''; position: absolute; width: 20px; height: 20px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: 0.2s; }
     .toggle.active::after { left: 22px; }
     .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-card); display: flex; justify-content: space-around; padding: 12px 0 24px; border-top: 1px solid var(--border); z-index: 100; }
-    .tab-item { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text-muted); font-size: 10px; cursor: pointer; padding: 4px 8px; border-radius: var(--radius-md); }
+    .tab-item { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text-muted); font-size: 10px; cursor: pointer; padding: 4px 8px; border-radius: 0; }
     .tab-item.active { color: var(--primary); }
     .tab-icon { font-size: 20px; }
     .view { display: none; }
     .view.active { display: block; }
-    .toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: var(--accent-green); color: #000; padding: 12px 24px; border-radius: var(--radius-full); font-weight: 600; z-index: 1000; opacity: 0; transition: opacity 0.3s; }
+    .toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: var(--accent-green); color: #000; padding: 12px 24px; border-radius: 0; font-weight: 600; z-index: 1000; opacity: 0; transition: opacity 0.3s; }
     .toast.show { opacity: 1; }
     .toast.error { background: #ef4444; color: white; }
     .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
