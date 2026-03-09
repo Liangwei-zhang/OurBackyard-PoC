@@ -154,93 +154,76 @@
     }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
     .status-text { font-size: 14px; font-weight: 500; }
-    .peer-count {
-      background: var(--primary);
-      color: #000 4px ;
-      padding:10px;
+    /* Facebook-style Status Bar */
+    .fb-status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-card);
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .fb-main-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .fb-peer-count {
+      background: #4caf50;
+      color: white;
+      padding: 2px 8px;
       border-radius: 12px;
       font-size: 12px;
       font-weight: 600;
     }
-    .sync-status {
+    .fb-menu-btn {
       background: var(--surface);
-      color: #aaa;
-      padding: 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      margin-left: 8px;
+      border: none;
+      color: var(--text);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
     }
-    .reputation, .timebank {
-      background: var(--surface);
-      color: #ffd700;
-      padding: 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      margin-left: 8px;
+    
+    /* Collapsible Stats Drawer */
+    .stats-drawer {
+      background: var(--bg-card);
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      border-bottom: 1px solid var(--border);
     }
-    .network-type {
-      background: var(--surface);
-      color: #4caf50;
-      padding: 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      margin-left: 8px;
+    .stats-drawer.open {
+      max-height: 300px;
+      padding: 12px;
     }
-    .storage {
-      background: var(--surface);
-      color: #9c27b0;
-      padding: 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      margin-left: 8px;
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
     }
-    .encryption {
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       background: var(--surface);
-      color: #00bcd4;
       padding: 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      margin-left: 8px;
+      border-radius: 8px;
     }
-    .items-count {
-      background: var(--surface);
-      color: #ff5722;
-      padding: 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      margin-left: 8px;
-    }
-    .unread {
-      background: var(--surface);
-      color: #f44336;
-      padding: 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      margin-left: 8px;
-    }
-    .uptime {
-      background: var(--surface);
-      color: #8bc34a;
-      padding: 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      margin-left: 8px;
-    }
-    .location {
-      background: var(--surface);
-      color: #ff9800;
-      padding: 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      margin-left: 8px;
+    .stat-icon { font-size: 16px; }
+    .stat-label { font-size: 11px; color: #888; flex: 1; }
+    .stat-value { font-size: 12px; font-weight: 600; color: var(--text); }
+    
+    /* Hide old status-bar */
+    .status-bar, .peer-count, .network-type, .sync-status, .reputation, .timebank, .storage, .encryption, .items-count, .unread, .uptime, .location {
+      display: none !important;
     }
 
     /* Info Card */
@@ -615,22 +598,70 @@
       </div>
     </div>
     
-    <div class="status-bar">
-      <div class="status-indicator">
+    <!-- Facebook-style Status Bar -->
+    <div class="fb-status-bar">
+      <div class="fb-main-status">
         <div class="status-dot" id="status-dot"></div>
         <span class="status-text" id="status-text">Disconnected</span>
+        <span class="fb-peer-count" id="peer-count">0</span>
       </div>
-      <div class="peer-count" id="peer-count">0 online</div>
-      <div class="network-type" id="network-type">📡 Online</div>
-      <div class="sync-status" id="sync-status">Last sync: --</div>
-      <div class="reputation" id="reputation">⭐ 0</div>
-      <div class="timebank" id="timebank">⏰ 0h</div>
-      <div class="storage" id="storage">💾 0MB</div>
-      <div class="encryption" id="encryption">🔒 E2E</div>
-      <div class="items-count" id="items-count">📦 0</div>
-      <div class="unread" id="unread">📬 0</div>
-      <div class="uptime" id="uptime">🌟 0m</div>
-      <div class="location" id="location">📍 --</div>
+      <button class="fb-menu-btn" id="statsDrawerBtn">☰</button>
+    </div>
+    
+    <!-- Collapsible Stats Drawer (Facebook-style) -->
+    <div class="stats-drawer" id="statsDrawer">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <span class="stat-icon">📡</span>
+          <span class="stat-label">Network</span>
+          <span class="stat-value" id="network-type">Online</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">🔄</span>
+          <span class="stat-label">Sync</span>
+          <span class="stat-value" id="sync-status">--</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">⭐</span>
+          <span class="stat-label">Reputation</span>
+          <span class="stat-value" id="reputation">100</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">⏰</span>
+          <span class="stat-label">Timebank</span>
+          <span class="stat-value" id="timebank">1h</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">💾</span>
+          <span class="stat-label">Storage</span>
+          <span class="stat-value" id="storage">0MB</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">🔒</span>
+          <span class="stat-label">Security</span>
+          <span class="stat-value" id="encryption">E2E</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">📦</span>
+          <span class="stat-label">Items</span>
+          <span class="stat-value" id="items-count">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">📬</span>
+          <span class="stat-label">Unread</span>
+          <span class="stat-value" id="unread">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">🌟</span>
+          <span class="stat-label">Uptime</span>
+          <span class="stat-value" id="uptime">0m</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">📍</span>
+          <span class="stat-label">Zone</span>
+          <span class="stat-value" id="location">--</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2023,20 +2054,14 @@
     // ============ UX: Mesh Radar Indicator ============
     function updatePeerCount(count) {
       connectedPeers = count;
-      
-      // Also track local neighbor count
       const localCount = onlineNeighbors.size;
+      const totalCount = count + localCount;
       
-      // Mesh Radar: show visual indicator
       const el = document.getElementById('peer-count');
-      if (count === 0 && localCount === 0) {
-        el.innerHTML = '<span style="color:#666">○ No neighbors</span>';
-      } else if (count > 0) {
-        el.innerHTML = `<span style="color:#4caf50">● ${count} peers</span>`;
-      } else if (localCount > 0) {
-        el.innerHTML = `<span style="color:#ff9800">◐ ${localCount} nearby</span>`;
+      if (totalCount === 0) {
+        el.innerHTML = '0';
       } else {
-        el.innerHTML = '<span style="color:#666">○ Searching...</span>';
+        el.innerHTML = totalCount;
       }
     }
     
@@ -2048,16 +2073,16 @@
           const diff = Date.now() - record.value;
           const mins = Math.floor(diff / 60000);
           if (mins < 1) {
-            el.innerHTML = '🔄 Just now';
+            el.innerHTML = 'Just now';
           } else if (mins === 1) {
-            el.innerHTML = '🔄 1 min ago';
+            el.innerHTML = '1 min';
           } else if (mins < 60) {
-            el.innerHTML = `🔄 ${mins} mins ago`;
+            el.innerHTML = `${mins} min`;
           } else {
-            el.innerHTML = '🔄 Offline';
+            el.innerHTML = 'Offline';
           }
         } else {
-          el.innerHTML = '🔄 Never';
+          el.innerHTML = 'Never';
         }
       });
     }
@@ -2068,11 +2093,11 @@
       db.userData.get('reputation').then(record => {
         const repEl = document.getElementById('reputation');
         if (record && record.value !== undefined) {
-          repEl.innerHTML = `⭐ ${record.value}`;
+          repEl.innerHTML = `${record.value}`;
         } else {
           // Initialize with default reputation
           db.userData.put({ key: 'reputation', value: 100 });
-          repEl.innerHTML = '⭐ 100';
+          repEl.innerHTML = '100';
         }
       });
       
@@ -2081,11 +2106,11 @@
         const tbEl = document.getElementById('timebank');
         if (record && record.value !== undefined) {
           const hours = Math.floor(record.value / 60);
-          tbEl.innerHTML = `⏰ ${hours}h`;
+          tbEl.innerHTML = `${hours}h`;
         } else {
           // Initialize with default timebank
           db.userData.put({ key: 'timebank', value: 60 });
-          tbEl.innerHTML = '⏰ 1h';
+          tbEl.innerHTML = '1h';
         }
       });
     }
@@ -2096,25 +2121,25 @@
       const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
       
       if (!navigator.onLine) {
-        el.innerHTML = '📡 Offline';
+        el.innerHTML = 'Offline';
         el.style.color = '#666';
       } else if (connection) {
         const type = connection.type;
         if (type === 'wifi') {
-          el.innerHTML = '📶 WiFi';
+          el.innerHTML = 'WiFi';
           el.style.color = '#4caf50';
         } else if (type === 'cellular') {
-          el.innerHTML = '📱 Cellular';
+          el.innerHTML = 'Cellular';
           el.style.color = '#ff9800';
         } else if (type === 'bluetooth') {
-          el.innerHTML = '🔵 Bluetooth';
+          el.innerHTML = 'Bluetooth';
           el.style.color = '#2196f3';
         } else {
-          el.innerHTML = '🌐 Online';
+          el.innerHTML = 'Online';
           el.style.color = '#4caf50';
         }
       } else {
-        el.innerHTML = '🌐 Online';
+        el.innerHTML = 'Online';
         el.style.color = '#4caf50';
       }
     }
@@ -2129,7 +2154,7 @@
         navigator.storage.estimate().then(estimate => {
           const used = (estimate.usage / (1024 * 1024)).toFixed(1);
           const el = document.getElementById('storage');
-          el.innerHTML = `💾 ${used}MB`;
+          el.innerHTML = `${used}MB`;
         });
       }
     }
@@ -2138,7 +2163,7 @@
     function updateItemsCount() {
       db.items.count().then(count => {
         const el = document.getElementById('items-count');
-        el.innerHTML = `📦 ${count}`;
+        el.innerHTML = `${count}`;
       });
     }
     
@@ -2151,7 +2176,7 @@
         if (!msg.read && msg.to === peerId) unread++;
       }
       const el = document.getElementById('unread');
-      el.innerHTML = `📬 ${unread}`;
+      el.innerHTML = `${unread}`;
     }
     
     // Update uptime
@@ -2160,10 +2185,10 @@
       const diff = Math.floor((Date.now() - startTime) / 60000);
       const el = document.getElementById('uptime');
       if (diff < 60) {
-        el.innerHTML = `🌟 ${diff}m`;
+        el.innerHTML = `${diff}m`;
       } else {
         const hours = Math.floor(diff / 60);
-        el.innerHTML = `🌟 ${hours}h ${diff % 60}m`;
+        el.innerHTML = `${hours}h ${diff % 60}m`;
       }
     }
     setInterval(updateUptime, 60000);
@@ -2172,11 +2197,16 @@
     function updateLocationDisplay() {
       const el = document.getElementById('location');
       if (currentH3Index) {
-        el.innerHTML = `📍 ${currentH3Index.slice(-6)}`;
+        el.innerHTML = `${currentH3Index.slice(-6)}`;
       } else {
-        el.innerHTML = '📍 --';
+        el.innerHTML = '--';
       }
     }
+    
+    // Toggle stats drawer
+    document.getElementById('statsDrawerBtn').addEventListener('click', () => {
+      document.getElementById('statsDrawer').classList.toggle('open');
+    });
 
     // ============ UX: Optimistic UI - Instant Feedback ============
     function optimisticUpdate(action, successCallback) {
