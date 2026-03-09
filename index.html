@@ -1534,6 +1534,15 @@
     });
     console.log('IndexedDB initialized v2');
 
+    // Auto-login if displayName saved
+    db.userData.get('displayName').then(record => {
+      if (record && record.value) {
+        displayName = record.value;
+        document.getElementById('input-name').value = displayName;
+        connect(); // Auto-connect
+      }
+    });
+
     // ============ Initialize OPFS ============
 
     // ============ Merkle Tree Sync (Priority 2) ============
@@ -2857,6 +2866,10 @@
     // ============ WebSocket ============
     function connect() {
       displayName = document.getElementById('input-name').value || peerId;
+      
+      // Save displayName for auto-login
+      db.userData.put({ key: 'displayName', value: displayName });
+      
       updateStatus('connecting', 'Connecting...');
       
       ws = new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws/${roomId}`);
