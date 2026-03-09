@@ -2292,10 +2292,16 @@
         
         // If item has image, send as binary chunks via P2P (not base64)
         // Use imageHash for content-addressable storage!
+        console.log('[Broadcast] Checking imageHash:', item.imageHash);
         if (item.imageHash) {
           const blobs = await db.blobs.where('hash').equals(item.imageHash).toArray();
+          console.log('[Broadcast] Found blobs:', blobs.length, 'for hash:', item.imageHash);
           if (blobs.length > 0) {
+            console.log('[Broadcast] Sending image binary...');
             await sendImageBinaryWS(ws, blobs[0].blob, item.id, item.imageHash);
+            console.log('[Broadcast] Image sent!');
+          } else {
+            console.log('[Broadcast] ❌ No blob found for hash:', item.imageHash);
           }
         }
       }
