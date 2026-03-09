@@ -2608,8 +2608,8 @@
                 // Auto-assemble when all chunks received
                 if (incomingImages[imageHash].received >= expectedSize) {
                   console.log('[IMG_CHUNK] All chunks received, auto-assembling...');
-                  // Find the item by hash
-                  const items = await db.items.where('imageHash').equals(imageHash).toArray();
+                  // Find the item by hash - use filter since imageHash is not indexed
+                  const items = await db.items.filter(i => i.imageHash === imageHash).toArray();
                   if (items.length > 0) {
                     await assembleAndSaveImage(imageHash, items[0].id);
                   } else {
