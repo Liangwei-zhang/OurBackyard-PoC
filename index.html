@@ -179,6 +179,15 @@
       font-weight: 600;
       margin-left: 8px;
     }
+    .network-type {
+      background: var(--surface);
+      color: #4caf50;
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
 
     /* Info Card */
     .info-card {
@@ -558,6 +567,7 @@
         <span class="status-text" id="status-text">Disconnected</span>
       </div>
       <div class="peer-count" id="peer-count">0 online</div>
+      <div class="network-type" id="network-type">📡 Online</div>
       <div class="sync-status" id="sync-status">Last sync: --</div>
       <div class="reputation" id="reputation">⭐ 0</div>
       <div class="timebank" id="timebank">⏰ 0h</div>
@@ -1935,6 +1945,7 @@
       renderCategories();
       initReputation();
       updateSyncStatus();
+      updateNetworkStatus();
     });
 
     // ============ UI Functions ============
@@ -2013,6 +2024,39 @@
         }
       });
     }
+    
+    // Network type detection
+    function updateNetworkStatus() {
+      const el = document.getElementById('network-type');
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      
+      if (!navigator.onLine) {
+        el.innerHTML = '📡 Offline';
+        el.style.color = '#666';
+      } else if (connection) {
+        const type = connection.type;
+        if (type === 'wifi') {
+          el.innerHTML = '📶 WiFi';
+          el.style.color = '#4caf50';
+        } else if (type === 'cellular') {
+          el.innerHTML = '📱 Cellular';
+          el.style.color = '#ff9800';
+        } else if (type === 'bluetooth') {
+          el.innerHTML = '🔵 Bluetooth';
+          el.style.color = '#2196f3';
+        } else {
+          el.innerHTML = '🌐 Online';
+          el.style.color = '#4caf50';
+        }
+      } else {
+        el.innerHTML = '🌐 Online';
+        el.style.color = '#4caf50';
+      }
+    }
+    
+    // Listen for network changes
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
 
     // ============ UX: Optimistic UI - Instant Feedback ============
     function optimisticUpdate(action, successCallback) {
