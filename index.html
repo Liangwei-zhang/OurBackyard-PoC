@@ -2780,8 +2780,8 @@
                 );
 
                 // Broadcast via P2P data channels (Selfless Neighbor!)
-                if (p2p && p2p.broadcast) {
-                    p2p.broadcast({
+                if (P2PStreamer && P2PStreamer.broadcast) {
+                    P2PStreamer.broadcast({
                         type: "REQ_IMAGE",
                         imageHash: imageHash,
                         requesterId: peerId,
