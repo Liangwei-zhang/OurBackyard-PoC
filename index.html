@@ -1810,7 +1810,7 @@
       renderMarketGrid(items, document.getElementById('my-items-grid'));
     }
 
-    function renderMarketGrid(items, container) {
+    async function renderMarketGrid(items, container) {
       if (items.length === 0) {
         container.innerHTML = '<div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-text">No items nearby</div></div>';
         return;
