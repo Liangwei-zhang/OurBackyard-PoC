@@ -733,13 +733,19 @@
                     <span id="status-text">0</span>
                 </div>
                 
-                <button class="header-btn" id="theme-toggle" onclick="toggleTheme()">🌙</button>
+                
             </div>
         </div>
 
         <!-- Collapsible Stats Drawer (Facebook-style) -->
             <div class="stats-drawer" id="statsDrawer">
                 <div class="stats-grid">
+                    <!-- Theme Toggle -->
+                    <div class="stat-item full-width">
+                        <span class="stat-icon">🌙</span>
+                        <span class="stat-label">Theme</span>
+                        <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">🌙</button>
+                    </div>
                     <!-- Zone & ID -->
                     <div class="stat-item full-width">
                         <span class="stat-icon">📍</span>
