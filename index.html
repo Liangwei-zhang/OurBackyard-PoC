@@ -2228,8 +2228,10 @@
         title, category, price, condition, description,
         sellerId: peerId, sellerName: displayName,
         status: 'available', timestamp: Date.now(),
-        imageUrl
+        imageUrl,
+        imageHash: imageHash || null  // Include imageHash for P2P!
       };
+      console.log('[Broadcast] Sending item with imageHash:', imageHash);
       broadcastNewItem(fullItem);
 
       alert('🎉 Item published!');
