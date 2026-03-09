@@ -10,7 +10,7 @@
 body.dark{--bg:#1a1a1a;--bg2:#2d2d2d;--border:#404040;--text:#fff;--text2:#aaa;--shadow:0 4px 20px rgba(0,0,0,0.3)}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;font-weight:400}
-.container{display:flex;height:100vh;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+.container{display:flex;height:100vh;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
 .container::-webkit-scrollbar{display:none}
 .page{min-width:100vw;height:100vh;overflow-y:auto;padding-bottom:80px}
 .header{background:var(--bg);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);backdrop-filter:blur(10px)}
@@ -36,8 +36,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .sec{padding:16px 20px}
 .sec-title{font-size:18px;font-weight:700;margin-bottom:14px}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.card{background:var(--bg);overflow:hidden;box-shadow:var(--shadow);border-radius:var(--radius);transition:transform 0.2s,box-shadow 0.2s}
-.card:active{transform:scale(0.97);box-shadow:0 2px 8px rgba(0,0,0,0.12)}
+.card{background:var(--bg);overflow:hidden;box-shadow:var(--shadow);border-radius:var(--radius);transition:transform 0.2s}
+.card:active{transform:scale(0.98)}
 .card-img{width:100%;aspect-ratio:1;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:56px;position:relative}
 .card-badge{position:absolute;top:10px;right:10px;background:var(--primary);color:#fff;padding:5px 12px;font-size:11px;font-weight:600;border-radius:20px}
 .card-info{padding:12px}
@@ -66,8 +66,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .msg.received{align-self:flex-start;background:var(--bg2);border-bottom-left-radius:4px}
 .chat-input-area{display:flex;gap:8px;padding:12px 20px;background:var(--bg);border-top:1px solid var(--border);position:fixed;bottom:70px;left:0;right:0}
 .chat-input{flex:1;background:var(--bg2);border:none;color:var(--text);padding:14px 18px;font-size:14px;border-radius:24px}
-.chat-send{background:var(--primary);border:none;width:48px;height:48px;color:#fff;font-size:20px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform 0.15s}
-.chat-send:active{transform:scale(0.92)}
+.chat-send{background:var(--primary);border:none;width:40px;height:40px;color:#fff;font-size:16px;cursor:pointer}
 .form{padding:0 20px;margin-bottom:16px}
 .form label{font-size:13px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block}
 .form input,.form textarea{width:100%;background:var(--bg2);border:none;color:var(--text);padding:16px 18px;font-size:15px;border-radius:var(--radius)}
@@ -117,12 +116,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .toast.on{opacity:1}
 .toast.error{background:#ef4444;color:#fff}
 .empty{text-align:center;padding:60px 20px;color:var(--text2)}
-.loading{display:none;text-align:center;padding:40px}
-.loading-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.swipe-indicator{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;gap:6px;z-index:50;pointer-events:none;opacity:0.4;transition:opacity 0.3s}
-.swipe-dot{width:6px;height:6px;background:var(--text2);border-radius:50%}
-.swipe-dot.active{background:var(--primary);transform:scale(1.2)}
 </style>
 </head>
 <body>
@@ -174,7 +167,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 <div class="sec"><div class="sec-title">✨ 為你推薦</div><div class="ai-scroll" id="aiGrid"></div></div>
 <div class="sec"><div class="sec-title">🛒 附近商品</div><div class="grid" id="productsGrid"></div></div>
 <div class="empty" id="emptyState" style="display:none"><div style="font-size:64px;opacity:0.5">📦</div><div style="margin-top:12px;font-size:15px">附近還沒有商品</div></div>
-<div class="loading" id="loadingState"><div class="loading-spinner"></div><div style="font-size:14px;color:var(--text2)">加載中...</div></div>
 </div>
 
 <!-- RIGHT: Chat -->
@@ -219,16 +211,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 <div id="chatDetail" class="chat-detail">
 <div class="chat-detail-header"><button class="chat-back" onclick="closeChatDetail()">←</button><div class="chat-avatar" id="chatAvatar">👤<div class="chat-online"></div></div><div><div class="chat-name" id="chatName">用戶</div><div class="chat-time" id="chatStatus">在線</div></div></div>
 <div class="chat-msgs" id="chatMsgs"></div>
-<div class="chat-input-area"><input type="text" class="chat-input" id="chatInput" placeholder="發送消息..."><button class="chat-send" id="chatSendBtn">↑</button></div>
+<div class="chat-input-area"><input type="text" class="chat-input" id="chatInput" placeholder="發送消息..."><button class="chat-send" id="chatSendBtn">➤</button></div>
 </div>
 
 <div class="toast" id="toast"></div>
-
-<div class="swipe-indicator" id="swipeIndicator">
-<div class="swipe-dot"></div>
-<div class="swipe-dot active"></div>
-<div class="swipe-dot"></div>
-</div>
 
 <nav class="tab-bar">
 <div class="tab-item on" data-page="mall"><span class="tab-icon">🏠</span><span>首頁</span></div>
@@ -308,10 +294,6 @@ function goToPage(page){
   document.querySelectorAll('.tab-item').forEach(x=>x.classList.remove('on'));
   const pages=['mall','chat','add','stats','profile','settings'];
   if(page>=1&&page<=5){document.querySelector('[data-page="'+pages[page-1]+'"]').classList.add('on');}
-  // Update swipe indicator - only show for drawer/mall/chat
-  const indicator=document.getElementById('swipeIndicator');
-  indicator.style.opacity=page<=2?'0.4':'0';
-  document.querySelectorAll('.swipe-dot').forEach((d,i)=>d.classList.toggle('active',i===Math.min(page,2)));
 }
 
 // Touch/Swipe
