@@ -4327,9 +4327,11 @@
                                                     await db.items.update(targetItemId, { imageHash: imageHash });
                                                 }
                                                 
-                                                // Notify and refresh
-                                                notifyImageReady(imageHash);
-                                                loadItems();
+                                                // Notify and refresh - wait a bit for IndexedDB to finish
+                                                setTimeout(() => {
+                                                    notifyImageReady(imageHash);
+                                                    loadItems();
+                                                }, 100);
                                             } catch (err) {
                                                 console.error("[IMG_CHUNK] Save error:", err);
                                             }
