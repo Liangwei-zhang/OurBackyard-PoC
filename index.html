@@ -220,6 +220,10 @@
     .stat-icon { font-size: 16px; }
     .stat-label { font-size: 11px; color: #888; flex: 1; }
     .stat-value { font-size: 12px; font-weight: 600; color: var(--text); }
+    .stat-item.full-width { grid-column: span 2; }
+    .p2p-toggles { display: flex; gap: 8px; }
+    .toggle-label { font-size: 10px; color: #666; display: flex; align-items: center; gap: 2px; }
+    .toggle-label input { width: 12px; height: 12px; }
     
     /* Hide old status-bar */
     .status-bar, .peer-count, .network-type, .sync-status, .reputation, .timebank, .storage, .encryption, .items-count, .unread, .uptime, .location {
@@ -611,6 +615,16 @@
     <!-- Collapsible Stats Drawer (Facebook-style) -->
     <div class="stats-drawer" id="statsDrawer">
       <div class="stats-grid">
+        <!-- P2P Mode Toggle -->
+        <div class="stat-item full-width">
+          <span class="stat-icon">🔀</span>
+          <span class="stat-label">P2P Mode</span>
+          <div class="p2p-toggles">
+            <label class="toggle-label"><input type="checkbox" id="dhtToggle" checked> DHT</label>
+            <label class="toggle-label"><input type="checkbox" id="mdnsToggle" checked> mDNS</label>
+            <label class="toggle-label"><input type="checkbox" id="bleToggle"> BLE</label>
+          </div>
+        </div>
         <div class="stat-item">
           <span class="stat-icon">📡</span>
           <span class="stat-label">Network</span>
@@ -2206,6 +2220,17 @@
     // Toggle stats drawer
     document.getElementById('statsDrawerBtn').addEventListener('click', () => {
       document.getElementById('statsDrawer').classList.toggle('open');
+    });
+    
+    // P2P Mode toggles
+    document.getElementById('dhtToggle').addEventListener('change', (e) => {
+      console.log('DHT:', e.target.checked ? 'enabled' : 'disabled');
+    });
+    document.getElementById('mdnsToggle').addEventListener('change', (e) => {
+      console.log('mDNS:', e.target.checked ? 'enabled' : 'disabled');
+    });
+    document.getElementById('bleToggle').addEventListener('change', (e) => {
+      console.log('BLE:', e.target.checked ? 'enabled' : 'disabled');
     });
 
     // ============ UX: Optimistic UI - Instant Feedback ============
