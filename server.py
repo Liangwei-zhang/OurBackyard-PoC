@@ -270,6 +270,12 @@ async def root():
     return FileResponse(os.path.join(BASE_DIR, "index.html"))
 
 
+@app.get("/v2")
+async def root_v2():
+    """V2 新版頁面 - 開發測試版本"""
+    return FileResponse(os.path.join(BASE_DIR, "index-v2.html"))
+
+
 @app.get("/api/config")
 async def get_config():
     """返回 TURN 服務器配置"""

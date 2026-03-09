@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a1a2e">
+  <title>🏡 OurBackyard V2 - 社區微商城</title>
+  <style>
+    /* ============================
+       V2 Modern Design System
+       ============================ */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    :root {
+      --primary: oklch(65% 0.18 250);
+      --primary-light: oklch(92% 0.04 250);
+      --bg-main: oklch(15% 0.02 260);
+      --bg-card: oklch(20% 0.02 260);
+      --surface: oklch(25% 0.02 260);
+      --border: rgba(255,255,255,0.08);
+      --text: oklch(95% 0.01 260);
+      --text-muted: oklch(70% 0.02 260);
+      --accent-green: oklch(70% 0.18 150);
+      --accent-pink: oklch(70% 0.18 330);
+      --accent-orange: oklch(70% 0.18 30);
+      --accent-blue: oklch(70% 0.18 220);
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+    }
+
+    /* Day Mode */
+    body.day-mode {
+      --bg-main: oklch(98% 0.01 240);
+      --bg-card: oklch(100% 0 0);
+      --surface: oklch(95% 0.01 240);
+      --border: rgba(0,0,0,0.08);
+      --text: oklch(20% 0.02 240);
+      --text-muted: oklch(55% 0.02 240);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg-main);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 90px;
+    }
+
+    /* Header */
+    .header {
+      padding: 16px 20px;
+      background: var(--bg-card);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .logo {
+      font-size: 22px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--primary), var(--accent-pink));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .icon-btn {
+      background: var(--surface);
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Status Bar V2 */
+    .status-bar-v2 {
+      background: var(--bg-card);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+    }
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .connection-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f44336;
+    }
+    .status-dot.connected { background: var(--accent-green); }
+    .status-dot.connecting { background: var(--accent-orange); animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    .peer-count {
+      background: var(--accent-green);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .latency {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+    .status-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .user-reputation {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--surface);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+    .timebank-balance {
+      background: var(--accent-blue);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    /* Search Bar V2 */
+    .search-container {
+      padding: 16px 20px;
+      background: var(--bg-card);
+    }
+    .search-bar {
+      display: flex;
+      align-items: center;
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 12px 16px;
+      gap: 10px;
+    }
+    .search-icon { font-size: 16px; }
+    .search-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+    }
+    .search-input::placeholder { color: var(--text-muted); }
+    .ai-search-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    /* AI Recommendations Section */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 20px 12px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-more {
+      color: var(--primary);
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .ai-recommendations {
+      padding: 0 20px;
+    }
+    .ai-scroll {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      scrollbar-width: none;
+    }
+    .ai-scroll::-webkit-scrollbar { display: none; }
+    .ai-card {
+      min-width: 120px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 14px;
+      padding: 12px;
+      cursor: pointer;
+    }
+    .ai-card-img {
+      width: 96px;
+      height: 96px;
+      object-fit: cover;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.2);
+    }
+    .ai-card-title {
+      color: white;
+      font-size: 12px;
+      margin-top: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ai-card-price {
+      color: rgba(255,255,255,0.9);
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    /* Products Grid V2 */
+    .products-section {
+      padding: 12px 20px;
+    }
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .product-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .product-card:active { transform: scale(0.98); }
+    .product-image {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: var(--surface);
+    }
+    .product-info {
+      padding: 12px;
+    }
+    .product-name {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .product-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .product-price {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .product-stats {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .product-reputation {
+      color: #fbbf24;
+    }
+    .product-distance {
+      background: var(--surface);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    /* Placeholder States */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-text { font-size: 14px; }
+
+    /* Tab Bar V2 */
+    .tab-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-card);
+      display: flex;
+      justify-content: space-around;
+      padding: 12px 0 24px;
+      border-top: 1px solid var(--border);
+      z-index: 100;
+    }
+    .tab-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .tab-item.active {
+      color: var(--primary);
+    }
+    .tab-icon { font-size: 20px; }
+    .tab-label { font-size: 10px; font-weight: 500; }
+
+    /* Connection Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: var(--bg-card);
+      border-radius: 20px;
+      padding: 24px;
+      width: 90%;
+      max-width: 360px;
+    }
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .connection-options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .conn-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      background: var(--surface);
+      border-radius: 12px;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+    .conn-option.selected {
+      border-color: var(--primary);
+    }
+    .conn-icon { font-size: 24px; }
+    .conn-info { flex: 1; }
+    .conn-name { font-weight: 500; font-size: 14px; }
+    .conn-desc { font-size: 11px; color: var(--text-muted); }
+
+    /* Loading Skeleton */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--bg-card) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: skeleton-loading 1.5s infinite;
+      border-radius: 8px;
+    }
+    @keyframes skeleton-loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Debug Panel (Hidden by default) */
+    .debug-panel {
+      display: none;
+      background: var(--bg-card);
+      margin: 20px;
+      padding: 16px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+    .debug-panel.show { display: block; }
+    .debug-title {
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--accent-orange);
+    }
+    .debug-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .debug-label { color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-top">
+      <div class="logo">
+        <div class="logo-icon">🏡</div>
+        <span>OurBackyard</span>
+        <span style="font-size: 12px; color: var(--text-muted);">V2</span>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="themeToggle" title="切換主題">🌙</button>
+        <button class="icon-btn" id="debugToggle" title="調試">⚙️</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Status Bar V2 -->
+  <div class="status-bar-v2">
+    <div class="status-left">
+      <div class="connection-status">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="connectionText">連接中...</span>
+      </div>
+      <span class="peer-count" id="peerCount">0 在線</span>
+    </div>
+    <div class="status-right">
+      <div class="user-reputation">
+        <span>⭐</span>
+        <span id="userReputation">--</span>
+      </div>
+      <div class="timebank-balance">
+        <span>⏱️</span>
+        <span id="timebankBalance">0h</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Bar V2 -->
+  <div class="search-container">
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" id="searchInput" placeholder="搜索商品...">
+      <button class="ai-search-btn" id="aiSearchBtn">🤖 AI</button>
+    </div>
+  </div>
+
+  <!-- AI Recommendations -->
+  <div class="section-header">
+    <div class="section-title">
+      <span>✨</span>
+      <span>為你推薦</span>
+    </div>
+    <span class="section-more" id="aiMore">更多</span>
+  </div>
+  <div class="ai-recommendations">
+    <div class="ai-scroll" id="aiRecommendations">
+      <!-- AI 推薦卡片 -->
+    </div>
+  </div>
+
+  <!-- Products Grid V2 -->
+  <div class="section-header">
+    <div class="section-title">
+      <span>🛒</span>
+      <span>附近商品</span>
+    </div>
+    <span class="section-more" id="productsMore">篩選</span>
+  </div>
+  <div class="products-section">
+    <div class="products-grid" id="productsGrid">
+      <!-- 商品網格 -->
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" id="emptyState" style="display: none;">
+    <div class="empty-icon">📦</div>
+    <div class="empty-text">附近還沒有商品</div>
+    <div class="empty-text" style="margin-top: 8px;">發布第一個商品吧！</div>
+  </div>
+
+  <!-- Debug Panel -->
+  <div class="debug-panel" id="debugPanel">
+    <div class="debug-title">🔧 調試信息</div>
+    <div class="debug-row"><span class="debug-label">連接狀態:</span><span id="debugStatus">--</span></div>
+    <div class="debug-row"><span class="debug-label">房間ID:</span><span id="debugRoom">--</span></div>
+    <div class="debug-row"><span class="debug-label">節點數:</span><span id="debugPeers">--</span></div>
+    <div class="debug-row"><span class="debug-label">商品數:</span><span id="debugProducts">--</span></div>
+    <div class="debug-row"><span class="debug-label">用戶ID:</span><span id="debugUserId">--</span></div>
+    <div class="debug-row"><span class="debug-label">聲譽分:</span><span id="debugReputation">--</span></div>
+    <div class="debug-row"><span class="debug-label">時間銀行:</span><span id="debugTimebank">--</span></div>
+  </div>
+
+  <!-- Tab Bar -->
+  <nav class="tab-bar">
+    <div class="tab-item active" data-tab="home">
+      <span class="tab-icon">🏠</span>
+      <span class="tab-label">首頁</span>
+    </div>
+    <div class="tab-item" data-tab="chat">
+      <span class="tab-icon">💬</span>
+      <span class="tab-label">消息</span>
+    </div>
+    <div class="tab-item" data-tab="add">
+      <span class="tab-icon" style="background: var(--primary); width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin-top: -20px;">➕</span>
+      <span class="tab-label" style="margin-top: 4px;">發布</span>
+    </div>
+    <div class="tab-item" data-tab="stats">
+      <span class="tab-icon">📊</span>
+      <span class="tab-label">統計</span>
+    </div>
+    <div class="tab-item" data-tab="profile">
+      <span class="tab-icon">👤</span>
+      <span class="tab-label">我的</span>
+    </div>
+  </nav>
+
+  <script>
+    // ============================
+    // V2 App State
+    // ============================
+    const AppState = {
+      connected: false,
+      peerId: '',
+      roomId: 'ourbackyard.h3.8912ccd5083ffff',
+      peerCount: 0,
+      products: [],
+      userReputation: 95,
+      timebankBalance: 12,
+      latency: 0
+    };
+
+    // ============================
+    // Mock Data for V2 Testing
+    // ============================
+    const mockProducts = [
+      { id: 1, name: '山地自行車', price: 150, image: '', reputation: 4.8, distance: 0.3, seller: 'Alice' },
+      { id: 2, name: '二手電視 32寸', price: 80, image: '', reputation: 4.5, distance: 0.5, seller: 'Bob' },
+      { id: 3, name: '燒烤爐', price: 45, image: '', reputation: 5.0, distance: 0.8, seller: 'Carol' },
+      { id: 4, name: '兒童玩具箱', price: 25, image: '', reputation: 4.2, distance: 1.2, seller: 'Dave' },
+      { id: 5, name: '園藝工具套裝', price: 35, image: '', reputation: 4.7, distance: 1.5, seller: 'Eve' },
+      { id: 6, name: '咖啡機', price: 60, image: '', reputation: 4.9, distance: 2.0, seller: 'Frank' },
+      { id: 7, name: '書籍角落', price: 20, image: '', reputation: 4.6, distance: 2.3, seller: 'Grace' },
+      { id: 8, name: '健身器材', price: 100, image: '', reputation: 4.4, distance: 2.8, seller: 'Henry' }
+    ];
+
+    // ============================
+    // UI Functions
+    // ============================
+    function renderProducts() {
+      const grid = document.getElementById('productsGrid');
+      const empty = document.getElementById('emptyState');
+      
+      if (mockProducts.length === 0) {
+        grid.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+      
+      grid.style.display = 'grid';
+      empty.style.display = 'none';
+      
+      grid.innerHTML = mockProducts.map(p => `
+        <div class="product-card" data-id="${p.id}">
+          <div class="product-image skeleton"></div>
+          <div class="product-info">
+            <div class="product-name">${p.name}</div>
+            <div class="product-meta">
+              <span class="product-price">$${p.price}</span>
+              <div class="product-stats">
+                <span class="product-reputation">⭐${p.reputation}</span>
+                <span class="product-distance">${p.distance}km</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      
+      document.getElementById('debugProducts').textContent = mockProducts.length;
+    }
+
+    function renderAIRecommendations() {
+      const container = document.getElementById('aiRecommendations');
+      const recommendations = mockProducts.slice(0, 4);
+      
+      container.innerHTML = recommendations.map(p => `
+        <div class="ai-card" data-id="${p.id}">
+          <div class="ai-card-img">🖼️</div>
+          <div class="ai-card-title">${p.name}</div>
+          <div class="ai-card-price">$${p.price}</div>
+        </div>
+      `).join('');
+    }
+
+    function updateStatus(status) {
+      const dot = document.getElementById('statusDot');
+      const text = document.getElementById('connectionText');
+      
+      dot.className = 'status-dot ' + status;
+      
+      const statusMap = {
+        'connected': '已連接',
+        'connecting': '連接中...',
+        'disconnected': '未連接'
+      };
+      
+      text.textContent = statusMap[status] || status;
+      document.getElementById('debugStatus').textContent = status;
+    }
+
+    function updatePeerCount(count) {
+      document.getElementById('peerCount').textContent = count + ' 在線';
+      document.getElementById('debugPeers').textContent = count;
+      AppState.peerCount = count;
+    }
+
+    function updateUserInfo() {
+      document.getElementById('userReputation').textContent = AppState.userReputation;
+      document.getElementById('timebankBalance').textContent = AppState.timebankBalance + 'h';
+      document.getElementById('debugReputation').textContent = AppState.userReputation;
+      document.getElementById('debugTimebank').textContent = AppState.timebankBalance + 'h';
+    }
+
+    function updateDebug() {
+      document.getElementById('debugRoom').textContent = AppState.roomId || '--';
+      document.getElementById('debugUserId').textContent = AppState.peerId || '--';
+    }
+
+    // ============================
+    // Event Handlers
+    // ============================
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      document.body.classList.toggle('day-mode');
+      const isDay = document.body.classList.contains('day-mode');
+      document.getElementById('themeToggle').textContent = isDay ? '☀️' : '🌙';
+    });
+
+    document.getElementById('debugToggle').addEventListener('click', () => {
+      document.getElementById('debugPanel').classList.toggle('show');
+    });
+
+    document.getElementById('aiSearchBtn').addEventListener('click', () => {
+      alert('🤖 AI 語義搜索 - 開發中\n\n將支持：\n• 自然語言搜索\n• 語義匹配\n• 智能推薦');
+    });
+
+    document.querySelectorAll('.tab-item').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+      });
+    });
+
+    // ============================
+    // Initialize V2
+    // ============================
+    function initV2() {
+      renderProducts();
+      renderAIRecommendations();
+      updateStatus('connecting');
+      updatePeerCount(0);
+      updateUserInfo();
+      updateDebug();
+      
+      // Simulate connection
+      setTimeout(() => {
+        updateStatus('connected');
+        updatePeerCount(Math.floor(Math.random() * 20) + 5);
+      }, 1500);
+      
+      // Generate random peer ID
+      AppState.peerId = 'peer_' + Math.random().toString(36).substr(2, 8);
+      updateDebug();
+    }
+
+    // Start V2
+    initV2();
+    
+    console.log('🏡 OurBackyard V2 initialized');
+  </script>
+</body>
+</html>
