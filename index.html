@@ -1744,6 +1744,9 @@
         // Notify waiting consumers
         ImageRegistry.notifyImageArrived(imageHash);
         
+        // Notify UI that image is ready
+        notifyImageReady(imageHash);
+        
         // Refresh display
         loadItems();
         
@@ -1751,6 +1754,43 @@
         console.error('[Image] Failed to save:', e);
       }
     }
+    
+    // ============ Image Ready Event System ============
+    // Notify UI when images arrive via P2P
+    function notifyImageReady(imageHash) {
+      console.log('[ImageReady] Hash:', imageHash);
+      // Trigger a custom event that UI can listen to
+      window.dispatchEvent(new CustomEvent('p2p-image-ready', { 
+        detail: { imageHash } 
+      }));
+    }
+    
+    // Auto-refresh items when image arrives
+    window.addEventListener('p2p-image-ready', (e) => {
+      console.log('[ImageReady] Refreshing items for hash:', e.detail.imageHash);
+      loadItems();
+    });
+    
+    // Periodic check for images that need loading
+    setInterval(async () => {
+      try {
+        const items = await db.items.where('imageHash').notEqual('').toArray();
+        for (const item of items) {
+          if (item.imageHash) {
+            const blobs = await db.blobs.where('hash').equals(item.imageHash).toArray();
+            if (blobs.length > 0) {
+              // Image exists, check if we need to refresh
+              const img = document.querySelector(`img[data-item-id="${item.id}"]`);
+              if (img && (!img.src || img.src === '')) {
+                console.log('[Periodic] Refreshing image for:', item.title);
+                loadItems();
+                break;
+              }
+            }
+          }
+        }
+      } catch(e) {}
+    }, 3000); // Check every 3 seconds
 
     // ============ Stability: Backpressure Control ============
     async function sendWithBackpressure(dc, data) {
