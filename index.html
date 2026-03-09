@@ -702,6 +702,17 @@
             <!-- Collapsible Stats Drawer (Facebook-style) -->
             <div class="stats-drawer" id="statsDrawer">
                 <div class="stats-grid">
+                    <!-- Zone & ID -->
+                    <div class="stat-item full-width">
+                        <span class="stat-icon">📍</span>
+                        <span class="stat-label">Zone (H3)</span>
+                        <span class="stat-value" id="h3-index-drawer">-</span>
+                    </div>
+                    <div class="stat-item full-width">
+                        <span class="stat-icon">🆔</span>
+                        <span class="stat-label">Your ID</span>
+                        <span class="stat-value" id="peer-id-drawer" style="font-size:9px;word-break:break-all">-</span>
+                    </div>
                     <!-- P2P Mode Toggle -->
                     <div class="stat-item full-width">
                         <span class="stat-icon">🔀</span>
@@ -1989,6 +2000,9 @@
                 peerId = "peer_" + Math.random().toString(36).substr(2, 9);
                 localStorage.setItem("ourbackyard_peerId", peerId);
             }
+            // Update drawer elements
+            const drawerPeerId = document.getElementById("peer-id-drawer");
+            if (drawerPeerId) drawerPeerId.textContent = peerId.substring(0, 20) + (peerId.length > 20 ? '...' : '');
 
             // Load theme preference
             const isDayMode =
@@ -2461,6 +2475,10 @@
                                 longitude,
                                 9,
                             );
+
+                            // Update drawer h3-index
+                            const drawerH3 = document.getElementById("h3-index-drawer");
+                            if (drawerH3) drawerH3.textContent = currentH3Index;
 
                             // Update badge: green = success
                             const badge =
