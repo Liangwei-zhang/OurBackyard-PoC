@@ -1949,19 +1949,12 @@
         try {
           let imgSrc = null;
           
-          // Try by itemId FIRST (most reliable for local items)
-          const blobs = await db.blobs.where('itemId').equals(item.id).toArray();
-          if (blobs.length > 0) {
-            imgSrc = URL.createObjectURL(blobs[0].blob);
-            console.log('[List] Loaded image by itemId:', item.id);
-          }
-          
-          // Fallback: try by imageHash (content-addressable)
-          if (!imgSrc && item.imageHash) {
+          // Use ONLY imageHash (content-addressable) - DO NOT use itemId
+          if (item.imageHash) {
             const hashBlobs = await db.blobs.where('hash').equals(item.imageHash).toArray();
             if (hashBlobs.length > 0) {
               imgSrc = URL.createObjectURL(hashBlobs[0].blob);
-              console.log('[List] Loaded image by hash:', item.imageHash);
+              console.log('[List] Loaded by hash:', item.imageHash);
             }
           }
           
@@ -1973,7 +1966,7 @@
             }
           }
         } catch(e) { 
-          console.error('[List] Image load error:', e); 
+          console.error('[List] Error:', e); 
         }
       }
       
@@ -1997,32 +1990,23 @@
       if (item.imageUrl && (item.imageUrl.startsWith('/uploads/') || item.imageUrl.startsWith('http'))) {
         imagesHtml = `<img src="${item.imageUrl}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
       } else {
-        // Try to load image - check multiple sources in order
+        // Try to load image - use ONLY hash (content-addressable)
         let imgSrc = null;
         
         // 1. First check if thumbnail is a valid URL (http/https)
         if (item.thumbnail && (item.thumbnail.startsWith('http') || item.thumbnail.startsWith('/uploads/'))) {
           imgSrc = item.thumbnail;
         } 
-        // 2. Try loading from IndexedDB - by itemId FIRST (most reliable)
-        else {
+        // 2. ONLY use imageHash for content-addressable storage
+        else if (item.imageHash) {
           try {
-            // Try by itemId first (most reliable for local items)
-            const blobs = await db.blobs.where('itemId').equals(id).toArray();
-            if (blobs.length > 0) {
-              imgSrc = URL.createObjectURL(blobs[0].blob);
-              console.log('[Detail] Loaded image by itemId:', id);
-            }
-            // Fallback: try by imageHash
-            else if (item.imageHash) {
-              const hashBlobs = await db.blobs.where('hash').equals(item.imageHash).toArray();
-              if (hashBlobs.length > 0) {
-                imgSrc = URL.createObjectURL(hashBlobs[0].blob);
-                console.log('[Detail] Loaded image by hash:', item.imageHash);
-              }
+            const hashBlobs = await db.blobs.where('hash').equals(item.imageHash).toArray();
+            if (hashBlobs.length > 0) {
+              imgSrc = URL.createObjectURL(hashBlobs[0].blob);
+              console.log('[Detail] Loaded by hash:', item.imageHash);
             }
           } catch(e) {
-            console.log('Blob load failed:', e);
+            console.log('[Detail] Hash query failed:', e);
           }
         }
         
