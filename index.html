@@ -1924,14 +1924,19 @@
     function updatePeerCount(count) {
       connectedPeers = count;
       
+      // Also track local neighbor count
+      const localCount = onlineNeighbors.size;
+      
       // Mesh Radar: show visual indicator
       const el = document.getElementById('peer-count');
-      if (count === 0) {
+      if (count === 0 && localCount === 0) {
         el.innerHTML = '<span style="color:#666">○ No neighbors</span>';
-      } else if (count === 1) {
-        el.innerHTML = '<span style="color:#4caf50">● 1 neighbor</span>';
+      } else if (count > 0) {
+        el.innerHTML = `<span style="color:#4caf50">● ${count} peers (${localCount} nearby)</span>`;
+      } else if (localCount > 0) {
+        el.innerHTML = `<span style="color:#ff9800">◐ ${localCount} nearby</span>`;
       } else {
-        el.innerHTML = `<span style="color:#4caf50">● ${count} neighbors</span>`;
+        el.innerHTML = '<span style="color:#666">○ Searching...</span>';
       }
     }
 
@@ -2647,6 +2652,8 @@
           case 'HEARTBEAT':
             onlineNeighbors.add(msg.peerId);
             console.log('Neighbor heartbeat:', msg.peerId);
+            // Update peer count display
+            updatePeerCount(connectedPeers);
             break;
           case 'SYNC_REQUEST':
             // Respond with items peer is missing
