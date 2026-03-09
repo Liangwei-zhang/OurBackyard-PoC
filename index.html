@@ -884,14 +884,20 @@
         // Get item info for matching on receiver side
         const item = await db.items.get(itemId);
         
-        // 發送 header with seller info
+        // Compute image hash (CID) for content-addressable storage
+        const imageHash = await ImageRegistry.computeHash(blob);
+        
+        // 發送 header with image hash (CID)
         this.broadcast({ 
           type: 'IMG_HEADER', 
           itemId, 
           size: total,
+          imageHash: imageHash, // CID for content addressing
           sellerId: item?.sellerId,
           title: item?.title
         });
+        
+        console.log('[P2P] Sending image with hash:', imageHash);
         
         // 分片發送
         for (let offset = 0; offset < total; offset += CHUNK) {
@@ -1044,6 +1050,51 @@
           memory: this.cidMap.size,
           mapping: this.itemToCid.size
         };
+      }
+    };
+    
+    // ============ Image Hash Registry (Content Addressable) ============
+    // Maps items to their image hashes (CID)
+    const ImageRegistry = {
+      // Map of item title+seller -> imageHash
+      itemToHash: new Map(),
+      // Pending images waiting for data
+      pending: new Map(), // hash -> { itemId, resolve }
+      
+      // Compute SHA-256 hash of blob
+      async computeHash(blob) {
+        const buffer = await blob.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return 'img1-' + hex.substring(0, 32); // Short hash
+      },
+      
+      // Register an item's image hash
+      register(itemId, hash) {
+        this.itemToHash.set(itemId, hash);
+        console.log('[ImageRegistry] Registered:', itemId, '->', hash);
+      },
+      
+      // Get hash for item
+      getHash(itemId) {
+        return this.itemToHash.get(itemId);
+      },
+      
+      // Wait for image data to arrive
+      waitForImage(hash) {
+        return new Promise((resolve) => {
+          this.pending.set(hash, { resolve });
+        });
+      },
+      
+      // Notify that image data arrived
+      notifyImageArrived(hash) {
+        const pending = this.pending.get(hash);
+        if (pending) {
+          pending.resolve();
+          this.pending.delete(hash);
+        }
       }
     };
     
@@ -1637,44 +1688,65 @@
       }
     }
     
-    // Receive binary image chunks
-    const incomingImages = {}; // itemId -> { chunks:[], size:0, mimeType:'' }
+    // Receive binary image chunks - keyed by hash (content-addressable)
+    const incomingImages = {}; // imageHash -> { itemId, chunks:[], size:0, mimeType:'' }
     
-    function handleBinaryImageChunk(itemId, chunk, isLastChunk) {
-      if (!incomingImages[itemId]) {
-        incomingImages[itemId] = { chunks: [], received: 0 };
+    function handleBinaryImageChunk(imageHash, chunk, isLastChunk) {
+      if (!incomingImages[imageHash]) {
+        incomingImages[imageHash] = { chunks: [], received: 0 };
       }
       
-      incomingImages[itemId].chunks.push(chunk);
-      incomingImages[itemId].received += chunk.byteLength;
+      incomingImages[imageHash].chunks.push(chunk);
+      incomingImages[imageHash].received += chunk.byteLength;
       
-      // If complete, assemble and save
+      // If complete, assemble and save by hash
       if (isLastChunk) {
-        assembleAndSaveImage(itemId);
+        assembleAndSaveImage(imageHash, null);
       }
     }
     
-    async function assembleAndSaveImage(itemId) {
-      const img = incomingImages[itemId];
+    // Assemble and save image by HASH (content-addressable)
+    async function assembleAndSaveImage(imageHash, itemId) {
+      const img = incomingImages[imageHash];
       if (!img || img.chunks.length === 0) return;
       
       try {
         // Assemble blob from chunks
         const blob = new Blob(img.chunks, { type: img.mimeType || 'image/jpeg' });
         
-        // Save to IndexedDB blobs table (binary, efficient!)
-        await db.blobs.put({ itemId: itemId, blob: blob, timestamp: Date.now() });
+        // Verify hash matches
+        const computedHash = await ImageRegistry.computeHash(blob);
+        if (computedHash !== imageHash) {
+          console.error('[Image] Hash mismatch! Expected:', imageHash, 'Got:', computedHash);
+          return;
+        }
         
-        console.log('Image saved to IndexedDB:', itemId);
+        // Save to IndexedDB BY HASH (content-addressable)
+        await db.blobs.put({ 
+          hash: imageHash,  // Key by hash!
+          blob: blob, 
+          timestamp: Date.now() 
+        });
+        
+        // Update item with imageHash if provided
+        if (itemId) {
+          await db.items.update(itemId, { imageHash: imageHash });
+          ImageRegistry.register(itemId, imageHash);
+        }
+        
+        console.log('[Image] Saved to IndexedDB by hash:', imageHash, 'for item:', itemId);
         
         // Clear from memory
-        delete incomingImages[itemId];
+        delete incomingImages[imageHash];
+        
+        // Notify waiting consumers
+        ImageRegistry.notifyImageArrived(imageHash);
         
         // Refresh display
         loadItems();
         
       } catch (e) {
-        console.error('Failed to save image:', e);
+        console.error('[Image] Failed to save:', e);
       }
     }
 
@@ -1870,15 +1942,31 @@
         `;
       }).join('');
       
-      // Load images from IndexedDB asynchronously
+      // Load images from IndexedDB asynchronously (by hash - content-addressable)
       for (const item of items) {
         try {
-          const blobs = await db.blobs.where('itemId').equals(item.id).toArray();
-          if (blobs.length > 0) {
+          let imgSrc = null;
+          
+          // Try by imageHash first (content-addressable)
+          if (item.imageHash) {
+            const hashBlobs = await db.blobs.where('hash').equals(item.imageHash).toArray();
+            if (hashBlobs.length > 0) {
+              imgSrc = URL.createObjectURL(hashBlobs[0].blob);
+            }
+          }
+          
+          // Fallback: try by itemId
+          if (!imgSrc) {
+            const blobs = await db.blobs.where('itemId').equals(item.id).toArray();
+            if (blobs.length > 0) {
+              imgSrc = URL.createObjectURL(blobs[0].blob);
+            }
+          }
+          
+          if (imgSrc) {
             const img = container.querySelector(`img[data-item-id="${item.id}"]`);
             if (img) {
-              const url = URL.createObjectURL(blobs[0].blob);
-              img.src = url;
+              img.src = imgSrc;
               img.style.filter = 'none';
             }
           }
@@ -1912,12 +2000,23 @@
         if (item.thumbnail && (item.thumbnail.startsWith('http') || item.thumbnail.startsWith('/uploads/'))) {
           imgSrc = item.thumbnail;
         } 
-        // 2. Try loading from IndexedDB (most reliable for local P2P)
+        // 2. Try loading from IndexedDB by IMAGE HASH (content-addressable)
         else {
           try {
-            const blobs = await db.blobs.where('itemId').equals(id).toArray();
-            if (blobs.length > 0) {
-              imgSrc = URL.createObjectURL(blobs[0].blob);
+            // Try to find by hash first
+            if (item.imageHash) {
+              const blobs = await db.blobs.where('hash').equals(item.imageHash).toArray();
+              if (blobs.length > 0) {
+                imgSrc = URL.createObjectURL(blobs[0].blob);
+                console.log('[Detail] Loaded image by hash:', item.imageHash);
+              }
+            }
+            // Fallback: try by itemId
+            if (!imgSrc) {
+              const blobs = await db.blobs.where('itemId').equals(id).toArray();
+              if (blobs.length > 0) {
+                imgSrc = URL.createObjectURL(blobs[0].blob);
+              }
             }
           } catch(e) {
             console.log('Blob load failed:', e);
@@ -2164,15 +2263,21 @@
         // Get item details for matching on receiver side
         const item = await db.items.get(itemId);
         
-        // Send header with seller info for matching
+        // Compute image hash (CID) for content addressing
+        const imageHash = await ImageRegistry.computeHash(blob);
+        
+        // Send header with image hash (CID)
         ws.send(JSON.stringify({ 
           type: 'IMG_HEADER', 
           itemId: itemId, 
           size: totalSize, 
           mimeType: blob.type || 'image/jpeg',
+          imageHash: imageHash, // CID for content addressing
           sellerId: item?.sellerId,
           title: item?.title
         }));
+        
+        console.log('[WS] Sending image with hash:', imageHash);
         
         // Send binary chunks with backpressure
         while (offset < totalSize) {
@@ -2338,35 +2443,61 @@
             }
             break;
           case 'IMG_HEADER':
-            // Find local item by matching sellerId and title - store in global
-            const hMsg = msg;
+            // Use hash-based content addressing!
+            const himg = msg;
+            (async () => {
+              try {
+                // Find local item by matching sellerId and title
+                const localItems = await db.items.toArray();
+                const matchingItem = localItems.find(i => 
+                  i.sellerId === himg.sellerId && i.title === himg.title
+                );
+                
+                const targetId = matchingItem ? matchingItem.id : himg.itemId;
+                const imageHash = himg.imageHash;
+                
+                console.log('[IMG_HEADER] Received:', imageHash, 'for item:', targetId);
+                
+                // Register item -> hash mapping
+                if (targetId && imageHash) {
+                  ImageRegistry.register(targetId, imageHash);
+                  
+                  // Store in items table for persistence
+                  await db.items.update(targetId, { imageHash: imageHash });
+                }
+                
+                // Initialize incoming image storage by HASH (not itemId)
+                window._currentImageReceive = { 
+                  itemId: targetId,
+                  imageHash: imageHash,
+                  expectedSize: himg.size,
+                  mimeType: himg.mimeType || 'image/jpeg'
+                };
+                incomingImages[imageHash] = {  // Key by hash!
+                  itemId: targetId,
+                  chunks: [], received: 0,
+                  mimeType: himg.mimeType || 'image/jpeg'
+                };
+              } catch(e) { console.error('[IMG_HEADER] error:', e); }
+            })();
+            break;
+          case 'IMG_END':
+            // Assemble and save binary image BY HASH
+            const endMsg = msg;
+            // Find the hash that matches this item
             (async () => {
               try {
                 const localItems = await db.items.toArray();
                 const matchingItem = localItems.find(i => 
-                  i.sellerId === hMsg.sellerId && i.title === hMsg.title
+                  i.sellerId === endMsg.sellerId && i.title === endMsg.title
                 );
-                
-                const targetId = matchingItem ? matchingItem.id : hMsg.itemId;
-                console.log('IMG_HEADER: mapped to local id:', targetId, 'title:', hMsg.title);
-                
-                window._currentImageReceive = { 
-                  itemId: targetId, 
-                  expectedSize: hMsg.size,
-                  mimeType: hMsg.mimeType || 'image/jpeg'
-                };
-                incomingImages[targetId] = { 
-                  chunks: [], received: 0,
-                  mimeType: hMsg.mimeType || 'image/jpeg'
-                };
-              } catch(e) { console.error('IMG_HEADER error:', e); }
+                if (matchingItem && matchingItem.imageHash) {
+                  if (incomingImages[matchingItem.imageHash]) {
+                    await assembleAndSaveImage(matchingItem.imageHash, matchingItem.id);
+                  }
+                }
+              } catch(e) { console.error('[IMG_END] error:', e); }
             })();
-            break;
-          case 'IMG_END':
-            // Assemble and save binary image
-            if (incomingImages[msg.itemId]) {
-              assembleAndSaveImage(msg.itemId);
-            }
             break;
           case 'HEARTBEAT':
             onlineNeighbors.add(msg.peerId);
@@ -2430,19 +2561,19 @@
         // Convert to ArrayBuffer if needed
         const buffer = data instanceof Blob ? await data.arrayBuffer() : data;
         
-        // Find which item this chunk belongs to by checking the last IMG_HEADER
-        // For simplicity, we'll track currentImageReceive
+        // Find which image this chunk belongs to by checking the last IMG_HEADER
+        // Use imageHash for content-addressable storage
         if (window._currentImageReceive) {
-          const { itemId, expectedSize } = window._currentImageReceive;
+          const { imageHash, expectedSize } = window._currentImageReceive;
           
-          if (!incomingImages[itemId]) {
-            incomingImages[itemId] = { chunks: [], received: 0, mimeType: 'image/jpeg' };
+          if (!incomingImages[imageHash]) {
+            incomingImages[imageHash] = { chunks: [], received: 0, mimeType: 'image/jpeg' };
           }
           
-          incomingImages[itemId].chunks.push(buffer);
-          incomingImages[itemId].received += buffer.byteLength;
+          incomingImages[imageHash].chunks.push(buffer);
+          incomingImages[imageHash].received += buffer.byteLength;
           
-          console.log('Binary chunk received:', itemId, incomingImages[itemId].received, '/', expectedSize);
+          console.log('[Binary] Chunk for hash:', imageHash, incomingImages[imageHash].received, '/', expectedSize);
         }
       } catch (e) {
         console.error('Binary message error:', e);
