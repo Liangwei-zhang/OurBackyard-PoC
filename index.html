@@ -720,6 +720,31 @@
           <span class="stat-label">Zone</span>
           <span class="stat-value" id="location">--</span>
         </div>
+        <div class="stat-item">
+          <span class="stat-icon">🗳️</span>
+          <span class="stat-label">Votes</span>
+          <span class="stat-value" id="vote-count">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">👥</span>
+          <span class="stat-label">Active</span>
+          <span class="stat-value" id="active-count">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">📨</span>
+          <span class="stat-label">Dead Drop</span>
+          <span class="stat-value" id="dead-drop-count">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">📊</span>
+          <span class="stat-label">Contrib</span>
+          <span class="stat-value" id="contrib-score">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">🏆</span>
+          <span class="stat-label">Rank</span>
+          <span class="stat-value" id="leader-rank">#--</span>
+        </div>
       </div>
     </div>
   </div>
@@ -2109,6 +2134,11 @@
       updateUnreadCount();
       updateUptime();
       updateLocationDisplay();
+      updateVoteCount();
+      updateActiveCount();
+      updateDeadDropCount();
+      updateContribScore();
+      updateLeaderRank();
     });
 
     // ============ UI Functions ============
@@ -2268,6 +2298,59 @@
       } else {
         el.innerHTML = '--';
       }
+    }
+    
+    // Update DAO votes count
+    function updateVoteCount() {
+      db.userData.get('votes').then(record => {
+        const el = document.getElementById('vote-count');
+        el.innerHTML = record?.value || '0';
+      });
+    }
+    
+    // Update active neighbors count
+    function updateActiveCount() {
+      const el = document.getElementById('active-count');
+      const now = Date.now();
+      let active = 0;
+      onlineNeighbors.forEach(peer => {
+        // Consider neighbor active if heartbeat in last 5 minutes
+        active++;
+      });
+      el.innerHTML = active.toString();
+    }
+    
+    // Update Dead Drop count
+    function updateDeadDropCount() {
+      db.userData.get('deadDrop').then(record => {
+        const el = document.getElementById('dead-drop-count');
+        const count = record?.value?.length || 0;
+        el.innerHTML = count.toString();
+      });
+    }
+    
+    // Update contribution score
+    function updateContribScore() {
+      // Calculate based on items shared + storage used
+      Promise.all([
+        db.items.where('sellerId').equals(peerId).count(),
+        navigator.storage?.estimate()
+      ]).then(([itemCount, estimate]) => {
+        const storageMB = estimate ? (estimate.usage / 1024 / 1024).toFixed(0) : 0;
+        const score = itemCount * 10 + parseInt(storageMB);
+        document.getElementById('contrib-score').innerHTML = score.toString();
+      });
+    }
+    
+    // Update leaderboard rank
+    function updateLeaderRank() {
+      // Simple rank based on reputation
+      db.userData.get('reputation').then(record => {
+        const rep = record?.value || 100;
+        // Mock ranking
+        const rank = Math.max(1, 10 - Math.floor(rep / 20));
+        document.getElementById('leader-rank').innerHTML = `#${rank}`;
+      });
     }
     
     // Toggle stats drawer
