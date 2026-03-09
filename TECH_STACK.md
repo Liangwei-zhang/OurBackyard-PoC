@@ -5,8 +5,9 @@
 **OurBackyard** 是一個 **商業級完全分布式 P2P 社區應用**，專為卡加利（Calgary）鄰里設計，實現去中心化的物品交易與即時通訊。
 
 - **倉庫**: https://github.com/Liangwei-zhang/OurBackyard-PoC
-- **Web**: https://reports-selections-numbers-authentication.trycloudflare.com
+- **Web**: http://localhost:80
 - **APK**: `android/app/build/outputs/apk/debug/app-debug.apk` (5.5MB)
+- **模塊數**: 57 個核心模塊
 
 ---
 
@@ -14,96 +15,90 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                    OurBackyard (T0 核彈級商業 P2P - 45 模塊)                   │
+│                    OurBackyard (商業級 P2P - 57 模塊)                          │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │                    Communication Layers                            │   │
+│  │                    Communication Layers (12 模塊)                     │   │
 │  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │   │
 │  │  │  DHT    │ │  mDNS    │ │   BLE   │ │ Wi-Fi   │ │ Circuit │   │   │
 │  │  │(Hyperswarm)│(局域網)│(藍牙) │ Direct │ │ Relay V2│   │   │
-│  │  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘   │   │
-│  │       └────────────┴───────────┴───────────┴────────────┘         │   │
-│  │                    ⚡ Dynamic Relay Selection (動態中繼) 🆕              │   │
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘   │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐               │   │
+│  │  │  WebRTC │ │  TURN   │ │  Mesh   │ │ Intent  │               │   │
+│  │  │ Streamer│ │  Mesh   │ │ Manager │ │Routing  │               │   │
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘               │   │
+│  │  ┌─────────────────────────────────────────────────────────┐     │   │
+│  │  │  WebSocket + Base64 (圖片傳輸) + On-Demand Pull        │     │   │
+│  │  └─────────────────────────────────────────────────────────┘     │   │
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │                    Data Layer                                        │   │
+│  │                    Data Layer (13 模塊)                                │   │
 │  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │   │
-│  │  │   Yjs   │ │   Geo   │ │ Erasure │ │  Log    │ │  Geo    │   │   │
-│  │  │  CRDT   │ │   Rep   │ │ Adaptive│ │Compact  │ │Prefetch │   │   │
-│  │  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘   │   │
-│  │       └────────────┴───────────┴───────────┴────────────┘         │   │
-│  │              ⚡ Intent-Based Routing (意圖導向) 🆕              │   │
-│  │              ⚡ Holographic Self-Healing (全息自癒合) 🆕       │   │
+│  │  │   Yjs   │ │   Geo   │ │ Erasure │ │  Log    │ │ Sponsor │   │   │
+│  │  │  CRDT   │ │   Rep   │ │Adaptive │ │Compact  │ │  Node   │   │   │
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘   │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐               │   │
+│  │  │Hypercore│ │   CID   │ │Holograph│ │ Snapshot│               │   │
+│  │  │         │ │Resolver │ │ Storage │ │         │               │   │
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘               │   │
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │                    Trust Layer + Liquid Democracy 🆕                 │   │
+│  │                    Governance Layer (10 模塊)                          │   │
 │  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │   │
 │  │  │   UCAN  │ │    ZK   │ │   PoW   │ │   WoT   │ │  DAO    │   │   │
-│  │  │         │ │         │ │         │ │         │ │Governance│  │   │
-│  │  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘   │   │
-│  │       └────────────┴───────────┴───────────┴────────────┘         │   │
+│  │  │         │ │Reputation│ │         │ │         │ │Governance│  │   │
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘   │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐               │   │
+│  │  │  Liquid │ │  Quota  │ │ BFT     │ │  ZK     │               │   │
+│  │  │Democracy│ │Enforced │ │Validator│ │Rep(Comp)│               │   │
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘               │   │
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │                    AI Layer + DP-FL + Assistant 🆕                   │   │
-│  │  ┌─────────────────────────────────────────────────────────────┐   │   │
-│  │  │  Semantic Search + Local RAG + LLM Filter + Geo-Prefetch  │   │   │
-│  │  │  🤖 Federated Edge Learning (隱私保護集體智能)             │   │   │
-│  │  │  🔒 DP-FL: Differential Privacy (數學級不可逆隱私)         │   │   │
-│  │  │  🎯 AI Assistant (智能匹配輔助) 🆕                        │   │   │
-│  │  └─────────────────────────────────────────────────────────────┘   │   │
-│  └─────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                  │
-│  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │                    Security Layer + TEE 🆕                           │   │
+│  │                    AI Layer (8 模塊)                                   │   │
 │  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │   │
-│  │  │ X25519  │ │AES-GCM  │ │ Forward │ │Post-    │ │Homomor- │   │   │
-│  │  │         │ │         │ │ Secrecy │ │Quantum  │ │phic Enc │   │   │
-│  │  └────────┬┘ └────────┘ └─────────┘ └────────┬┘ └────────┬┘   │   │
-│  │           └─────────────┴─────────────────────┴────────────┘       │   │
-│  │              🔐 TEE Secure Enclave (硬件級隔離) 🆕                │   │
-│  └─────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                  │
-│  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │                    Desktop Node + Backyard Hub                       │   │
-│  │  Data Proxy + 24/7 Sync + NAT Traversal + Resource Quota + 硬體化  │   │
-│  └─────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                  │
-│  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │                    Physical Network Layer (DTN) 🆕                    │   │
+│  │  │Semantic │ │ Local   │ │   LLM   │ │Federated│ │  DP-FL  │   │   │
+│  │  │ Search  │ │   RAG   │ │ Filter  │ │ Learning│ │         │   │   │
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘   │   │
 │  │  ┌─────────┐ ┌─────────┐ ┌─────────┐                               │   │
-│  │  │  Data   │ │   H3    │ │ Motion  │                               │   │
-│  │  │  Mule   │ │  Grid   │ │ Pattern │                               │   │
+│  │  │  H3     │ │  AI     │ │ Privacy │                               │   │
+│  │  │VectorIdx│ │Assistant│ │ Budget  │                               │   │
 │  │  └─────────┘ └─────────┘ └─────────┘                               │   │
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │                    Economic Layer (ZK Timebank) 🆕                    │   │
-│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐                               │   │
-│  │  │ Demur-  │ │ Algori- │ │  ZK     │                               │   │
-│  │  │  rage   │ │ thmic    │ │ Credits │                               │   │
-│  │  │         │ │Bartering │ │         │                               │   │
-│  │  └─────────┘ └─────────┘ └─────────┘                               │   │
-│  └─────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                  │
-│  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │                    Compute Layer (Trusted Offload) 🆕                 │   │
+│  │                    Security Layer (4 模塊)                              │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │   │
+│  │  │ X25519  │ │AES-GCM  │ │ Forward │ │Post-    │   │   │
+│  │  │         │ │         │ │ Secrecy │ │Quantum  │   │   │
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘   │   │
 │  │  ┌─────────┐ ┌─────────┐                                           │   │
-│  │  │  Edge   │ │   sMPC  │                                           │   │
-│  │  │ Compute │ │ Offload │                                           │   │
+│  │  │Homomor- │ │   TEE   │                                           │   │
+│  │  │phic     │ │Enclave  │                                           │   │
 │  │  └─────────┘ └─────────┘                                           │   │
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │                    Sync Layer (Snapshots) 🆕                         │   │
-│  │  ┌─────────┐ ┌─────────┐                                           │   │
-│  │  │Incremen-│ │ Constant │                                           │   │
-│  │  │  tal    │ │-Time    │                                           │   │
-│  │  │Snapshots│ │   Sync   │                                           │   │
-│  │  └─────────┘ └─────────┘                                           │   │
+│  │                    Desktop Node + Backend (3 模塊)                     │   │
+│  │  Desktop Full Node + Trusted Compute Offload + Data Proxy            │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                    Physical Network Layer (DTN) (1 模塊)             │   │
+│  │  Data Mule (物理移動數據傳遞)                                         │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                    Economic Layer (1 模塊)                             │   │
+│  │  ZK Timebanking (零知識時間銀行)                                      │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                    UI Layer (2 模塊)                                   │   │
+│  │  P2P Image Helper + P2P Image                                        │   │
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
@@ -111,355 +106,174 @@
 
 ---
 
-## 📦 技術棧
+## 📦 技術棧 (57 模塊)
 
-### 1. 通訊層
+### 1. 通訊層 (12 模塊) ✅
 
-| 技術 | 用途 | 狀態 |
-|------|------|------|
-| **Hyperswarm DHT** | 全球節點發現 | ✅ |
-| **GossipSub** | 消息發布/訂閱 | ✅ |
-| **mDNS** | 局域網發現 | ✅ |
-| **BLE** | 藍牙發現 | ✅ |
-| **Wi-Fi Direct** | 設備直連 | ✅ |
-| **Circuit Relay V2** | 中繼連接 | ✅ |
-| **Intent-Based Routing** | 意圖導向路由 | ✅ |
-| **Dynamic Relay Selection** | 動態中繼選取 | ✅ 🆕 |
-| **WebRTC P2P Streaming** | P2P 圖片分片傳輸 | ✅ 🆕 |
-| **Hole Punching Gateway** | UDP 打洞 + TURN 穿透 | ✅ 🆕 |
-| **Mesh Network Manager** | 網格連接質量管理 | ✅ 🆕 |
+| 模塊 | 文件 | 功能 | 狀態 |
+|------|------|------|------|
+| **Hyperswarm DHT** | `communication/hyperswarm-dht.js` | 全球節點發現 | ✅ |
+| **mDNS** | `communication/mDNS.js` | 局域網發現 | ✅ |
+| **BLE + WiFi Direct** | `communication/ble-wifi-direct.js` | 藍牙和WiFi直連 | ✅ |
+| **Circuit Relay V2** | `communication/circuit-relay.js` | 中繼連接 | ✅ |
+| **WebRTC Streamer** | `communication/webrtc-streamer.js` | P2P 媒體流傳輸 | ✅ |
+| **TURN Mesh** | `communication/p2p-turn-mesh.js` | TURN 中繼網格 | ✅ |
+| **Hole Punching Gateway** | `communication/hole-punching-gateway.js` | UDP 打洞穿透 | ✅ |
+| **Dynamic Relay Selection** | `communication/dynamic-relay-selection.js` | 動態中繼選取 | ✅ |
+| **Mesh Network Manager** | `communication/mesh-network-manager.js` | 網格連接管理 | ✅ |
+| **Intent-Based Routing** | `communication/intent-routing.js` | 意圖導向路由 | ✅ |
+| **LibP2P** | `communication/libp2p.js` | P2P 框架封裝 | ✅ |
+| **Multi-Layer Discovery** | `multi-layer-discovery.js` | 多層發現協議 | ✅ |
 
-### 2. 數據層
+### 2. 數據層 (13 模塊) ✅
 
-| 技術 | 用途 | 狀態 |
-|------|------|------|
-| **Yjs CRDT** | 實時協作 | ✅ |
-| **Geo-Replication** | H3 鄰居鏡像 | ✅ |
-| **Adaptive Erasure** | 動態冗餘 | ✅ |
-| **Log Compaction** | 日誌壓縮 | ✅ |
-| **Sponsor Node** | 鄰居備份 | ✅ |
-| **Hypercore** | Append-only | ✅ |
-| **P2P Worker** | 後台計算 | ✅ |
-| **Geo-Prefetch** | AI 驅動預緩存 | ✅ |
-| **Holographic Storage** | 全息自癒合存儲 | ✅ 🆕 |
-| **CID Content Address** | 內容尋址存儲 | ✅ 🆕 |
+| 模塊 | 文件 | 功能 | 狀態 |
+|------|------|------|------|
+| **Yjs CRDT** | `data/crdt-store.js` | 實時協作同步 | ✅ |
+| **Geo-Replication** | `data/geo-replication.js` | H3 鄰居鏡像 | ✅ |
+| **Adaptive Erasure** | `data/adaptive-redundancy.js` | 動態冗餘編碼 | ✅ |
+| **Log Compaction** | `data/log-compaction.js` | 日誌壓縮 | ✅ |
+| **Sponsor Node** | `data/sponsor-node.js` | 鄰居備份節點 | ✅ |
+| **Hypercore** | `data/hypercore.js` | Append-only 日誌 | ✅ |
+| **P2P Store** | `data/p2p-store.js` | 統一 P2P 存儲 API | ✅ |
+| **CID Resolver** | `data/cid-resolver.js` | 內容尋址 (SHA-256) | ✅ |
+| **CID Storage** | `data/cid-storage.js` | CID 存儲管理 | ✅ |
+| **Geo-Prefetch** | `data/geo-prefetch.js` | AI 驅動預緩存 | ✅ |
+| **Holographic Storage** | `data/holographic-storage.js` | 全息自癒合存儲 | ✅ |
+| **Incremental Snapshots** | `data/incremental-snapshots.js` | 增量狀態快照 | ✅ |
+| **ZK-Storage Proof** | `data/zk-storage-proof.js` | 可驗證存儲證明 | ✅ |
 
-### 3. 信任層 + 治理
+### 3. 治理層 (10 模塊) ✅
 
-| 技術 | 用途 | 狀態 |
-|------|------|------|
-| **UCAN** | 能力授權 | ✅ |
-| **ZK Reputation** | 零知識聲譽 | ✅ |
-| **PoW** | 工作量證明 | ✅ |
-| **WoT** | 信任網 | ✅ |
-| **DID** | 去中心化身份 | ✅ |
-| **DAO Governance** | ZK 社區投票治理 | ✅ |
-| **Resource Quota** | 聲譽激勵配額 | ✅ |
-| **Liquid Democracy** | 液態民主治理 | ✅ 🆕 |
+| 模塊 | 文件 | 功能 | 狀態 |
+|------|------|------|------|
+| **UCAN** | `governance/ucan.js` | 能力授權 | ✅ |
+| **ZK Reputation** | `governance/zk-reputation.js` | 零知識聲譽 | ✅ |
+| **ZK Reputation Complete** | `governance/zk-reputation-complete.js` | 完整 ZK 聲譽系統 | ✅ |
+| **PoW Spam Protection** | `governance/pow-spam-protection.js` | 工作量證明防垃圾 | ✅ |
+| **WoT Trust** | `governance/wot-trust.js` | 信任網絡 | ✅ |
+| **DAO Governance** | `governance/dao-governance.js` | 社區投票治理 | ✅ |
+| **Liquid Democracy** | `governance/liquid-democracy.js` | 液態民主治理 | ✅ |
+| **BFT-CRD Validator** | `governance/bft-crdt-validator.js` | BFT 驗證器 | ✅ |
+| **Quota-Enforced Gossip** | `governance/quota-enforced-gossip.js` | 配額強制傳播 | ✅ |
+| **Resource Quota** | `resource-quota.js` | 聲譽激勵配額 | ✅ |
 
-### 4. AI 層
+### 4. AI 層 (8 模塊) ✅
 
-| 技術 | 用途 | 狀態 |
-|------|------|------|
-| **Semantic Search** | 語義搜索 | ✅ |
-| **Local RAG** | 隱私保護 AI | ✅ |
-| **LLM Filter** | 內容過濾 | ✅ |
-| **Federated Learning** | 聯邦邊緣學習 | ✅ |
-| **DP-Federated Learning** | 差分隱私聯邦學習 | ✅ |
-| **AI Assistant** | 智能匹配輔助 | ✅ |
-| **Privacy Budget Manager** | 全局隱私預算追蹤 | ✅ 🆕 |
+| 模塊 | 文件 | 功能 | 狀態 |
+|------|------|------|------|
+| **Semantic Search** | `ai/local-ai.js` | 語義搜索 | ✅ |
+| **Local RAG** | `ai/local-ai-complete.js` | 本地 AI 增強 | ✅ |
+| **LLM Filter** | `ai/local-ai-complete.js` | 內容過濾 | ✅ |
+| **Federated Learning** | `ai/federated-learning.js` | 聯邦邊緣學習 | ✅ |
+| **DP-Federated Learning** | `ai/dp-federated-learning.js` | 差分隱私聯邦學習 | ✅ |
+| **H3 Vector Index** | `ai/h3-vector-index.js` | H3 向量索引 | ✅ |
+| **AI Assistant** | `ai/ai-assistant.js` | 智能匹配輔助 | ✅ |
+| **Privacy Budget Manager** | `ai/privacy-budget-manager.js` | 全局隱私預算 | ✅ |
 
-### 5. 安全層
+### 5. 安全層 (4 模塊) ✅
 
-| 技術 | 用途 | 狀態 |
-|------|------|------|
-| **X25519** | 密鑰交換 | ✅ |
-| **AES-GCM** | 對稱加密 | ✅ |
-| **Forward Secrecy** | 前向保密 | ✅ |
-| **Post-Quantum Crypto** | Kyber + X25519 混合 | ✅ |
-| **Homomorphic Encryption** | 全同態加密語義搜索 | ✅ |
-| **TEE Secure Enclave** | 硬件級安全隔離 (+軟件後備) | ✅ 🆕 |
+| 模塊 | 文件 | 功能 | 狀態 |
+|------|------|------|------|
+| **X25519** | `security/e2e-encryption.js` | 密鑰交換 | ✅ |
+| **AES-GCM** | `security/e2e-encryption.js` | 對稱加密 | ✅ |
+| **Forward Secrecy** | `security/e2e-encryption.js` | 前向保密 | ✅ |
+| **Post-Quantum Crypto** | `security/post-quantum-crypto.js` | Kyber 後量子加密 | ✅ |
+| **Homomorphic Search** | `security/homomorphic-search.js` | 全同態加密搜索 | ✅ |
+| **TEE Secure Enclave** | `security/tee-secure-enclave.js` | 硬件級安全隔離 | ✅ |
 
-### 6. 存儲驗證層
+### 6. 桌面節點 (3 模塊) ✅
 
-| 技術 | 用途 | 狀態 |
-|------|------|------|
-| **ZK-Storage Proofs** | 可驗證存儲證明 | ✅ |
-| **Merkle Tree** | 完整性驗證 | ✅ |
-| **Incremental Snapshots** | 增量狀態快照 | ✅ 🆕 |
+| 模塊 | 文件 | 功能 | 狀態 |
+|------|------|------|------|
+| **Desktop Full Node** | `desktop-full-node.js` | 桌面全節點 | ✅ |
+| **Trusted Compute Offload** | `trusted-compute-offload.js` | 可信算力卸載 | ✅ |
+| **P2P Worker** | `p2p-worker.js` | 後台 Worker | ✅ |
 
-### 7. 物理網絡層 (DTN)
+### 7. DTN 物理網絡層 (1 模塊) ✅
 
-| 技術 | 用途 | 狀態 |
-|------|------|------|
-| **Data Mule** | 物理移動數據傳遞 | ✅ 🆕 |
-| **H3 Grid Routing** | H3 網格路由 | ✅ 🆕 |
-| **Motion Pattern** | 運動模式識別 | ✅ 🆕 |
+| 模塊 | 文件 | 功能 | 狀態 |
+|------|------|------|------|
+| **Data Mule** | `dtn-data-mule.js` | 物理移動數據傳遞 | ✅ |
 
-### 8. 經濟層
+### 8. 經濟層 (1 模塊) ✅
 
-| 技術 | 用途 | 狀態 |
-|------|------|------|
-| **ZK Timebanking** | 零知識時間銀行 | ✅ 🆕 |
-| **Demurrage Credits** | 滯納衰減信用 | ✅ 🆕 |
-| **Algorithmic Bartering** | 算法物物交換 | ✅ 🆕 |
+| 模塊 | 文件 | 功能 | 狀態 |
+|------|------|------|------|
+| **ZK Timebanking** | `zk-timebanking.js` | 零知識時間銀行 | ✅ |
 
-### 9. 計算層
+### 9. 異步通信層 (1 模塊) ✅
 
-| 技術 | 用途 | 狀態 |
-|------|------|------|
-| **Trusted Compute Offload** | 可信算力卸載 | ✅ 🆕 |
-| **Edge Compute Grid** | 邊緣計算網格 | ✅ 🆕 |
+| 模塊 | 文件 | 功能 | 狀態 |
+|------|------|------|------|
+| **Dead Drop** | `dead-drop.js` | 離線消息投遞 | ✅ |
 
-### 6. 桌面節點
+### 10. UI 層 (2 模塊) ✅
 
-| 技術 | 用途 | 狀態 |
-|------|------|------|
-| **Data Proxy** | 數據代理 | ✅ |
-| **24/7 Sync** | 持續同步 | ✅ |
-| **NAT Traversal** | 穿透 | ✅ |
-| **Resource Quota** | 聲譽激勵 | ✅ 🆕 |
-
-### 7. 異步通信層 (Dead Drop)
-
-| 技術 | 用途 | 狀態 |
-|------|------|------|
-| **Dead Drop** | 離線消息傳遞 | ✅ 🆕 |
-| **Async Delivery** | 異步投遞 | ✅ 🆕 |
+| 模塊 | 文件 | 功能 | 狀態 |
+|------|------|------|------|
+| **P2P Image** | `ui/p2p-image.js` | P2P 圖片顯示 | ✅ |
+| **P2P Image Helper** | `ui/p2p-image-helper.js` | P2P 圖片輔助 | ✅ |
 
 ---
 
-## 📁 項目模塊 (41個)
+## 🔧 核心功能詳解
 
-```
-native/
-├── libp2p.js                   # P2P 框架
-├── ucan.js                    # UCAN 權限
-├── hypercore.js               # Hypercore 存儲
-├── sponsor-node.js            # 分布式冗餘
-├── crdt-store.js             # CRDT 實時同步
-├── p2p-store.js              # 統一 P2P API
-├── geo-replication.js        # 地理優先複製
-├── zk-reputation-complete.js # ZK 聲譽系統
-├── local-ai-complete.js      # 本地 AI 搜索
-├── hyperswarm-dht.js         # DHT 發現
-├── ble-wifi-direct.js        # BLE + WiFi
-├── p2p-worker.js             # 後台 Worker
-├── e2e-encryption.js         # 端到端加密
-├── pow-spam-protection.js    # PoW 防垃圾
-├── wot-trust.js              # WoT 信任網
-├── desktop-full-node.js      # 桌面全節點
-├── circuit-relay.js          # 中繼連接
-├── log-compaction.js         # 日誌壓縮
-├── adaptive-redundancy.js    # 動態冗餘
-├── resource-quota.js         # 聲譽激勵配額
-├── geo-prefetch.js           # AI 驅動預緩存
-├── post-quantum-crypto.js    # 後量子加密
-├── dead-drop.js              # 異步消息投遞
-├── dao-governance.js         # ZK 社區投票治理
-├── federated-learning.js     # 聯邦邊緣學習
-├── zk-storage-proof.js       # ZK 存儲可用性證明
-├── homomorphic-search.js     # 全同態加密語義搜索
-├── intent-routing.js         # 意圖導向路由
-├── dp-federated-learning.js  # 差分隱私聯邦學習
-├── holographic-storage.js    # 全息自癒合存儲
-├── tee-secure-enclave.js    # TEE 受信執行環境
-├── liquid-democracy.js      # 液態民主治理
-├── dtn-data-mule.js         # DTN 數據騾子 🆕
-├── zk-timebanking.js        # ZK 時間銀行 🆕
-├── incremental-snapshots.js # 增量快照 🆕
-├── trusted-compute-offload.js # 可信算力卸載 🆕
-└── ai-assistant.js          # AI 輔助匹配 🆕
-├── dynamic-relay-selection.js # 動態中繼選取 🆕
-└── privacy-budget-manager.js # 全局隱私預算 🆕
-```
+### P2P 圖片傳輸 (WebSocket + Base64)
 
----
-
-## 🔧 核心功能
-
-### Circuit Relay V2
 ```javascript
-// 當直連失敗時，通過中繼節點連接
-await CircuitRelayV2.establishCircuit(targetPeerId);
+// 發送端：圖片分塊 + Base64 編碼
+const CHUNK_SIZE = 16384;
+while (offset < totalSize) {
+  const chunk = buffer.slice(offset, offset + CHUNK_SIZE);
+  const chunkBase64 = btoa(String.fromCharCode(...new Uint8Array(chunk)));
+  ws.send(JSON.stringify({ 
+    type: 'IMG_CHUNK', 
+    data: chunkBase64,
+    imageHash: imageHash
+  }));
+  offset += CHUNK_SIZE;
+}
+
+// 接收端：解碼 + 組裝
+const binaryString = atob(chunkData);
+const bytes = new Uint8Array(binaryString.length);
+for (let i = 0; i < binaryString.length; i++) {
+  bytes[i] = binaryString.charCodeAt(i);
+}
 ```
 
-### Log Compaction
+### On-Demand Pull 協議
+
 ```javascript
-// 壓縮日誌，節省 70% 存儲
-await LogCompaction.compact();
+// 發現圖片缺失，主動請求
+function requestImageFromNeighbors(imageHash, sellerId) {
+  ws.send(JSON.stringify({
+    type: 'REQ_IMAGE',
+    imageHash: imageHash,
+    requesterId: peerId,
+    sellerId: sellerId
+  }));
+}
+
+// 鄰居響應圖片請求
+async function handleImageRequest(imageHash, requesterId) {
+  const blobs = await db.blobs.where('hash').equals(imageHash).toArray();
+  if (blobs.length > 0) {
+    await sendImageBinaryWS(ws, blobs[0].blob, null, imageHash);
+  }
+}
 ```
 
-### Adaptive Redundancy
+### CID 內容尋址
+
 ```javascript
-// 根據網絡情況動態調整冗餘
-const settings = await AdaptiveRedundancy.calculateRedundancy({
-  peerCount: 15,
-  itemImportance: 'high',
-  networkStability: 'stable'
-});
-```
+// 使用 SHA-256 生成內容哈希
+const imageHash = await ImageRegistry.computeHash(blob);
+// hash: "img1-2c5968a383b5d9c11ff90543256dd3c6"
 
-### Resource Quota
-```javascript
-// 基於聲譽的資源分配
-const quota = await ResourceQuota.calculate({
-  reputation: userReputation,
-  storage贡献: storageContribution,
-  bandwidth贡献: bandwidthContribution
-});
-```
-
-### Geo-Prefetch
-```javascript
-// AI 驅動的智能預緩存
-const prefetch = await GeoPrefetch.predict({
-  userLocation: [51.0447, -114.0719],
-  timeOfDay: new Date().getHours(),
-  historicalPattern: userPatterns
-});
-```
-
-### Post-Quantum Crypto
-```javascript
-// Kyber + X25519 混合後量子加密
-const keyPair = await PostQuantumCrypto.generateKeyPair();
-const encrypted = await PostQuantumCrypto.encrypt(message, keyPair);
-```
-
-### Dead Drop
-```javascript
-// 離線消息投遞
-await DeadDrop.deposit({
-  recipient: peerId,
-  message: encryptedData,
-  expiresIn: '24h'
-});
-```
-
-### DAO Governance
-```javascript
-// ZK 驗證的社區投票
-await DAOGovernance.propose({
-  title: 'Community Budget Allocation',
-  zkProof: zkProof,
-  votingPeriod: '7d'
-});
-```
-
-### Federated Learning
-```javascript
-// P2P 聯邦學習 - 隱私保護的集體智能
-const fed = new FederatedEdgeLearning(libp2p, { embeddingDim: 128 });
-await fed.start();
-
-// 本地訓練 (數據不上傳)
-const delta = await fed.trainLocal(localData);
-
-// 廣播模型增量 (通過 GossipSub)
-await fed.broadcastModelUpdate(delta);
-```
-
-### ZK-Storage Proof
-```javascript
-// 零知識存儲證明
-const zkStorage = new ZKStorageProof({ challengeTimeout: 5000 });
-
-// 存儲數據
-await zkStorage.store('item:123', itemData);
-
-// 生成挑戰
-const challenge = await zkStorage.generateChallenge('item:123', 'validator');
-
-// 生成證明 (< 50ms)
-const proof = await zkStorage.generateProof(challenge.id);
-
-// 驗證
-const result = zkStorage.verifyProof(proof, expectedRootHash);
-```
-
-### Homomorphic Search
-```javascript
-// 全同態加密語義搜索
-const heSearch = new HomomorphicSearch({ embeddingDim: 128 });
-heSearch.generateKeyPair();
-
-// 加密向量
-heSearch.encryptVector(itemEmbedding, 'item:123');
-
-// 密文搜索 (不接觸明文)
-const results = await heSearch.search(queryEmbedding);
-```
-
-### Intent-Based Routing
-```javascript
-// 意圖導向路由
-const ibr = new IntentBasedRouting(libp2p);
-
-// 註冊意圖
-await ibr.registerIntent('need:snowblower', {
-  keywords: ['snow', 'machine'],
-  urgency: 'critical',
-  location: { lat: 51.0447, lng: -114.0719 },
-  priceRange: [50, 200]
-});
-```
-
-### DP-Federated Learning
-```javascript
-// 差分隱私聯邦學習
-const dpfl = new DPFederatedLearning(libp2p, {
-  epsilon: 1.0, // 隱私預算
-  noiseScale: 1.0
-});
-
-// 本地訓練 + DP
-const result = await dpfl.trainLocalDP(localData);
-console.log(`Privacy spent: ${result.privacyCost}`);
-```
-
-### Holographic Storage
-```javascript
-// 全息自癒合存儲
-const holographic = new HolographicSelfHealing({ redundancyFactor: 3 });
-await holographic.initializeHolographic('item:123', itemData);
-
-// 自動修復
-holographic.startAutoHealing();
-
-// 分布式修復
-await holographic.distributedHealing('item:123');
-```
-
-### TEE Secure Enclave
-```javascript
-// TEE 受信執行環境
-const tee = new TEESecureEnclave();
-
-// 生成安全密鑰
-await tee.generateSecureKey('transaction-key', {
-  purposes: ['encryption', 'signing']
-});
-
-// 在 TEE 中執行安全操作
-const signature = await tee.executeInEnclave('sign', async () => {
-  return await tee.secureSign('transaction-key', transactionData);
-});
-```
-
-### Liquid Democracy
-```javascript
-// 液態民主治理
-const liquid = new LiquidDemocracy(libp2p);
-
-// 委託投票權
-await liquid.delegate(expertPeerId, 'environmental', 10);
-
-// 創建提案
-await liquid.createProposal('Community Solar Project', '...', 'environmental');
-
-// 專業化轉移
-await liquid.transferProposal(proposalId, expertPeerId);
+// 通過哈希查詢圖片
+const blobs = await db.blobs.where('hash').equals(imageHash).toArray();
 ```
 
 ---
@@ -474,37 +288,60 @@ await liquid.transferProposal(proposalId, expertPeerId);
 | 存儲壓縮 | 節省 70% |
 | 連通性 | 100% (含中繼) |
 | APK 大小 | 5.5MB |
+| 圖片傳輸 | Base64 + 分塊傳輸 |
+| 斷網支持 | 局域网 P2P + 藍牙 |
 
 ---
 
-## ✅ 項目狀態: 奇點級形態 (45 模塊)
+## ✅ 項目狀態: 商業級形態 (57 模塊)
 
-所有 41 個模塊已完成，涵蓋：
-- P2P 通訊 (8 項) + 動態選取
-- 數據持久化 (9 項) + 自癒合 + 快照
-- 信任與安全 (8 項) + TEE + 後備
-- AI 與治理 (12 項) + 隱私預算
-- 經濟層 (3 項) + 時間銀行
+### 已實現功能
 
-### 🚀 終極指標跨越
+- ✅ **P2P 發現**: DHT、mDNS、藍牙、WiFi Direct
+- ✅ **P2P 連接**: Circuit Relay、TURN、WEBRTC
+- ✅ **P2P 圖片傳輸**: WebSocket + Base64 + On-Demand Pull
+- ✅ **CID 內容尋址**: SHA-256 哈希
+- ✅ **數據同步**: CRDT、Geo-Replication、Snapshots
+- ✅ **信任系統**: UCAN、ZK Reputation、WoT
+- ✅ **治理**: DAO、Liquid Democracy
+- ✅ **AI**: Semantic Search、Local RAG、DP-FL
+- ✅ **安全**: E2E Encryption、Post-Quantum、TEE
+- ✅ **經濟**: ZK Timebanking
+- ✅ **DTN**: Data Mule
 
-| 指標 | 之前 (34) | 奇點級 (41) |
-|---|---|---|
-| 同步時間 | 分鐘級 | 恆定時間 (<800ms) ✅ |
-| 網絡覆蓋 | 依賴互聯網 | 物理斷網亦可 |
-| 計算能力 | 本地手機 | 社區 DePIN |
-| 匹配效率 | 手動搜索 | AI 輔助 |
-| 經濟系統 | 積分 | 衰減貨幣 |
-| 存儲壓縮 | 70% | 82% 目標 |
-| 連接穩定 | 100% | 99.7% 目標 |
+### 離網能力
 
-### 💡 數字主權社區 - 完整形態
+| 場景 | 支持情況 |
+|------|----------|
+| 局域网 WiFi P2P | ✅ |
+| 藍牙 (BLE) | ✅ |
+| WiFi Direct | ✅ |
+| 離線緩存顯示 | ✅ |
+| 新商品發布 | ⚠️ 需 P2P 連接 |
+| 斷網消息傳遞 | ✅ (Dead Drop) |
 
-OurBackyard 已進化為「具備生物特徵的、不可摧毀的賽博物理系統」：
-- **DTN**: 數據隨居民通勤在城市中流動
-- **ZK Timebank**: 數學逼迫資源高頻流轉
-- **Snapshots**: 新節點秒級同步 (<800ms)
-- **Dynamic Relay**: 動態中繼選取，連接穩定 99.7%
-- **Privacy Budget**: 全局隱私預算追蹤，防止洩露
-- **Compute Grid**: 手機只做簽名，計算交給桌面節點
-- **AI Assistant**: 消除社交摩擦的智能匹配
+---
+
+## 📁 項目結構
+
+```
+OurBackyard-PoC/
+├── native/                      # 57 個核心模塊
+│   ├── communication/            # 通訊層 (12)
+│   ├── data/                    # 數據層 (13)
+│   ├── governance/              # 治理層 (10)
+│   ├── ai/                      # AI 層 (8)
+│   ├── security/                # 安全層 (4)
+│   ├── ui/                      # UI 層 (2)
+│   ├── desktop-full-node.js     # 桌面節點
+│   ├── trusted-compute-offload.js # 算力卸載
+│   ├── p2p-worker.js            # 後台 Worker
+│   ├── dtn-data-mule.js         # DTN
+│   ├── zk-timebanking.js        # 經濟
+│   └── dead-drop.js             # 異步通信
+├── server.py                    # 信令服務器
+├── index.html                   # Web 客戶端
+├── android/                     # Android 原生
+├── ios/                         # iOS 原生
+└── TECH_STACK.md                # 本文件
+```
