@@ -4303,7 +4303,9 @@
                                         if (imgData.chunks.length > 0) {
                                             try {
                                                 const blob = new Blob(imgData.chunks, { type: imgData.mimeType || "image/jpeg" });
+                                                const storeItemId = targetItemId || imgData.itemId || Date.now();
                                                 await db.blobs.put({
+                                                    itemId: storeItemId,
                                                     hash: imageHash,
                                                     blob: blob,
                                                     timestamp: Date.now(),
