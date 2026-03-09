@@ -3281,6 +3281,10 @@
 
             // ============ Load Items ============
             async function loadItems() {
+                // Prevent concurrent loads
+                if (window._loadingItems) return;
+                window._loadingItems = true;
+                try {
                 let items = await db.items
                     .where("status")
                     .notEqual("gone")
@@ -3412,6 +3416,7 @@
           <div class="item-card ${item.status}" onclick="showItemDetail(${item.id})">
             <img class="item-image lazy"
                  data-item-id="${item.id}"
+                 data-hash="${item.imageHash || ''}"
                  src="${microPlaceholder}"
                  alt="${item.title}"
                  style="filter: blur(3px)"
@@ -3498,6 +3503,9 @@
                     const images = container.querySelectorAll(".lazy");
                     images.forEach((img) => observer.observe(img));
                 }, 100);
+            } finally {
+                window._loadingItems = false;
+            }
             }
 
             // ============ Item Detail ============
