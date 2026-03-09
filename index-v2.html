@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#ffffff">
 <title>OurBackyard</title>
 <style>
-:root{--primary:#4169E1;--bg:#fff;--bg2:#f8f9fa;--border:#e9ecef;--text:#1a1a1a;--text2:#6c757d;--green:#22c55e;--orange:#f97316;--radius:16px;--shadow:0 4px 20px rgba(0,0,0,0.08)}
-body.dark{--bg:#1a1a1a;--bg2:#2d2d2d;--border:#404040;--text:#fff;--text2:#aaa;--shadow:0 4px 20px rgba(0,0,0,0.3)}
+:root{--primary:#4169E1;--bg:#fff;--bg2:#f2f2f7;--bg3:#e5e5ea;--border:#c7c7cc;--text:#000;--text2:#8e8e93;--green:#34c759;--orange:#ff9500;--red:#ff3b30;--radius:16px;--shadow:0 4px 20px rgba(0,0,0,0.08)}
+body.dark{--bg:#000;--bg2:#1c1c1e;--bg3:#2c2c2e;--border:#38383a;--text:#fff;--text2:#8e8e93}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;font-weight:400}
 .container{display:flex;height:100vh;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
@@ -107,12 +107,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .drawer-stat-value{font-size:13px;font-weight:600}
 .stat-good{color:var(--green)}
 .stat-warn{color:var(--orange)}
-.tab-bar{position:fixed;bottom:0;left:0;right:0;background:var(--bg);display:flex;justify-content:space-around;padding:12px 0 24px;border-top:1px solid var(--border);box-shadow:0 -4px 24px rgba(0,0,0,0.06);z-index:100;backdrop-filter:blur(10px)}
-.tab-item{display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--text2);font-size:10px;cursor:pointer;padding:4px 8px;transition:transform 0.1s}
-.tab-item:active{transform:scale(0.9)}
-.tab-item.on{color:var(--primary)}
-.tab-icon{font-size:22px}
-.tab-add{width:56px;height:56px;background:linear-gradient(135deg,var(--primary),#5b5fd4);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;margin-top:-24px;box-shadow:0 6px 16px rgba(65,105,225,0.4)}
+.tab-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(249,249,249,0.94);backdrop-filter:blur(20px);display:flex;justify-content:space-around;padding:8px 0 28px;border-top:0.5px solid var(--border);z-index:100}
+.tab-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 12px}
+.tab-icon{font-size:24px}
+.tab-label{font-size:10px;color:var(--text2);margin-top:2px}
+.tab-item.active .tab-label{color:var(--primary);font-weight:500}
+.tab-add{width:46px;height:46px;background:linear-gradient(135deg,var(--primary),#5b5fd4);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;margin-top:-20px;box-shadow:0 4px 12px rgba(65,105,225,0.4)}
 .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;padding:14px 28px;font-weight:700;border-radius:24px;z-index:1000;opacity:0;transition:opacity 0.3s;box-shadow:var(--shadow)}
 .toast.on{opacity:1}
 .toast.error{background:#ef4444;color:#fff}
@@ -120,9 +120,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .loading{display:none;text-align:center;padding:40px}
 .loading-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.swipe-indicator{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;gap:6px;z-index:50;pointer-events:none;opacity:0.4;transition:opacity 0.3s}
-.swipe-dot{width:6px;height:6px;background:var(--text2);border-radius:50%}
-.swipe-dot.active{background:var(--primary);transform:scale(1.2)}
+.home-indicator{position:fixed;bottom:6px;left:50%;transform:translateX(-50%);width:134px;height:5px;background:#000;border-radius:3px;z-index:101}
+body.dark .home-indicator{background:#fff}
 </style>
 </head>
 <body>
@@ -167,6 +166,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 
 <!-- CENTER: Mall -->
 <div class="page" id="page-mall">
+<div class="ios-status-bar">
+<div class="ios-status-left"><span id="iosTime">12:03</span></div>
+<div class="ios-status-right">
+<div class="ios-signal"><span></span><span></span><span></span><span></span></div>
+<span>5G</span>
+<span>🔋</span>
+</div>
+</div>
 <header class="header"><div class="logo"><div class="logo-i">🏡</div><span>OurBackyard</span></div><button class="btn" id="themeBtn">🌙</button></header>
 <div class="bar"><div class="dot" id="statusDot"></div><span id="statusText">連接中...</span><span class="tag blue" id="peerCount">0 在線</span><span class="tag gray">⭐ <span id="userRep">95</span></span><span class="tag green"><span id="timebank">12</span>h</span></div>
 <div class="search"><div class="search-bar"><span>🔍</span><input type="text" id="searchInput" placeholder="搜索商品..."><button class="ai-btn" id="aiBtn">🤖 AI</button></div></div>
@@ -224,23 +231,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 
 <div class="toast" id="toast"></div>
 
-<div class="swipe-indicator" id="swipeIndicator">
-<div class="swipe-dot"></div>
-<div class="swipe-dot active"></div>
-<div class="swipe-dot"></div>
-</div>
+<div class="home-indicator"></div>
 
 <nav class="tab-bar">
-<div class="tab-item on" data-page="mall"><span class="tab-icon">🏠</span><span>首頁</span></div>
-<div class="tab-item" data-page="chat"><span class="tab-icon">💬</span><span>消息</span></div>
+<div class="tab-item active" data-page="mall"><span class="tab-icon">🏠</span><span class="tab-label">首頁</span></div>
+<div class="tab-item" data-page="chat"><span class="tab-icon">💬</span><span class="tab-label">消息</span></div>
 <div class="tab-item" data-page="add"><div class="tab-add">➕</div></div>
-<div class="tab-item" data-page="stats"><span class="tab-icon">📊</span><span>統計</span></div>
-<div class="tab-item" data-page="profile"><span class="tab-icon">👤</span><span>我的</span></div>
+<div class="tab-item" data-page="stats"><span class="tab-icon">📊</span><span class="tab-label">統計</span></div>
+<div class="tab-item" data-page="profile"><span class="tab-icon">👤</span><span class="tab-label">我的</span></div>
 </nav>
 
 <script>
 const App = {ws:null, peerId:'', roomId:'ourbackyard.h3.8912ccd5083ffff', products:[], myProducts:[], chats:[], currentChat:null, userRep:95, timebank:12, category:'all'};
 let currentPage = 1;
+
+// iOS time
+function updateTime(){
+  try{const now=new Date();const t=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');const el=document.getElementById('iosTime');if(el)el.textContent=t;}catch{}
+}
+setInterval(updateTime,1000);updateTime();
 
 function toast(msg, err=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(err?' error':'')+' on';setTimeout(()=>t.classList.remove('on'),3000)}
 
@@ -305,13 +314,9 @@ function closeChatDetail(){document.getElementById('chatDetail').style.display='
 function goToPage(page){
   currentPage=page;
   document.getElementById('container').scrollTo({left:page*window.innerWidth,behavior:'auto'});
-  document.querySelectorAll('.tab-item').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.tab-item').forEach(x=>x.classList.remove('active'));
   const pages=['mall','chat','add','stats','profile','settings'];
-  if(page>=1&&page<=5){document.querySelector('[data-page="'+pages[page-1]+'"]').classList.add('on');}
-  // Update swipe indicator - only show for drawer/mall/chat
-  const indicator=document.getElementById('swipeIndicator');
-  indicator.style.opacity=page<=2?'0.4':'0';
-  document.querySelectorAll('.swipe-dot').forEach((d,i)=>d.classList.toggle('active',i===Math.min(page,2)));
+  if(page>=1&&page<=5){document.querySelector('[data-page="'+pages[page-1]+'"]').classList.add('active');}
 }
 
 // Touch/Swipe
