@@ -1900,74 +1900,37 @@
           microThumbnail = await blobToBase64(microBlob);
         }
         
-        // Compress first image to 800px
+        // Compress first image to 800px for storage
         imageBlob = await compressImage(selectedPhotos[0], 800, 0.7);
         if (imageBlob) {
           imageBase64 = await blobToBase64(imageBlob);
           
-          // Upload to server and get URL
-          // 生成臨時 ID 用於 P2P 標記
-          const tempItemId = 'temp_' + Date.now();
-          var useP2P = false;
+          // 完全 P2P 模式：跳過 HTTP 上傳，直接用 base64 + CID
+          const tempItemId = 'p2p_' + Date.now();
+          imageUrl = 'p2p://' + tempItemId;
           
-          try {
-            const uploadResponse = await fetch('/api/upload/image', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                image: imageBase64.split(',')[1] || imageBase64, // Remove data:image/xxx;base64, prefix
-                ext: 'jpg'
-              })
-            });
-            if (!uploadResponse.ok) {
-              console.error('Upload failed with status:', uploadResponse.status);
-              useP2P = true;
-            } else {
-              const uploadResult = await uploadResponse.json();
-              if (uploadResult.success && uploadResult.url) {
-                imageUrl = uploadResult.url;
-                console.log('Image uploaded successfully:', imageUrl);
-              } else {
-                useP2P = true;
-              }
-            }
-          } catch (e) {
-            console.error('Upload error:', e);
-            useP2P = true;
-          }
-          
-          // 如果使用 P2P，標記 URL
-          if (useP2P) {
-            imageUrl = 'p2p://' + tempItemId;
-          }
-          
-          // 保存 CID 到本地
+          // 保存 CID 到本地 (內容尋址)
           const cid = await CIDResolver.save(tempItemId, imageBlob);
           
-          // Store with URL first, fallback to base64
+          // Store item with base64 thumbnail (instant display)
           const itemId = await db.items.add({
             type: 'marketplace', status: 'available', category, price, condition,
             title, description, sellerId: peerId, sellerName: displayName,
             h3Index: currentH3Index, timestamp: Date.now(),
-            imageUrl: imageUrl,  // Cloud URL or p2p:// marker
-            thumbnail: imageBase64,  // Base64 fallback
-            microThumbnail: microThumbnail,  // Micro thumbnail (50px, ~2KB)
-            cid: cid  // Content ID for P2P
+            imageUrl: imageUrl,  // P2P marker
+            thumbnail: imageBase64,  // Base64 for instant display
+            microThumbnail: microThumbnail,  // Micro thumbnail (50px)
+            cid: cid  // Content ID for P2P lookup
           });
           
-          // 更新 CID 映射
-          await CIDResolver.save(itemId, imageBlob);
-          
-          // 通過 P2P 廣播圖片 (如果 HTTP 失敗或使用 P2P 模式)
-          if (useP2P) {
-            console.log('[P2P] Broadcasting image via WebRTC...');
-            if (P2PStreamer.getPeers().length > 0) {
-              await P2PStreamer.sendImage(itemId, imageBlob);
-            }
-          }
-          
-          // Also save blob for potential P2P transfer
+          // 保存 blob 到 IndexedDB (P2P 傳輸用)
           await db.blobs.add({ itemId, blob: imageBlob });
+          
+          // 通過 P2P 廣播圖片
+          console.log('[P2P] Broadcasting image via WebRTC...');
+          if (P2PStreamer.getPeers().length > 0) {
+            await P2PStreamer.sendImage(itemId, imageBlob);
+          }
         }
       }
       
