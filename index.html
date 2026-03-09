@@ -2531,10 +2531,11 @@
                             if (drawerH3) drawerH3.textContent = currentH3Index;
 
                             // Update badge: green = success
-                            const badge =
-                                document.getElementById("location-badge");
-                            badge.textContent = "";
-                            badge.className = "location-badge success";
+                            const badge = document.getElementById("location-badge");
+                            if (badge) {
+                                badge.textContent = "";
+                                badge.className = "location-badge success";
+                            }
 
                             // Auto-join H3 L9 room
                             roomId = "ourbackyard.h3." + currentH3Index;
@@ -4103,13 +4104,14 @@
             const chatMessages = {}; // peerId -> messages[]
             const knownPeers = new Set(); // Track all known peers
 
-            document
-                .getElementById("btn-chat")
-                .addEventListener("click", () => {
+            const chatBtn = document.getElementById("btn-chat");
+            if (chatBtn) {
+                chatBtn.addEventListener("click", () => {
                     document.getElementById("chat-modal").classList.add("show");
                     updateChatPeerSelector();
                     renderChatMessages();
                 });
+            }
 
             function closeChatModal() {
                 document.getElementById("chat-modal").classList.remove("show");
