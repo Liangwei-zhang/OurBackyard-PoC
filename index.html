@@ -188,6 +188,15 @@
       font-weight: 600;
       margin-left: 8px;
     }
+    .storage {
+      background: var(--surface);
+      color: #9c27b0;
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
 
     /* Info Card */
     .info-card {
@@ -571,6 +580,7 @@
       <div class="sync-status" id="sync-status">Last sync: --</div>
       <div class="reputation" id="reputation">⭐ 0</div>
       <div class="timebank" id="timebank">⏰ 0h</div>
+      <div class="storage" id="storage">💾 0MB</div>
     </div>
   </div>
 
@@ -1946,6 +1956,7 @@
       initReputation();
       updateSyncStatus();
       updateNetworkStatus();
+      updateStorageUsage();
     });
 
     // ============ UI Functions ============
@@ -2057,6 +2068,17 @@
     // Listen for network changes
     window.addEventListener('online', updateNetworkStatus);
     window.addEventListener('offline', updateNetworkStatus);
+    
+    // Calculate storage usage
+    function updateStorageUsage() {
+      if (navigator.storage && navigator.storage.estimate) {
+        navigator.storage.estimate().then(estimate => {
+          const used = (estimate.usage / (1024 * 1024)).toFixed(1);
+          const el = document.getElementById('storage');
+          el.innerHTML = `💾 ${used}MB`;
+        });
+      }
+    }
 
     // ============ UX: Optimistic UI - Instant Feedback ============
     function optimisticUpdate(action, successCallback) {
