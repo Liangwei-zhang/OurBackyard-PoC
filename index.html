@@ -4239,7 +4239,7 @@
                         case "IMG_CHUNK":
                             // Decode base64 chunk back to binary
                             try {
-                                const msg = JSON.parse(e.data);
+                                const msg = JSON.parse(data);
                                 const chunkData = msg.data;
                                 const imageHash = msg.imageHash; // Use hash from message!
                                 const binaryString = atob(chunkData);
