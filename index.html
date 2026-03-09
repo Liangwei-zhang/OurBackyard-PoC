@@ -2225,12 +2225,11 @@
         ws.send(JSON.stringify(signedMsg));
         
         // If item has image, send as binary chunks via P2P (not base64)
-        if (item.thumbnail || item.imageHash) {
-          // Get blob from IndexedDB
-          const blobs = await db.blobs.where('itemId').equals(item.id).toArray();
+        // Use imageHash for content-addressable storage!
+        if (item.imageHash) {
+          const blobs = await db.blobs.where('hash').equals(item.imageHash).toArray();
           if (blobs.length > 0) {
-            // Send binary image via WebSocket
-            await sendImageBinaryWS(ws, blobs[0].blob, item.id);
+            await sendImageBinaryWS(ws, blobs[0].blob, item.id, item.imageHash);
           }
         }
       }
@@ -2240,7 +2239,7 @@
     }
     
     // Send image as binary via WebSocket
-    async function sendImageBinaryWS(ws, blob, itemId) {
+    async function sendImageBinaryWS(ws, blob, itemId, imageHash) {
       const CHUNK_SIZE = 16384;
       const buffer = await blob.arrayBuffer();
       const totalSize = buffer.byteLength;
@@ -2248,23 +2247,23 @@
       
       try {
         // Get item details for matching on receiver side
-        const item = await db.items.get(itemId);
+        const item = itemId ? await db.items.get(itemId) : null;
         
-        // Compute image hash (CID) for content addressing
-        const imageHash = await ImageRegistry.computeHash(blob);
+        // Use provided imageHash or compute new one
+        const hash = imageHash || await ImageRegistry.computeHash(blob);
         
         // Send header with image hash (CID)
         ws.send(JSON.stringify({ 
           type: 'IMG_HEADER', 
-          itemId: itemId, 
+          itemId: itemId || null, 
           size: totalSize, 
           mimeType: blob.type || 'image/jpeg',
-          imageHash: imageHash, // CID for content addressing
+          imageHash: hash, // CID for content addressing
           sellerId: item?.sellerId,
           title: item?.title
         }));
         
-        console.log('[WS] Sending image with hash:', imageHash);
+        console.log('[WS] Sending image with hash:', hash);
         
         // Send binary chunks with backpressure
         while (offset < totalSize) {
