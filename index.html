@@ -197,6 +197,24 @@
       font-weight: 600;
       margin-left: 8px;
     }
+    .encryption {
+      background: var(--surface);
+      color: #00bcd4;
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    .items-count {
+      background: var(--surface);
+      color: #ff5722;
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
 
     /* Info Card */
     .info-card {
@@ -581,6 +599,8 @@
       <div class="reputation" id="reputation">⭐ 0</div>
       <div class="timebank" id="timebank">⏰ 0h</div>
       <div class="storage" id="storage">💾 0MB</div>
+      <div class="encryption" id="encryption">🔒 E2E</div>
+      <div class="items-count" id="items-count">📦 0</div>
     </div>
   </div>
 
@@ -1957,6 +1977,7 @@
       updateSyncStatus();
       updateNetworkStatus();
       updateStorageUsage();
+      updateItemsCount();
     });
 
     // ============ UI Functions ============
@@ -2078,6 +2099,14 @@
           el.innerHTML = `💾 ${used}MB`;
         });
       }
+    }
+    
+    // Update items count
+    function updateItemsCount() {
+      db.items.count().then(count => {
+        const el = document.getElementById('items-count');
+        el.innerHTML = `📦 ${count}`;
+      });
     }
 
     // ============ UX: Optimistic UI - Instant Feedback ============
