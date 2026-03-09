@@ -1,1 +1,34 @@
-/bin/bash: line 1: python: command not found
+INFO:     Started server process [894528]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
+INFO:     127.0.0.1:51164 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51164 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51924 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "GET / HTTP/1.1" 200 OK
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "GET / HTTP/1.1" 200 OK
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "WebSocket /ws/ourbackyard-calgary-test" [accepted]
+INFO:     connection open
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "WebSocket /ws/ourbackyard.h3.8912ccd5083ffff" [accepted]
+INFO:     connection open
+[+] peer_vulrnruiu joined room: ourbackyard-calgary-test (1 clients)
+[SYNC] Received from peer_vulrnruiu
+[+] peer_l57hylfjp joined room: ourbackyard.h3.8912ccd5083ffff (1 clients)
+[SYNC] Received from peer_l57hylfjp
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "WebSocket /ws/ourbackyard.h3.8912ccd5083ffff" [accepted]
+INFO:     connection open
+[-] peer_l57hylfjp left room: ourbackyard.h3.8912ccd5083ffff
+[+] peer_jrcoqs23q joined room: ourbackyard.h3.8912ccd5083ffff (1 clients)
+[SYNC] Received from peer_jrcoqs23q
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+[-] peer_jrcoqs23q left room: ourbackyard.h3.8912ccd5083ffff
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "WebSocket /ws/ourbackyard.h3.8912ccd5083ffff" [accepted]
+INFO:     connection open
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "WebSocket /ws/ourbackyard.h3.8912ccd5083ffff" [accepted]
+INFO:     connection open

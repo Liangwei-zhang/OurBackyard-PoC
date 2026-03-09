@@ -2604,6 +2604,18 @@
                 incomingImages[imageHash].received += buffer.byteLength;
                 
                 console.log('[IMG_CHUNK] Progress:', incomingImages[imageHash].received, '/', expectedSize);
+                
+                // Auto-assemble when all chunks received
+                if (incomingImages[imageHash].received >= expectedSize) {
+                  console.log('[IMG_CHUNK] All chunks received, auto-assembling...');
+                  // Find the item by hash
+                  const items = await db.items.where('imageHash').equals(imageHash).toArray();
+                  if (items.length > 0) {
+                    await assembleAndSaveImage(imageHash, items[0].id);
+                  } else {
+                    await assembleAndSaveImage(imageHash, null);
+                  }
+                }
               }
             } catch(e) {
               console.error('[IMG_CHUNK] decode error:', e);
