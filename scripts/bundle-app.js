@@ -49,3 +49,31 @@ async function bundle() {
 }
 
 bundle().catch(console.error);
+
+// Developer keys (for demo - in production use environment variables)
+const DEV_KEYS = {
+    // In production, generate once and store securely:
+    // privateKey: 'your-ed25519-private-key-base64'
+    publicKey: 'ourbackyard-demo-key-v1'  // Embedded in app for verification
+};
+
+// Sign bundle
+function signBundle(bundleHash) {
+    // In real implementation, use libsodium or WebCrypto
+    // For demo: simple HMAC
+    const crypto = require('crypto');
+    const hmac = crypto.createHmac('sha256', DEV_KEYS.publicKey);
+    hmac.update(bundleHash);
+    return hmac.digest('base64');
+}
+
+// Verify signature  
+function verifySignature(signature, bundleHash) {
+    const crypto = require('crypto');
+    const hmac = crypto.createHmac('sha256', DEV_KEYS.publicKey);
+    hmac.update(bundleHash);
+    const expected = hmac.digest('base64');
+    return signature === expected;
+}
+
+module.exports = { signBundle, verifySignature, DEV_KEYS };

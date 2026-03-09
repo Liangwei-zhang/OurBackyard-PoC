@@ -870,6 +870,7 @@
                         <span class="stat-icon">🔄</span>
                         <span class="stat-label">Version</span>
                         <button class="btn btn-sm" onclick="AppUpdater.checkForUpdates()">檢查更新</button>
+                        <button class="btn btn-sm" onclick="alert('增量更新功能開發中')">增量</button>
                     </div>
                 </div>
             </div>
@@ -1626,6 +1627,64 @@
                     await this.saveBundle(bundleBlob, hash, version);
                     broadcast({ type: "APP_UPDATE_AVAILABLE", version: version, bundleHash: hash, peerId: peerId });
                     alert("版本 " + version + " 已發布！");
+                },
+                
+                // ============ Delta Update (Module 57) ============
+                async checkDeltaUpdates(remoteManifest) {
+                    const localManifest = await db.systemAssets.get("app-manifest");
+                    if (!localManifest || !remoteManifest) return null;
+                    
+                    // Find missing blocks
+                    const localBlocks = new Set(localManifest.blocks?.map(b => b.hash) || []);
+                    const missingBlocks = remoteManifest.blocks.filter(b => !localBlocks.has(b.hash));
+                    
+                    console.log("[Delta] Local blocks: " + localBlocks.size + ", Missing: " + missingBlocks.length);
+                    return missingBlocks;
+                },
+                
+                async applyDeltaUpdate(remoteBundle, missingBlocks) {
+                    // Get local blocks
+                    const localBundle = await db.systemAssets.get("app-bundle");
+                    const localBlocks = localBundle?.blocks || [];
+                    
+                    // Merge blocks
+                    const mergedBlocks = [...localBundle?.blocks || [], ...missingBlocks];
+                    
+                    // Reassemble files
+                    for (const [filename, expectedHash] of Object.entries(remoteBundle.fileHashes)) {
+                        const fileContent = this.extractFileFromBlocks(mergedBlocks, filename);
+                        if (fileContent) {
+                            await db.systemAssets.put({
+                                url: filename,
+                                blob: new Blob([fileContent], { type: 'text/html' }),
+                                hash: expectedHash,
+                                version: remoteBundle.version
+                            });
+                        }
+                    }
+                    
+                    // Save manifest
+                    await db.systemAssets.put({ url: "app-manifest", ...remoteBundle });
+                    
+                    console.log("[Delta] ✅ Delta update applied!");
+                },
+                
+                extractFileFromBlocks(blocks, filename) {
+                    // This is a simplified version - real implementation needs block boundaries
+                    // For now, return the full content
+                    const allData = blocks.map(b => atob(b.data)).join('');
+                    return allData;
+                },
+                
+                // Request specific blocks from neighbors
+                async requestDeltaBlocks(peerId, version, missingHashes) {
+                    console.log("[Delta] Requesting " + missingHashes.length + " blocks from neighbor");
+                    broadcast({
+                        type: "REQ_DELTA_BLOCKS",
+                        version: version,
+                        hashes: missingHashes,
+                        peerId: peerId
+                    });
                 }
             };
             
