@@ -488,6 +488,8 @@
                border-radius: 10px;
                font-weight: 600;
              }
+             .btn-report { background: none; border: none; font-size: 14px; cursor: pointer; opacity: 0.5; padding: 4px; }
+             .btn-report:hover { opacity: 1; }
              .status-available { background: var(--accent-green); color: #000; }
              .status-pending { background: var(--accent-orange); color: #000; }
              .status-gone { background: var(--text-muted); color: #fff; }
@@ -1690,6 +1692,141 @@
             
             AppUpdater.init();
 
+            // ============ Module 58: P2P Content Moderation ============
+            const ContentModerator = {
+                // Block threshold for consensus
+                BLOCK_THRESHOLD: 5,
+                BLOCK_WINDOW_MS: 10 * 60 * 1000, // 10 minutes
+                
+                // Check if item is blocked
+                async isBlocked(itemHash) {
+                    const blocked = await db.blocklist.get(itemHash);
+                    return !!blocked;
+                },
+                
+                // Submit a report (ZK-Proof would be used in production)
+                async reportItem(itemHash, reason) {
+                    const report = {
+                        itemHash: itemHash,
+                        reason: reason,
+                        reporterId: peerId,
+                        reporterRep: parseInt(document.getElementById("reputation")?.textContent || "50"),
+                        timestamp: Date.now()
+                    };
+                    
+                    console.log("[Moderation] Report submitted for:", itemHash);
+                    
+                    // Broadcast report to neighbors
+                    broadcast({
+                        type: "ITEM_REPORT",
+                        report: report,
+                        peerId: peerId
+                    });
+                    
+                    alert("舉報已提交，等待鄰里裁決");
+                },
+                
+                // Handle incoming report
+                async handleReport(msg) {
+                    const { report } = msg;
+                    if (!report) return;
+                    
+                    console.log("[Moderation] Received report for:", report.itemHash);
+                    
+                    // Check reporter's reputation
+                    if (report.reporterRep < 50) {
+                        console.log("[Moderation] Reporter reputation too low, ignoring");
+                        return;
+                    }
+                    
+                    // Store report locally
+                    const reports = await db.blocklist.where("itemHash").equals(report.itemHash).toArray();
+                    reports.push(report);
+                    
+                    // Check consensus
+                    if (reports.length >= this.BLOCK_THRESHOLD) {
+                        // Get unique reporters
+                        const uniqueReporters = new Set(reports.map(r => r.reporterId));
+                        if (uniqueReporters.size >= this.BLOCK_THRESHOLD) {
+                            // Consensus reached - block item
+                            await this.blockItem(report.itemHash, "Consensus reached by neighbors");
+                        }
+                    }
+                },
+                
+                // Block an item
+                async blockItem(itemHash, reason) {
+                    await db.blocklist.put({
+                        itemHash: itemHash,
+                        reason: reason,
+                        timestamp: Date.now(),
+                        blockedBy: "neighbor-consensus"
+                    });
+                    
+                    console.log("[Moderation] ❌ Item BLOCKED:", itemHash);
+                    
+                    // Broadcast block to all neighbors
+                    broadcast({
+                        type: "ITEM_BLOCKED",
+                        itemHash: itemHash,
+                        reason: reason,
+                        peerId: peerId
+                    });
+                    
+                    // Refresh the view
+                    if (typeof renderItems === "function") {
+                        renderItems();
+                    }
+                },
+                
+                // Handle block broadcast
+                async handleBlockBroadcast(msg) {
+                    const { itemHash, reason } = msg;
+                    if (!itemHash) return;
+                    
+                    console.log("[Moderation] Received block broadcast:", itemHash);
+                    
+                    // Already blocked?
+                    const existing = await db.blocklist.get(itemHash);
+                    if (existing) return;
+                    
+                    // Add to local blocklist
+                    await db.blocklist.put({
+                        itemHash: itemHash,
+                        reason: reason || "Neighbor consensus",
+                        timestamp: Date.now(),
+                        blockedBy: "network"
+                    });
+                    
+                    // Refresh UI
+                    if (typeof renderItems === "function") {
+                        renderItems();
+                    }
+                },
+                
+                // Filter items before rendering
+                async filterItems(items) {
+                    const blocked = await db.blocklist.toArray();
+                    const blockedHashes = new Set(blocked.map(b => b.itemHash));
+                    
+                    return items.filter(item => {
+                        const itemHash = item.imageHash || "item-" + item.id;
+                        return !blockedHashes.has(itemHash);
+                    });
+                },
+                
+                // Get blocklist count
+                async getBlockCount() {
+                    return await db.blocklist.count();
+                }
+            };
+            
+            // Add report button to item cards
+            function addReportButtonToItem(itemId, itemHash) {
+                // This would be called when rendering items
+                console.log("[Moderation] Report button added for item:", itemId);
+            }
+
             // ============ Image Hash Registry (Content Addressable) ============
             // Maps items to their image hashes (CID)
             const ImageRegistry = {
@@ -1986,14 +2123,15 @@
 
             // ============ Initialize IndexedDB (Dexie) ============
             const db = new Dexie("OurBackyardDB");
-            db.version(3).stores({
+            db.version(4).stores({
                 items: "++id, title, category, price, status, sellerId, h3Index, timestamp",
                 blobs: "itemId, hash",
                 sync: "key",
                 userData: "key",
                 systemAssets: "url, hash, version",
+                blocklist: "itemHash, reason, timestamp",
             });
-            console.log("IndexedDB initialized v3 with systemAssets");
+            console.log("IndexedDB initialized v4 with blocklist");
 
             // Auto-login - generate display name if not saved
             db.userData.get("displayName").then((record) => {
@@ -3194,6 +3332,7 @@
               <div class="item-price">${priceText}</div>
               <div class="item-footer">
                 <span class="item-status ${statusClass}">${item.status}</span>
+                <button class="btn-report" onclick="event.stopPropagation(); ContentModerator.reportItem('item-${item.id}', 'inappropriate')" title="舉報">🚩</button>
               </div>
             </div>
           </div>
@@ -3894,6 +4033,12 @@
                         case "APP_UPDATE_AVAILABLE":
                         case "APP_BUNDLE":
                             AppUpdater.handleUpdateMessage(msg);
+                            break;
+                        case "ITEM_REPORT":
+                            ContentModerator.handleReport(msg);
+                            break;
+                        case "ITEM_BLOCKED":
+                            ContentModerator.handleBlockBroadcast(msg);
                             break;
                         case "NEW_ITEM":
                             console.log(
