@@ -1315,7 +1315,7 @@
     const db = new Dexie('OurBackyardDB');
     db.version(2).stores({
       items: '++id, title, category, price, status, sellerId, h3Index, timestamp',
-      blobs: 'itemId',
+      blobs: 'itemId, hash',
       sync: 'key'
     });
     console.log('IndexedDB initialized v2');
