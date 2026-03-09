@@ -1991,11 +1991,12 @@
         // Compress first image to 800px for storage
         imageBlob = await compressImage(selectedPhotos[0], 800, 0.7);
         if (imageBlob) {
-          // 使用 Object URL 替代 base64 (更高效，無 +33% 開銷)
-          const objectUrl = blobToObjectURL(imageBlob, tempItemId || 'temp_' + Date.now());
-          
           // 完全 P2P 模式：跳過 HTTP 上傳
           const tempItemId = 'p2p_' + Date.now();
+          
+          // 使用 Object URL 替代 base64 (更高效，無 +33% 開銷)
+          const objectUrl = blobToObjectURL(imageBlob, tempItemId);
+          
           imageUrl = 'p2p://' + tempItemId;
           
           // 保存 CID 到本地 (內容尋址，去重)
