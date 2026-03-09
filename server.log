@@ -106,3 +106,221 @@ INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "GET / HTTP/1.1" 200 OK
 INFO:     connection closed
 INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "WebSocket /ws/ourbackyard.h3.8912ccd5083ffff" [accepted]
 INFO:     connection open
+[-] peer_kgxs0e169 left room: ourbackyard.h3.8912ccd5083ffff
+[+] peer_6sevtge7c joined room: ourbackyard.h3.8912ccd5083ffff (3 clients)
+[HISTORY] Sending 2 items to new peer peer_6sevtge7c
+[HISTORY] Sending 2 items to peer_6sevtge7c
+[SYNC] Received from peer_6sevtge7c
+[REQ_IMAGE] Broadcasting image request from peer_6sevtge7c: img1-f1a41e60ef36802d94a1f8d4d5011adf
+[SYNC] Broadcasting response from peer_ttbg77b9p
+[IMG_HEADER] Broadcasting from peer_yf01z23ma
+[IMG_END] Broadcasting from peer_yf01z23ma
+[SYNC] Broadcasting response from peer_yf01z23ma
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "WebSocket /ws/ourbackyard.h3.8912ccd5083ffff" [accepted]
+INFO:     connection open
+[-] peer_ttbg77b9p left room: ourbackyard.h3.8912ccd5083ffff
+[+] peer_adfwjd2t3 joined room: ourbackyard.h3.8912ccd5083ffff (3 clients)
+[HISTORY] Sending 2 items to new peer peer_adfwjd2t3
+[HISTORY] Sending 2 items to peer_adfwjd2t3
+[SYNC] Received from peer_adfwjd2t3
+[SYNC] Broadcasting response from peer_6sevtge7c
+[SYNC] Broadcasting response from peer_yf01z23ma
+INFO:     2604:3d09:a7e:bec0:fc9f:ffe1:2d30:ddbd:0 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     2604:3d09:a7e:bec0:fc9f:ffe1:2d30:ddbd:0 - "WebSocket /ws/ourbackyard-calgary-test" [accepted]
+INFO:     connection open
+[-] peer_yf01z23ma left room: ourbackyard.h3.8912ccd5083ffff
+[+] peer_qche0vz4r joined room: ourbackyard-calgary-test (1 clients)
+[SYNC] Received from peer_qche0vz4r
+[REQ_IMAGE] Broadcasting image request from peer_qche0vz4r: img1-2294df69af50e8bb0073ce0f9f5220a4
+[REQ_IMAGE] Broadcasting image request from peer_qche0vz4r: img1-2294df69af50e8bb0073ce0f9f5220a4
+INFO:     2604:3d09:a7e:bec0:fc9f:ffe1:2d30:ddbd:0 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     2604:3d09:a7e:bec0:fc9f:ffe1:2d30:ddbd:0 - "WebSocket /ws/ourbackyard-calgary-test" [accepted]
+INFO:     connection open
+[-] peer_qche0vz4r left room: ourbackyard-calgary-test
+[+] peer_8oh36gynm joined room: ourbackyard-calgary-test (1 clients)
+[SYNC] Received from peer_8oh36gynm
+[REQ_IMAGE] Broadcasting image request from peer_8oh36gynm: img1-2294df69af50e8bb0073ce0f9f5220a4
+[REQ_IMAGE] Broadcasting image request from peer_8oh36gynm: img1-2294df69af50e8bb0073ce0f9f5220a4
+INFO:     2604:3d09:a7e:bec0:fc9f:ffe1:2d30:ddbd:0 - "GET / HTTP/1.1" 200 OK
+INFO:     2604:3d09:a7e:bec0:fc9f:ffe1:2d30:ddbd:0 - "WebSocket /ws/ourbackyard.h3.8912ccd5083ffff" [accepted]
+INFO:     connection open
+[+] peer_aymvcdi8n joined room: ourbackyard.h3.8912ccd5083ffff (3 clients)
+[HISTORY] Sending 2 items to new peer peer_aymvcdi8n
+[HISTORY] Sending 2 items to peer_aymvcdi8n
+[SYNC] Received from peer_aymvcdi8n
+[REQ_IMAGE] Broadcasting image request from peer_aymvcdi8n: img1-2294df69af50e8bb0073ce0f9f5220a4
+[REQ_IMAGE] Broadcasting image request from peer_aymvcdi8n: img1-2294df69af50e8bb0073ce0f9f5220a4
+[REQ_IMAGE] Broadcasting image request from peer_aymvcdi8n: img1-f1a41e60ef36802d94a1f8d4d5011adf
+[REQ_IMAGE] Broadcasting image request from peer_aymvcdi8n: img1-f1a41e60ef36802d94a1f8d4d5011adf
+[SYNC] Broadcasting response from peer_adfwjd2t3
+[SYNC] Broadcasting response from peer_6sevtge7c
+[IMG_HEADER] Broadcasting from peer_adfwjd2t3
+[IMG_HEADER] Broadcasting from peer_6sevtge7c
+[IMG_END] Broadcasting from peer_adfwjd2t3
+[IMG_HEADER] Broadcasting from peer_adfwjd2t3
+[IMG_END] Broadcasting from peer_6sevtge7c
+[IMG_HEADER] Broadcasting from peer_6sevtge7c
+[IMG_END] Broadcasting from peer_adfwjd2t3
+[IMG_HEADER] Broadcasting from peer_adfwjd2t3
+[IMG_END] Broadcasting from peer_6sevtge7c
+[IMG_HEADER] Broadcasting from peer_6sevtge7c
+[IMG_END] Broadcasting from peer_6sevtge7c
+[IMG_HEADER] Broadcasting from peer_6sevtge7c
+[IMG_END] Broadcasting from peer_adfwjd2t3
+[IMG_HEADER] Broadcasting from peer_adfwjd2t3
+[IMG_END] Broadcasting from peer_adfwjd2t3
+[IMG_END] Broadcasting from peer_6sevtge7c
+INFO:     2604:3d09:a7e:bec0:fc9f:ffe1:2d30:ddbd:0 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     2604:3d09:a7e:bec0:fc9f:ffe1:2d30:ddbd:0 - "WebSocket /ws/ourbackyard-calgary-test" [accepted]
+INFO:     connection open
+[-] peer_aymvcdi8n left room: ourbackyard.h3.8912ccd5083ffff
+[+] peer_jzu21oyjo joined room: ourbackyard-calgary-test (2 clients)
+[SYNC] Received from peer_jzu21oyjo
+[REQ_IMAGE] Broadcasting image request from peer_jzu21oyjo: img1-2294df69af50e8bb0073ce0f9f5220a4
+[REQ_IMAGE] Broadcasting image request from peer_jzu21oyjo: img1-f1a41e60ef36802d94a1f8d4d5011adf
+[IMG_HEADER] Broadcasting from peer_8oh36gynm
+[IMG_END] Broadcasting from peer_8oh36gynm
+[SYNC] Broadcasting response from peer_8oh36gynm
+[REQ_IMAGE] Broadcasting image request from peer_jzu21oyjo: img1-2294df69af50e8bb0073ce0f9f5220a4
+[REQ_IMAGE] Broadcasting image request from peer_jzu21oyjo: img1-2294df69af50e8bb0073ce0f9f5220a4
+INFO:     2604:3d09:a7e:bec0:fc9f:ffe1:2d30:ddbd:0 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     2604:3d09:a7e:bec0:fc9f:ffe1:2d30:ddbd:0 - "WebSocket /ws/ourbackyard-calgary-test" [accepted]
+INFO:     connection open
+INFO:     connection closed
+[-] peer_jzu21oyjo left room: ourbackyard-calgary-test
+[+] peer_eh9tx943v joined room: ourbackyard-calgary-test (2 clients)
+[SYNC] Received from peer_eh9tx943v
+[REQ_IMAGE] Broadcasting image request from peer_eh9tx943v: img1-2294df69af50e8bb0073ce0f9f5220a4
+[REQ_IMAGE] Broadcasting image request from peer_eh9tx943v: img1-2294df69af50e8bb0073ce0f9f5220a4
+[SYNC] Broadcasting response from peer_8oh36gynm
+[-] peer_8oh36gynm left room: ourbackyard-calgary-test
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+[-] peer_adfwjd2t3 left room: ourbackyard.h3.8912ccd5083ffff
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "WebSocket /ws/ourbackyard.h3.8912ccd5083ffff" [accepted]
+INFO:     connection open
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "WebSocket /ws/ourbackyard-calgary-test" [accepted]
+INFO:     connection open
+[-] peer_6sevtge7c left room: ourbackyard.h3.8912ccd5083ffff
+[+] peer_2pliycdj1 joined room: ourbackyard.h3.8912ccd5083ffff (1 clients)
+[HISTORY] Sending 2 items to new peer peer_2pliycdj1
+[HISTORY] Sending 2 items to peer_2pliycdj1
+[SYNC] Received from peer_2pliycdj1
+[+] peer_yjb9pxv14 joined room: ourbackyard-calgary-test (2 clients)
+[SYNC] Received from peer_yjb9pxv14
+[SYNC] Broadcasting response from peer_eh9tx943v
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "WebSocket /ws/ourbackyard.h3.8912ccd5083ffff" [accepted]
+INFO:     connection open
+[-] peer_yjb9pxv14 left room: ourbackyard-calgary-test
+[+] peer_s607t3ssk joined room: ourbackyard.h3.8912ccd5083ffff (2 clients)
+[HISTORY] Sending 2 items to new peer peer_s607t3ssk
+[HISTORY] Sending 2 items to peer_s607t3ssk
+[SYNC] Received from peer_s607t3ssk
+[SYNC] Broadcasting response from peer_2pliycdj1
+INFO:     2604:3d09:a7e:bec0:fc9f:ffe1:2d30:ddbd:0 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     2604:3d09:a7e:bec0:fc9f:ffe1:2d30:ddbd:0 - "WebSocket /ws/ourbackyard.h3.8912ccd5083ffff" [accepted]
+INFO:     connection open
+[-] peer_eh9tx943v left room: ourbackyard-calgary-test
+[+] peer_ctf75bmfp joined room: ourbackyard.h3.8912ccd5083ffff (3 clients)
+[HISTORY] Sending 2 items to new peer peer_ctf75bmfp
+[HISTORY] Sending 2 items to peer_ctf75bmfp
+[SYNC] Received from peer_ctf75bmfp
+[REQ_IMAGE] Broadcasting image request from peer_ctf75bmfp: img1-2294df69af50e8bb0073ce0f9f5220a4
+[SYNC] Broadcasting response from peer_2pliycdj1
+[IMG_HEADER] Broadcasting from peer_2pliycdj1
+[SYNC] Broadcasting response from peer_s607t3ssk
+[IMG_HEADER] Broadcasting from peer_s607t3ssk
+[IMG_END] Broadcasting from peer_2pliycdj1
+[IMG_END] Broadcasting from peer_s607t3ssk
+[NEW_ITEM] Broadcasting from peer_2pliycdj1
+[IMG_HEADER] Broadcasting from peer_2pliycdj1
+[IMG_END] Broadcasting from peer_2pliycdj1
+[REQ_IMAGE] Broadcasting image request from peer_ctf75bmfp: img1-2294df69af50e8bb0073ce0f9f5220a4
+[REQ_IMAGE] Broadcasting image request from peer_ctf75bmfp: img1-f5fb6d2977baac9f284eb035d94d9e42
+[IMG_HEADER] Broadcasting from peer_s607t3ssk
+[IMG_HEADER] Broadcasting from peer_2pliycdj1
+[REQ_IMAGE] Broadcasting image request from peer_ctf75bmfp: img1-2294df69af50e8bb0073ce0f9f5220a4
+[REQ_IMAGE] Broadcasting image request from peer_ctf75bmfp: img1-2294df69af50e8bb0073ce0f9f5220a4
+[IMG_END] Broadcasting from peer_2pliycdj1
+[IMG_HEADER] Broadcasting from peer_2pliycdj1
+[IMG_END] Broadcasting from peer_2pliycdj1
+[IMG_HEADER] Broadcasting from peer_2pliycdj1
+[IMG_END] Broadcasting from peer_s607t3ssk
+[IMG_HEADER] Broadcasting from peer_s607t3ssk
+[IMG_END] Broadcasting from peer_2pliycdj1
+[IMG_HEADER] Broadcasting from peer_2pliycdj1
+[IMG_END] Broadcasting from peer_2pliycdj1
+[IMG_END] Broadcasting from peer_s607t3ssk
+[IMG_HEADER] Broadcasting from peer_s607t3ssk
+[IMG_END] Broadcasting from peer_s607t3ssk
+[IMG_HEADER] Broadcasting from peer_s607t3ssk
+[IMG_END] Broadcasting from peer_s607t3ssk
+[NEW_ITEM] Broadcasting from peer_ctf75bmfp
+[IMG_HEADER] Broadcasting from peer_ctf75bmfp
+[IMG_END] Broadcasting from peer_ctf75bmfp
+[REQ_IMAGE] Broadcasting image request from peer_ctf75bmfp: img1-2294df69af50e8bb0073ce0f9f5220a4
+[REQ_IMAGE] Broadcasting image request from peer_2pliycdj1: img1-fcba0b8f58c4648de91320d462c8fcad
+[IMG_HEADER] Broadcasting from peer_2pliycdj1
+[IMG_END] Broadcasting from peer_2pliycdj1
+[IMG_HEADER] Broadcasting from peer_ctf75bmfp
+[IMG_END] Broadcasting from peer_ctf75bmfp
+[IMG_HEADER] Broadcasting from peer_s607t3ssk
+[IMG_END] Broadcasting from peer_s607t3ssk
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "WebSocket /ws/ourbackyard-calgary-test" [accepted]
+INFO:     connection open
+[-] peer_s607t3ssk left room: ourbackyard.h3.8912ccd5083ffff
+[+] peer_sgb3x4m6c joined room: ourbackyard-calgary-test (1 clients)
+[SYNC] Received from peer_sgb3x4m6c
+[NEW_ITEM] Broadcasting from peer_ctf75bmfp
+[IMG_HEADER] Broadcasting from peer_ctf75bmfp
+[REQ_IMAGE] Broadcasting image request from peer_2pliycdj1: img1-1d98d83281a6fa21465e0084f285324b
+[IMG_END] Broadcasting from peer_ctf75bmfp
+[REQ_IMAGE] Broadcasting image request from peer_ctf75bmfp: img1-2294df69af50e8bb0073ce0f9f5220a4
+[IMG_HEADER] Broadcasting from peer_ctf75bmfp
+[IMG_END] Broadcasting from peer_ctf75bmfp
+[IMG_HEADER] Broadcasting from peer_2pliycdj1
+[IMG_END] Broadcasting from peer_2pliycdj1
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+[-] peer_sgb3x4m6c left room: ourbackyard-calgary-test
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "WebSocket /ws/ourbackyard.h3.8912ccd5083ffff" [accepted]
+INFO:     connection open
+INFO:     2604:3d09:a7e:bec0:e95a:75d9:6d81:c338:0 - "WebSocket /ws/ourbackyard.h3.8912ccd5083ffff" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+[-] peer_2pliycdj1 left room: ourbackyard.h3.8912ccd5083ffff
+[+] peer_qcisl2rhg joined room: ourbackyard.h3.8912ccd5083ffff (2 clients)
+[HISTORY] Sending 5 items to new peer peer_qcisl2rhg
+[HISTORY] Sending 5 items to peer_qcisl2rhg
+[SYNC] Received from peer_qcisl2rhg
+[REQ_IMAGE] Broadcasting image request from peer_qcisl2rhg: img1-1d98d83281a6fa21465e0084f285324b
+[IMG_HEADER] Broadcasting from peer_ctf75bmfp
+[IMG_END] Broadcasting from peer_ctf75bmfp
+[SYNC] Broadcasting response from peer_ctf75bmfp
+[+] peer_i5qnmslnf joined room: ourbackyard.h3.8912ccd5083ffff (3 clients)
+[HISTORY] Sending 5 items to new peer peer_i5qnmslnf
+[HISTORY] Sending 5 items to peer_i5qnmslnf
+[SYNC] Received from peer_i5qnmslnf
+[SYNC] Broadcasting response from peer_qcisl2rhg
+[SYNC] Broadcasting response from peer_ctf75bmfp
+[-] peer_i5qnmslnf left room: ourbackyard.h3.8912ccd5083ffff
+[-] peer_qcisl2rhg left room: ourbackyard.h3.8912ccd5083ffff
+[-] peer_ctf75bmfp left room: ourbackyard.h3.8912ccd5083ffff
+INFO:     2604:3d09:a7e:bec0:fc9f:ffe1:2d30:ddbd:0 - "GET /index.html HTTP/1.1" 404 Not Found
