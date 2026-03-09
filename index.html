@@ -344,6 +344,27 @@
       background: var(--accent-pink);
       color: #fff;
     }
+    
+    /* Sort Bar */
+    .sort-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+    }
+    .sort-label { font-size: 12px; color: #888; }
+    .sort-btn {
+      padding: 4px 10px;
+      background: var(--surface);
+      border: none;
+      border-radius: 12px;
+      font-size: 11px;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .sort-btn.active { background: var(--primary); color: #000; }
 
     /* Market Grid */
     .market-grid {
@@ -795,6 +816,12 @@
         <div class="ai-items" id="ai-items"></div>
       </div>
       <div class="category-bar" id="category-bar"></div>
+      <div class="sort-bar" id="sort-bar">
+        <span class="sort-label">Sort:</span>
+        <button class="sort-btn active" data-sort="time" onclick="sortItems('time')">🕐 Newest</button>
+        <button class="sort-btn" data-sort="price-low" onclick="sortItems('price-low')">💰 Low</button>
+        <button class="sort-btn" data-sort="price-high" onclick="sortItems('price-high')">💎 High</button>
+      </div>
       <div class="market-grid" id="market-grid">
         <div class="empty-state">
           <div class="empty-icon">🛒</div>
@@ -1783,6 +1810,8 @@
     let roomId = 'ourbackyard-calgary-test';
     let currentH3Index = null;
     let selectedCategory = 'All';
+    let selectedSort = 'time';
+    let currentItems = []; // Store items for sorting
     let selectedPhotos = [];
     let connectedPeers = 0;
     let onlineNeighbors = new Set();  // Track online neighbors
@@ -2428,9 +2457,37 @@
       if (selectedCategory !== 'All') {
         items = items.filter(i => i.category === selectedCategory);
       }
+      // Store for sorting
+      currentItems = items;
+      // Apply current sort
+      items = sortItemsData(items, selectedSort);
       renderMarketGrid(items, document.getElementById('market-grid'));
       // Load AI recommendations
       loadAIRecommendations();
+    }
+    
+    // ============ Sort Items ============
+    function sortItems(sortBy) {
+      selectedSort = sortBy;
+      // Update UI
+      document.querySelectorAll('.sort-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.sort === sortBy);
+      });
+      // Re-render
+      const sorted = sortItemsData(currentItems, sortBy);
+      renderMarketGrid(sorted, document.getElementById('market-grid'));
+    }
+    
+    function sortItemsData(items, sortBy) {
+      const sorted = [...items];
+      if (sortBy === 'time') {
+        sorted.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      } else if (sortBy === 'price-low') {
+        sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
+      } else if (sortBy === 'price-high') {
+        sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
+      }
+      return sorted;
     }
     
     // ============ AI Recommendations ============
