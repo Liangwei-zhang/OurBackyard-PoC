@@ -1869,29 +1869,31 @@
       // Check if imageUrl is a valid URL (starts with /uploads/ or http)
       if (item.imageUrl && (item.imageUrl.startsWith('/uploads/') || item.imageUrl.startsWith('http'))) {
         imagesHtml = `<img src="${item.imageUrl}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
-      // Try to load image - check multiple sources in order
-      let imgSrc = null;
-      
-      // 1. First check if thumbnail is a valid URL (http/https)
-      if (item.thumbnail && (item.thumbnail.startsWith('http') || item.thumbnail.startsWith('/uploads/'))) {
-        imgSrc = item.thumbnail;
-      } 
-      // 2. Try loading from IndexedDB (most reliable for local P2P)
-      else {
-        try {
-          const blobs = await db.blobs.where('itemId').equals(id).toArray();
-          if (blobs.length > 0) {
-            imgSrc = URL.createObjectURL(blobs[0].blob);
+      } else {
+        // Try to load image - check multiple sources in order
+        let imgSrc = null;
+        
+        // 1. First check if thumbnail is a valid URL (http/https)
+        if (item.thumbnail && (item.thumbnail.startsWith('http') || item.thumbnail.startsWith('/uploads/'))) {
+          imgSrc = item.thumbnail;
+        } 
+        // 2. Try loading from IndexedDB (most reliable for local P2P)
+        else {
+          try {
+            const blobs = await db.blobs.where('itemId').equals(id).toArray();
+            if (blobs.length > 0) {
+              imgSrc = URL.createObjectURL(blobs[0].blob);
+            }
+          } catch(e) {
+            console.log('Blob load failed:', e);
           }
-        } catch(e) {
-          console.log('Blob load failed:', e);
         }
+        
+        // Render image or placeholder
+        imagesHtml = imgSrc 
+          ? `<img src="${imgSrc}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`
+          : `<img src="${defaultImg}" style="width:100%;border-radius:16px;margin-bottom:16px">`;
       }
-      
-      // Render image or placeholder
-      const imagesHtml = imgSrc 
-        ? `<img src="${imgSrc}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`
-        : `<img src="${defaultImg}" style="width:100%;border-radius:16px;margin-bottom:16px">`;
       
       const priceText = item.price === 0 ? '🎁 Free' : item.price === 'swap' ? '☕ Swap for Coffee' : `$${item.price}`;
       
