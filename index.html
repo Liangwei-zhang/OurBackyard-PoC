@@ -2271,7 +2271,17 @@
                 systemAssets: "url, hash, version",
                 blocklist: "itemHash, reason, timestamp",
             });
-            console.log("IndexedDB initialized v4 with blocklist");
+            
+            // v5: Add imageHash index
+            db.version(5).stores({
+                items: "++id, imageHash, title, category, price, status, sellerId, h3Index, timestamp",
+                blobs: "itemId, hash",
+                sync: "key",
+                userData: "key",
+                systemAssets: "url, hash, version",
+                blocklist: "itemHash, reason, timestamp",
+            });
+            console.log("IndexedDB initialized v5 with imageHash index");
             AppUpdater.init();
 
             // Auto-login - generate display name if not saved
