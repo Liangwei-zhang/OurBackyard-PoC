@@ -703,11 +703,21 @@
             .form-group label { display: block; margin-bottom: 4px; font-weight: bold; }
             .form-group input, .form-group textarea, .form-group select {
                 width: 100%;
-                padding: 10px;
-                border: 1px solid var(--border);
-                border-radius: var(--radius-sm);
-                background: var(--surface); /* Differentiate input fields */
+                padding: 12px;
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 8px;
+                background: #2a2a2a;
                 color: var(--text);
+                font-size: 14px;
+                transition: box-shadow 0.2s, border-color 0.2s;
+            }
+            .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+                outline: none;
+                border-color: rgba(255,255,255,0.2);
+                box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
+            }
+            .form-group input::placeholder, .form-group textarea::placeholder {
+                color: #666;
             }
             .modal-footer {
                 padding: 16px;
