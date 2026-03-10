@@ -2903,10 +2903,17 @@
             // Request image from neighbors (On-Demand Pull)
             // Broadcast to ALL connected peers, not just the original seller!
             function requestImageFromNeighbors(imageHash, sellerId) {
-                console.log(
-                    "[P2P] Requesting image from ALL neighbors:",
-                    imageHash,
-                );
+                // Debounce: prevent request storms
+                if (activeImageRequests.has(imageHash)) {
+                    console.log("[P2P] Already requesting:", imageHash);
+                    return;
+                }
+                activeImageRequests.add(imageHash);
+                
+                // Clear after 15 seconds to allow retry
+                setTimeout(() => activeImageRequests.delete(imageHash), 15000);
+                
+                console.log("[P2P] Requesting image from ALL neighbors:", imageHash);
 
                 // Broadcast via P2P data channels (Selfless Neighbor!)
                 if (P2PStreamer && P2PStreamer.broadcast) {
@@ -2991,6 +2998,18 @@
                 console.log("[ImageReady] Targeted update for hash:", e.detail.imageHash);
                 window.updateImageInUI(e.detail.imageHash);
             });
+
+            // Timeout retry - clean stalled buffers
+            setInterval(() => {
+                for (const hash in incomingImages) {
+                    const img = incomingImages[hash];
+                    if (Date.now() - (img.lastUpdate || 0) > 8000) {
+                        console.log("[Retry] Image stalled, clearing buffer:", hash);
+                        delete incomingImages[hash];
+                        activeImageRequests.delete(hash);
+                    }
+                }
+            }, 5000);
 
             // Aggressive periodic check - load all missing images
             setInterval(async () => {
@@ -4251,6 +4270,9 @@
                             "/",
                             totalSize,
                         );
+                        
+                        // Rate limiting: yield to prevent buffer overflow
+                        await new Promise(r => setTimeout(r, 2));
                     }
 
                     // Send end marker
@@ -4266,6 +4288,7 @@
             // ============ WebSocket ============
             // WebSocket message queue for offline/reconnecting
             let pendingWsMessages = [];
+            let activeImageRequests = new Set();
             
             // Helper to send WS messages with queue support
             function sendWsMessage(msg) {
