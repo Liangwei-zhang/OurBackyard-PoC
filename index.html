@@ -3858,6 +3858,10 @@
                     let microThumbnail = null;
                     let imageHash = null; // Move outside the if block
 
+                    // Arrays for multiple images
+                    let imageHashes = [];
+                    let thumbnails = [];
+
                     if (selectedPhotos.length > 0) {
                         // Generate micro-thumbnail (50px) for instant display - use Object URL
                         const microBlob = await generateMicroThumbnail(
@@ -3891,6 +3895,10 @@
                             // Compute image hash for content-addressable storage
                             imageHash =
                                 await ImageRegistry.computeHash(imageBlob);
+                            
+                            // Collect for multiple images
+                            imageHashes.push(imageHash);
+                            thumbnails.push(objectUrl);
 
                             // Store item with imageHash (content-addressable)
                             const itemId = await db.items.add({
@@ -3909,6 +3917,8 @@
                                 thumbnail: objectUrl, // Object URL (efficient!)
                                 microThumbnail: microThumbnail, // Micro thumbnail (50px)
                                 imageHash: imageHash, // Content ID for P2P
+                                imageHashes: imageHashes,
+                                thumbnails: thumbnails,
                             });
 
                             // Save blob to IndexedDB - include itemId as key for backwards compatibility
