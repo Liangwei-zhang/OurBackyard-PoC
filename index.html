@@ -561,8 +561,16 @@
                color: #000;
              }
              .btn-secondary {
-               background: var(--surface);
-               color: var(--text);
+               border: 1px solid rgba(255,255,255,0.2);
+               padding: 12px 20px;
+               border-radius: 8px;
+               cursor: pointer;
+               font-size: 14px;
+               transition: all 0.2s;
+             }
+             .btn-secondary:hover {
+               background: rgba(255,255,255,0.1);
+               border-color: rgba(255,255,255,0.3);
              }
              .btn-danger {
                background: #f44336;
