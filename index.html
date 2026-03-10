@@ -1148,17 +1148,37 @@
         </div>
 
         <!-- Scripts -->
-        <!-- Load libraries synchronously -->
-        <script src="js/dexie.js"></script>
-        <script src="js/h3-js.js"></script>
-        <!-- CDN fallback -->
+        <!-- Load libraries with async fallback -->
         <script>
-            if (typeof Dexie === 'undefined') {
-                document.write('<script src="https://unpkg.com/dexie@4.0.4/dist/dexie.js"><\/script>');
-            }
-            if (typeof h3 === 'undefined') {
-                document.write('<script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"><\/script>');
-            }
+            (function() {
+                function loadLib(src, global) {
+                    return new Promise(function(resolve) {
+                        var s = document.createElement('script');
+                        s.src = src;
+                        s.onload = function() { console.log('[Lib] Loaded:', src); resolve(); };
+                        s.onerror = function() { console.warn('[Lib] Failed:', src); resolve(); };
+                        document.head.appendChild(s);
+                    });
+                }
+                
+                // Try local first
+                loadLib('js/dexie.js').then(function() {
+                    if (typeof Dexie === 'undefined') {
+                        return loadLib('https://unpkg.com/dexie@4.0.4/dist/dexie.js');
+                    }
+                }).then(function() {
+                    return loadLib('js/h3-js.js');
+                }).then(function() {
+                    if (typeof h3 === 'undefined') {
+                        return loadLib('https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js');
+                    }
+                }).then(function() {
+                    // Trigger app init when ready
+                    if (typeof Dexie !== 'undefined') {
+                        document.dispatchEvent(new Event('DexieReady'));
+                    }
+                });
+            })();
         </script>
 
         <script>
@@ -2258,44 +2278,54 @@
                 },
             };
 
-            // Initialize DID on load
-            DIDService.init();
+            // Initialize after Dexie is ready
+            function initApp() {
+                // Initialize DID on load
+                DIDService.init();
 
-            // ============ Initialize IndexedDB (Dexie) ============
-            const db = new Dexie("OurBackyardDB");
-            db.version(4).stores({
-                items: "++id, title, category, price, status, sellerId, h3Index, timestamp",
-                blobs: "itemId, hash",
-                sync: "key",
-                userData: "key",
-                systemAssets: "url, hash, version",
-                blocklist: "itemHash, reason, timestamp",
-            });
+                // ============ Initialize IndexedDB (Dexie) ============
+                const db = new Dexie("OurBackyardDB");
+                db.version(4).stores({
+                    items: "++id, title, category, price, status, sellerId, h3Index, timestamp",
+                    blobs: "itemId, hash",
+                    sync: "key",
+                    userData: "key",
+                    systemAssets: "url, hash, version",
+                    blocklist: "itemHash, reason, timestamp",
+                });
+                
+                // v5: Add imageHash index
+                db.version(5).stores({
+                    items: "++id, imageHash, title, category, price, status, sellerId, h3Index, timestamp",
+                    blobs: "itemId, hash",
+                    sync: "key",
+                    userData: "key",
+                    systemAssets: "url, hash, version",
+                    blocklist: "itemHash, reason, timestamp",
+                });
+                console.log("IndexedDB initialized v5 with imageHash index");
+                AppUpdater.init();
+
+                // Auto-login - generate display name if not saved
+                db.userData.get("displayName").then((record) => {
+                    if (record && record.value) {
+                        displayName = record.value;
+                    } else {
+                        // Generate random display name
+                        displayName = "User" + Math.floor(Math.random() * 10000);
+                        db.userData.put({ key: "displayName", value: displayName });
+                    }
+                    document.getElementById("input-name").value = displayName;
+                    connect(); // Auto-connect
+                });
+            }
             
-            // v5: Add imageHash index
-            db.version(5).stores({
-                items: "++id, imageHash, title, category, price, status, sellerId, h3Index, timestamp",
-                blobs: "itemId, hash",
-                sync: "key",
-                userData: "key",
-                systemAssets: "url, hash, version",
-                blocklist: "itemHash, reason, timestamp",
-            });
-            console.log("IndexedDB initialized v5 with imageHash index");
-            AppUpdater.init();
-
-            // Auto-login - generate display name if not saved
-            db.userData.get("displayName").then((record) => {
-                if (record && record.value) {
-                    displayName = record.value;
-                } else {
-                    // Generate random display name
-                    displayName = "User" + Math.floor(Math.random() * 10000);
-                    db.userData.put({ key: "displayName", value: displayName });
-                }
-                document.getElementById("input-name").value = displayName;
-                connect(); // Auto-connect
-            });
+            // Run init now or wait for DexieReady
+            if (typeof Dexie !== 'undefined') {
+                initApp();
+            } else {
+                document.addEventListener('DexieReady', initApp);
+            }
 
             // ============ Initialize OPFS ============
 
