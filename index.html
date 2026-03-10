@@ -488,7 +488,17 @@
                border-radius: 10px;
                font-weight: 600;
              }
-             .btn-report { background: none; border: none; font-size: 14px; cursor: pointer; opacity: 0.5; padding: 4px; }
+             .btn-edit {
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-size: 14px;
+                opacity: 0.7;
+                padding: 2px 6px;
+            }
+            .btn-edit:hover { opacity: 1; }
+
+            .btn-report { background: none; border: none; font-size: 14px; cursor: pointer; opacity: 0.5; padding: 4px; }
              .btn-report:hover { opacity: 1; }
              .status-available { background: var(--accent-green); color: #000; }
              .status-pending { background: var(--accent-orange); color: #000; }
@@ -658,7 +668,63 @@
              }
 
              /* Modal */
-             .modal {
+             /* Edit Modal */
+            .modal {
+                display: none;
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.7);
+                z-index: 1000;
+                align-items: center;
+                justify-content: center;
+            }
+            .modal.show { display: flex; }
+            .modal-content {
+                background: var(--bg-card);
+                border-radius: var(--radius-md);
+                width: 90%;
+                max-width: 500px;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+            .modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 16px;
+                border-bottom: 1px solid var(--border);
+            }
+            .modal-header h3 { margin: 0; }
+            .close-btn {
+                background: none; border: none; font-size: 24px; cursor: pointer;
+            }
+            .modal-body { padding: 16px; }
+            .form-group { margin-bottom: 16px; }
+            .form-group label { display: block; margin-bottom: 4px; font-weight: bold; }
+            .form-group input, .form-group textarea, .form-group select {
+                width: 100%;
+                padding: 10px;
+                border: 1px solid var(--border);
+                border-radius: var(--radius-sm);
+                background: var(--bg-main);
+                color: var(--text);
+            }
+            .modal-footer {
+                padding: 16px;
+                border-top: 1px solid var(--border);
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+            }
+            .btn-cancel, .btn-save {
+                padding: 10px 20px;
+                border-radius: var(--radius-sm);
+                cursor: pointer;
+            }
+            .btn-cancel { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+            .btn-save { background: #4CAF50; border: none; color: white; }
+
+            .modal {
                position: fixed;
                inset: 0;
                background: rgba(0,0,0,0.8);
@@ -3443,6 +3509,7 @@
               <div class="item-price">${priceText}</div>
               <div class="item-footer">
                 <span class="item-status ${statusClass}">${item.status}</span>
+                ${item.sellerId === peerId ? `<button class="btn-edit" onclick="event.stopPropagation(); editItem(${item.id})" title="編輯">✏️</button>` : ''}
                 <button class="btn-report" onclick="event.stopPropagation(); ContentModerator.reportItem('item-${item.id}', 'inappropriate')" title="舉報">🚩</button>
               </div>
             </div>
@@ -4274,13 +4341,34 @@
                             }
                             break;
                         case "ITEM_UPDATE":
+                            // Handle full item update from neighbors
                             if (msg.itemId) {
                                 db.items.get(msg.itemId).then(localItem => {
-                                    const updatedItem = { ...localItem, ...msg, updatedAt: msg.updatedAt || Date.now() };
-                                    const resolved = resolveConflict(localItem, updatedItem);
+                                    // Create incoming item from message
+                                    const incomingItem = {
+                                        id: msg.itemId,
+                                        title: msg.title,
+                                        price: msg.price,
+                                        description: msg.description,
+                                        category: msg.category,
+                                        status: msg.status,
+                                        updatedAt: msg.updatedAt || Date.now(),
+                                        sellerId: msg.sellerId
+                                    };
+                                    
+                                    const resolved = resolveConflict(localItem, incomingItem);
                                     if (resolved.updated) {
-                                        db.items.put(resolved.item).then(() => loadItems());
-                                        console.log("[Conflict] ITEM_UPDATE:", resolved.reason);
+                                        const finalItem = { 
+                                            ...(localItem || {}), 
+                                            ...incomingItem,
+                                            updatedAt: Math.max(localItem?.updatedAt || 0, incomingItem.updatedAt)
+                                        };
+                                        db.items.put(finalItem).then(() => {
+                                            console.log("[ITEM_UPDATE] Updated item:", msg.itemId, resolved.reason);
+                                            loadItems();
+                                        });
+                                    } else {
+                                        console.log("[ITEM_UPDATE] Ignored (older):", msg.itemId, resolved.reason);
                                     }
                                 });
                             }
@@ -5032,5 +5120,148 @@
                 };
             }
         </script>
+
+        <!-- Edit Item Modal -->
+        <div id="edit-modal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>編輯商品</h3>
+                    <button onclick="closeEditModal()" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit-item-id">
+                    <div class="form-group">
+                        <label>標題</label>
+                        <input type="text" id="edit-title" maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label>價格 (0=免費, swap=交換)</label>
+                        <input type="text" id="edit-price" maxlength="20">
+                    </div>
+                    <div class="form-group">
+                        <label>描述</label>
+                        <textarea id="edit-description" rows="3" maxlength="500"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>分類</label>
+                        <select id="edit-category">
+                            <option value="Electronics">電子產品</option>
+                            <option value="Furniture">傢俱</option>
+                            <option value="Clothing">服裝</option>
+                            <option value="Books">書籍</option>
+                            <option value="Sports">運動</option>
+                            <option value="Toys">玩具</option>
+                            <option value="Tools">工具</option>
+                            <option value="Food">食物</option>
+                            <option value="Other">其他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>狀態</label>
+                        <select id="edit-status">
+                            <option value="available">可交易</option>
+                            <option value="pending">處理中</option>
+                            <option value="gone">已結束</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button onclick="closeEditModal()" class="btn-cancel">取消</button>
+                    <button onclick="saveEditedItem()" class="btn-save">保存</button>
+                </div>
+            </div>
+        </div>
+
+    <script>
+            // ============ Edit Item Functions ============
+            window.editItem = async function(id) {
+                const item = await db.items.get(id);
+                if (!item) return;
+                if (item.sellerId !== peerId) {
+                    alert('只能編輯自己的商品');
+                    return;
+                }
+                
+                document.getElementById('edit-item-id').value = item.id;
+                document.getElementById('edit-title').value = item.title || '';
+                document.getElementById('edit-price').value = item.price || '';
+                document.getElementById('edit-description').value = item.description || '';
+                document.getElementById('edit-category').value = item.category || 'Other';
+                document.getElementById('edit-status').value = item.status || 'available';
+                
+                document.getElementById('edit-modal').classList.add('show');
+            };
+
+            window.closeEditModal = function() {
+                document.getElementById('edit-modal').classList.remove('show');
+            };
+
+            window.saveEditedItem = async function() {
+                const id = parseInt(document.getElementById('edit-item-id').value);
+                const title = document.getElementById('edit-title').value.trim();
+                const price = document.getElementById('edit-price').value.trim();
+                const description = document.getElementById('edit-description').value.trim();
+                const category = document.getElementById('edit-category').value;
+                const status = document.getElementById('edit-status').value;
+                
+                if (!title) {
+                    alert('請輸入標題');
+                    return;
+                }
+                
+                const item = await db.items.get(id);
+                if (!item) {
+                    alert('商品不存在');
+                    return;
+                }
+                
+                // Update locally
+                const updatedItem = {
+                    ...item,
+                    title,
+                    price,
+                    description,
+                    category,
+                    status,
+                    updatedAt: Date.now()
+                };
+                
+                await db.items.put(updatedItem);
+                console.log('[Edit] Item updated:', id);
+                
+                // Broadcast to neighbors
+                broadcastItemUpdate(updatedItem);
+                
+                closeEditModal();
+                loadItems();
+            };
+
+            function broadcastItemUpdate(item) {
+                const msg = {
+                    type: 'ITEM_UPDATE',
+                    itemId: item.id,
+                    title: item.title,
+                    price: item.price,
+                    description: item.description,
+                    category: item.category,
+                    status: item.status,
+                    updatedAt: item.updatedAt,
+                    sellerId: item.sellerId
+                };
+                
+                // Via P2P
+                if (P2PStreamer && P2PStreamer.broadcast) {
+                    P2PStreamer.broadcast(msg);
+                }
+                
+                // Via WebSocket
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify(msg));
+                }
+                
+                console.log('[Edit] Broadcasted update for item:', item.id);
+            }
+
+    </script>
     </body>
 </html>
