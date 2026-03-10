@@ -3000,21 +3000,51 @@
                 window.updateImageInUI(e.detail.imageHash);
             });
 
-            // Periodic check - use targeted update instead of full reload
+            // Aggressive periodic check - load all missing images
             setInterval(async () => {
                 try {
-                    const blobs = await db.blobs.toArray();
-                    for (const blob of blobs) {
-                        const img = document.querySelector(`img[data-hash="${blob.hash}"]`);
+                    // Get all items with images
+                    const items = await db.items.where("imageHash").notEqual("").toArray();
+                    // Also get items with imageHashes
+                    const allItems = await db.items.toArray();
+                    const itemsWithHashes = allItems.filter(i => i.imageHashes && i.imageHashes.length > 0);
+                    
+                    for (const item of items) {
+                        if (!item.imageHash) continue;
+                        
+                        // Find blob
+                        const blobs = await db.blobs.where("hash").equals(item.imageHash).toArray();
+                        if (blobs.length === 0) continue;
+                        
+                        // Update image element by data-item-id
+                        const img = document.querySelector(`img[data-item-id="${item.id}"]`);
                         if (img && !img.dataset.loaded) {
-                            const url = URL.createObjectURL(blob.blob);
+                            const url = URL.createObjectURL(blobs[0].blob);
                             img.src = url;
                             img.dataset.loaded = 'true';
                             img.style.filter = 'none';
                         }
                     }
-                } catch (err) {}
-            }, 2000); // Check every 3 seconds
+                    
+                    // Check items with imageHashes array
+                    for (const item of itemsWithHashes) {
+                        for (const hash of item.imageHashes) {
+                            const blobs = await db.blobs.where("hash").equals(hash).toArray();
+                            if (blobs.length === 0) continue;
+                            
+                            const img = document.querySelector(`img[data-item-id="${item.id}"]`);
+                            if (img && !img.dataset.loaded) {
+                                const url = URL.createObjectURL(blobs[0].blob);
+                                img.src = url;
+                                img.dataset.loaded = 'true';
+                                img.style.filter = 'none';
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.log("[ImageCheck] Error:", err);
+                }
+            }, 1500); // Check every 3 seconds
 
             // ============ Stability: Backpressure Control ============
             async function sendWithBackpressure(dc, data) {
@@ -3448,6 +3478,26 @@
                     // Apply current sort
                     items = sortItemsData(items, selectedSort);
                     renderMarketGrid(items, document.getElementById("market-grid"));
+                    
+                    // Load images immediately after render
+                    setTimeout(async () => {
+                        try {
+                            for (const item of items) {
+                                const hashes = item.imageHashes || (item.imageHash ? [item.imageHash] : []);
+                                for (const hash of hashes) {
+                                    const blobs = await db.blobs.where("hash").equals(hash).toArray();
+                                    if (blobs.length > 0) {
+                                        const img = document.querySelector(`img[data-item-id="${item.id}"]`);
+                                        if (img && !img.dataset.loaded) {
+                                            img.src = URL.createObjectURL(blobs[0].blob);
+                                            img.dataset.loaded = 'true';
+                                        }
+                                    }
+                                }
+                            }
+                        } catch(e) {}
+                    }, 100);
+                    
                     // Load AI recommendations
                     loadAIRecommendations();
                 } catch (err) {
@@ -3569,7 +3619,7 @@
           <div class="item-card ${item.status}" onclick="showItemDetail(${item.id})">
             <img class="item-image lazy"
                  data-item-id="${item.id}"
-                 data-hash="${item.imageHash || ''}"
+                 data-item-id="${item.id}" data-hash="${item.imageHash || ''}"
                  src="${microPlaceholder}"
                  alt="${item.title}"
                  style="filter: blur(3px)"
