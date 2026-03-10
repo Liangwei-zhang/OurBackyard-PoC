@@ -3630,52 +3630,50 @@
                 const item = await db.items.get(id);
                 if (!item) return;
 
-                // Prefer URL, then thumbnail (base64), then blob
                 let imagesHtml = "";
-                const defaultImg =
-                    "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 x=%2250%22 y=%2255%22 text-anchor=%22middle%22>📷</text></svg>";
-                // Check if imageUrl is a valid URL (starts with /uploads/ or http)
-                if (
-                    item.imageUrl &&
-                    (item.imageUrl.startsWith("/uploads/") ||
-                        item.imageUrl.startsWith("http"))
-                ) {
-                    imagesHtml = `<img src="${item.imageUrl}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
-                } else {
-                    // Try to load image - use ONLY hash (content-addressable)
-                    let imgSrc = null;
-
-                    // 1. First check if thumbnail is a valid URL (http/https)
-                    if (
-                        item.thumbnail &&
-                        (item.thumbnail.startsWith("http") ||
-                            item.thumbnail.startsWith("/uploads/"))
-                    ) {
-                        imgSrc = item.thumbnail;
-                    }
-                    // 2. ONLY use imageHash for content-addressable storage
-                    else if (item.imageHash) {
-                        try {
-                            const hashBlobs = await db.blobs
-                                .where("hash")
-                                .equals(item.imageHash)
-                                .toArray();
-                            if (hashBlobs.length > 0) {
-                                imgSrc = URL.createObjectURL(hashBlobs[0].blob);
-                                console.log(
-                                    "[Detail] Loaded by hash:",
-                                    item.imageHash,
-                                );
-                            }
-                        } catch (err) {
-                            console.log("[Detail] Hash query failed:", e);
+                const defaultImg = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 x=%2250%22 y=%2255%22 text-anchor=%22middle%22>📷</text></svg>";
+                
+                // Check for multiple images (thumbnails array)
+                const thumbnails = item.thumbnails || (item.thumbnail ? [item.thumbnail] : []);
+                const imageHashes = item.imageHashes || (item.imageHash ? [item.imageHash] : []);
+                
+                // Try to load images from IndexedDB using imageHashes
+                let loadedImages = [];
+                for (const hash of imageHashes) {
+                    try {
+                        const hashBlobs = await db.blobs.where("hash").equals(hash).toArray();
+                        if (hashBlobs.length > 0) {
+                            loadedImages.push(URL.createObjectURL(hashBlobs[0].blob));
                         }
+                    } catch (err) {
+                        console.log("[Detail] Hash query failed:", err);
                     }
-
-                    // Render image or placeholder
-                    imagesHtml = imgSrc
-                        ? `<img src="${imgSrc}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`
-                        : `<img src="${defaultImg}" style="width:100%;border-radius:16px;margin-bottom:16px">`;
+                }
+                
+                // Combine URLs and loaded blobs
+                let allImages = [...thumbnails.filter(t => t.startsWith('http')), ...loadedImages];
+                
+                if (allImages.length === 0) {
+                    // Fallback to single image
+                    if (item.imageUrl && (item.imageUrl.startsWith("/uploads/") || item.imageUrl.startsWith("http"))) {
+                        allImages = [item.imageUrl];
+                    } else if (item.thumbnail) {
+                        allImages = [item.thumbnail];
+                    }
+                }
+                
+                // Build gallery HTML
+                if (allImages.length > 1) {
+                    // Multiple images - show gallery
+                    imagesHtml = `<div class="detail-gallery" style="display:flex;flex-direction:column;gap:8px">
+                        ${allImages.map((src, i) => `<img src="${src}" class="gallery-img" style="width:100%;border-radius:12px;object-fit:cover;max-height:300px" onerror="this.src='${defaultImg}'" ${i > 0 ? 'loading="lazy"' : ''}>`).join('')}
+                    </div>`;
+                } else if (allImages.length === 1) {
+                    // Single image
+                    imagesHtml = `<img src="${allImages[0]}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
+                } else {
+                    // No image
+                    imagesHtml = `<img src="${defaultImg}" style="width:100%;border-radius:16px;margin-bottom:16px">`;
                 }
 
                 const priceText =
@@ -3771,12 +3769,18 @@
             document
                 .getElementById("item-photos")
                 .addEventListener("change", async (e) => {
-                    selectedPhotos = Array.from(e.target.files);
+                    selectedPhotos = Array.from(e.target.files).slice(0, 4); // Max 4 photos
                     const preview = document.getElementById("photo-preview");
                     preview.innerHTML = "";
-                    for (const file of selectedPhotos) {
+                    for (let i = 0; i < selectedPhotos.length; i++) {
                         const img = document.createElement("img");
-                        img.src = URL.createObjectURL(file);
+                        img.src = URL.createObjectURL(selectedPhotos[i]);
+                        img.style.width = "60px";
+                        img.style.height = "60px";
+                        img.style.objectFit = "cover";
+                        img.style.borderRadius = "8px";
+                        img.style.marginRight = "4px";
+                        if (i === 0) img.style.border = "2px solid var(--primary)";
                         preview.appendChild(img);
                     }
                 });
@@ -3801,89 +3805,79 @@
                         return;
                     }
 
-                    // Compress images before storing
-                    let imageUrl = null;
-                    let imageBlob = null;
-                    let microThumbnail = null;
-                    let imageHash = null; // Move outside the if block
+                    // Process multiple images (max 4)
+                    let imageUrls = [];
+                    let imageHashes = [];
+                    let thumbnails = [];
+                    let microThumbnails = [];
 
                     if (selectedPhotos.length > 0) {
-                        // Generate micro-thumbnail (50px) for instant display - use Object URL
-                        const microBlob = await generateMicroThumbnail(
-                            selectedPhotos[0],
-                        );
-                        if (microBlob) {
-                            microThumbnail = blobToObjectURL(
-                                microBlob,
-                                "micro_" + Date.now(),
-                            );
-                        }
-
-                        // Compress first image to 800px for storage
-                        imageBlob = await compressImage(
-                            selectedPhotos[0],
-                            800,
-                            0.7,
-                        );
-                        if (imageBlob) {
-                            // 完全 P2P 模式：跳過 HTTP 上傳
-                            const tempItemId = "p2p_" + Date.now();
-
-                            // 使用 Object URL 替代 base64 (更高效，無 +33% 開銷)
-                            const objectUrl = blobToObjectURL(
-                                imageBlob,
-                                tempItemId,
-                            );
-
-                            imageUrl = "p2p://" + tempItemId;
-
-                            // Compute image hash for content-addressable storage
-                            imageHash =
-                                await ImageRegistry.computeHash(imageBlob);
-
-                            // Store item with imageHash (content-addressable)
-                            const itemId = await db.items.add({
-                                type: "marketplace",
-                                status: "available",
-                                category,
-                                price,
-                                condition,
-                                title,
-                                description,
-                                sellerId: peerId,
-                                sellerName: displayName,
-                                h3Index: currentH3Index,
-                                timestamp: Date.now(),
-                                imageUrl: imageUrl, // P2P marker
-                                thumbnail: objectUrl, // Object URL (efficient!)
-                                microThumbnail: microThumbnail, // Micro thumbnail (50px)
-                                imageHash: imageHash, // Content ID for P2P
-                            });
-
-                            // Save blob to IndexedDB - include itemId as key for backwards compatibility
-                            await db.blobs.put({
-                                itemId: itemId,
-                                hash: imageHash,
-                                blob: imageBlob,
-                                timestamp: Date.now(),
-                            });
-
-                            // Register in ImageRegistry
-                            ImageRegistry.register(itemId, imageHash);
-
-                            console.log(
-                                "[P2P] Broadcasting image with hash:",
-                                imageHash,
-                            );
-
-                            // 通過 P2P 廣播圖片 (二進制，無 base64)
-                            if (P2PStreamer.getPeers().length > 0) {
-                                await P2PStreamer.sendImage(itemId, imageBlob);
+                        // Process up to 4 images
+                        const photosToProcess = selectedPhotos.slice(0, 4);
+                        
+                        for (let i = 0; i < photosToProcess.length; i++) {
+                            const photo = photosToProcess[i];
+                            
+                            // Generate micro-thumbnail (50px)
+                            const microBlob = await generateMicroThumbnail(photo);
+                            if (microBlob) {
+                                microThumbnails.push(blobToObjectURL(microBlob, "micro_" + Date.now() + "_" + i));
+                            }
+                            
+                            // Compress to 800px
+                            const imageBlob = await compressImage(photo, 800, 0.7);
+                            if (imageBlob) {
+                                const tempItemId = "p2p_" + Date.now() + "_" + i;
+                                const objectUrl = blobToObjectURL(imageBlob, tempItemId);
+                                thumbnails.push(objectUrl);
+                                imageUrls.push("p2p://" + tempItemId);
+                                
+                                // Compute hash for content-addressable storage
+                                const imageHash = await ImageRegistry.computeHash(imageBlob);
+                                imageHashes.push(imageHash);
+                                
+                                // Save blob to IndexedDB
+                                await db.blobs.put({
+                                    itemId: tempItemId,
+                                    hash: imageHash,
+                                    blob: imageBlob,
+                                    timestamp: Date.now(),
+                                });
+                                
+                                // Register in ImageRegistry
+                                ImageRegistry.register(tempItemId, imageHash);
+                                
+                                // Broadcast via P2P
+                                if (P2PStreamer.getPeers().length > 0) {
+                                    await P2PStreamer.sendImage(tempItemId, imageBlob);
+                                }
+                                
+                                console.log("[P2P] Broadcasting image " + (i+1) + " with hash:", imageHash);
                             }
                         }
-                    }
 
-                    if (!imageBlob && !imageUrl) {
+                        // Store item with multiple images
+                        const itemId = await db.items.add({
+                            type: "marketplace",
+                            status: "available",
+                            category,
+                            price,
+                            condition,
+                            title,
+                            description,
+                            sellerId: peerId,
+                            sellerName: displayName,
+                            h3Index: currentH3Index,
+                            timestamp: Date.now(),
+                            imageUrl: imageUrls[0] || null,
+                            thumbnail: thumbnails[0] || null,
+                            microThumbnail: microThumbnails[0] || null,
+                            imageHash: imageHashes[0] || null,
+                            imageHashes: imageHashes, // Array of all image hashes
+                            thumbnails: thumbnails, // Array of all thumbnails
+                        });
+
+                    if (imageHashes.length === 0) {
                         await db.items.add({
                             type: "marketplace",
                             status: "available",
@@ -3910,12 +3904,14 @@
                         sellerName: displayName,
                         status: "available",
                         timestamp: Date.now(),
-                        imageUrl,
-                        imageHash: imageHash || null, // Include imageHash for P2P!
+                        imageUrl: imageUrls[0] || null,
+                        imageHash: imageHashes[0] || null,
+                        imageHashes: imageHashes,
+                        thumbnails: thumbnails,
                     };
                     console.log(
-                        "[Broadcast] Sending item with imageHash:",
-                        imageHash,
+                        "[Broadcast] Sending item with imageHashes:",
+                        imageHashes,
                     );
                     broadcastNewItem(fullItem);
 
