@@ -4518,20 +4518,17 @@
                 try {
                     const msg = JSON.parse(data);
 
-                    // ===== Layer 1: Message Deduplication =====
-                    // For IMG_CHUNK, use imageHash + chunkIndex for deduplication
-                    let msgId;
-                    if (msg.type === "IMG_CHUNK") {
-                        msgId = "IMG_CHUNK_" + msg.imageHash + "_" + (msg.chunkIndex || msg.offset || "0");
-                    } else if (msg.type === "IMG_HEADER") {
-                        msgId = "IMG_HEADER_" + msg.imageHash;
-                    } else {
-                        msgId = msg.type + (msg.item?.id || msg.itemId || msg.hash || msg.imageHash || '') + (msg.timestamp || Date.now());
+                    // ===== Layer 1: Skip deduplication for image chunks =====
+                    // Only deduplicate non-image messages
+                    let shouldSkip = false;
+                    if (msg.type !== "IMG_CHUNK" && msg.type !== "IMG_HEADER" && msg.type !== "IMG_END") {
+                        let msgId = msg.type + (msg.item?.id || msg.itemId || msg.hash || msg.imageHash || '') + (msg.timestamp || Date.now());
+                        if (window._seenMsgIds && window._seenMsgIds.has(msgId)) {
+                            console.log('[Dedupe] Already processed:', msg.type);
+                            shouldSkip = true;
+                        }
                     }
-                    if (window._seenMsgIds && window._seenMsgIds.has(msgId)) {
-                        console.log('[Dedupe] Already processed:', msg.type, msg.imageHash ? ("hash:" + msg.imageHash) : "");
-                        return;
-                    }
+                    if (shouldSkip) return;
                     if (!window._seenMsgIds) window._seenMsgIds = new Set();
                     window._seenMsgIds.add(msgId);
                     if (window._seenMsgIds.size > 500) {
