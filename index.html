@@ -1067,8 +1067,18 @@
         </div>
 
         <!-- Scripts -->
-        <script src="https://unpkg.com/dexie@4.0.4/dist/dexie.js"></script>
-        <script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
+        <!-- Load libraries synchronously -->
+        <script src="js/dexie.js"></script>
+        <script src="js/h3-js.js"></script>
+        <!-- CDN fallback -->
+        <script>
+            if (typeof Dexie === 'undefined') {
+                document.write('<script src="https://unpkg.com/dexie@4.0.4/dist/dexie.js"><\/script>');
+            }
+            if (typeof h3 === 'undefined') {
+                document.write('<script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"><\/script>');
+            }
+        </script>
 
         <script>
             // ============ Image Utilities ============
@@ -3285,7 +3295,7 @@
                 if (window._loadingItems) return;
                 window._loadingItems = true;
                 try {
-                let items = await db.items
+                    let items = await db.items
                     .where("status")
                     .notEqual("gone")
                     .toArray();
@@ -3301,6 +3311,9 @@
                 renderMarketGrid(items, document.getElementById("market-grid"));
                 // Load AI recommendations
                 loadAIRecommendations();
+                } catch (err) {
+                    console.error("[loadItems] Error:", err);
+                }
             }
 
             // ============ Sort Items ============
@@ -3374,6 +3387,7 @@
             }
 
             async function renderMarketGrid(items, container) {
+                try {
                 // ===== Layer 3: UI Deduplication =====
                 const seenIds = new Set();
                 items = items.filter(item => {
