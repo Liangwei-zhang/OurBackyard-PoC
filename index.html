@@ -3630,52 +3630,46 @@
                 const item = await db.items.get(id);
                 if (!item) return;
 
-                // Prefer URL, then thumbnail (base64), then blob
                 let imagesHtml = "";
-                const defaultImg =
-                    "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 x=%2250%22 y=%2255%22 text-anchor=%22middle%22>📷</text></svg>";
-                // Check if imageUrl is a valid URL (starts with /uploads/ or http)
-                if (
-                    item.imageUrl &&
-                    (item.imageUrl.startsWith("/uploads/") ||
-                        item.imageUrl.startsWith("http"))
-                ) {
-                    imagesHtml = `<img src="${item.imageUrl}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
-                } else {
-                    // Try to load image - use ONLY hash (content-addressable)
-                    let imgSrc = null;
-
-                    // 1. First check if thumbnail is a valid URL (http/https)
-                    if (
-                        item.thumbnail &&
-                        (item.thumbnail.startsWith("http") ||
-                            item.thumbnail.startsWith("/uploads/"))
-                    ) {
-                        imgSrc = item.thumbnail;
-                    }
-                    // 2. ONLY use imageHash for content-addressable storage
-                    else if (item.imageHash) {
-                        try {
-                            const hashBlobs = await db.blobs
-                                .where("hash")
-                                .equals(item.imageHash)
-                                .toArray();
-                            if (hashBlobs.length > 0) {
-                                imgSrc = URL.createObjectURL(hashBlobs[0].blob);
-                                console.log(
-                                    "[Detail] Loaded by hash:",
-                                    item.imageHash,
-                                );
-                            }
-                        } catch (err) {
-                            console.log("[Detail] Hash query failed:", e);
+                const defaultImg = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 x=%2250%22 y=%2255%22 text-anchor=%22middle%22>📷</text></svg>";
+                
+                // Support multiple images
+                const thumbnails = item.thumbnails || [];
+                const imageHashes = item.imageHashes || (item.imageHash ? [item.imageHash] : []);
+                
+                // Try to load images from IndexedDB
+                let loadedImages = [];
+                for (const hash of imageHashes) {
+                    try {
+                        const hashBlobs = await db.blobs.where("hash").equals(hash).toArray();
+                        if (hashBlobs.length > 0) {
+                            loadedImages.push(URL.createObjectURL(hashBlobs[0].blob));
                         }
+                    } catch (err) {
+                        console.log("[Detail] Hash query failed:", err);
                     }
-
-                    // Render image or placeholder
-                    imagesHtml = imgSrc
-                        ? `<img src="${imgSrc}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`
-                        : `<img src="${defaultImg}" style="width:100%;border-radius:16px;margin-bottom:16px">`;
+                }
+                
+                // Combine thumbnails and loaded blobs
+                let allImages = [...thumbnails.filter(t => t.startsWith('http')), ...loadedImages];
+                
+                // Fallback to single image
+                if (allImages.length === 0 && item.imageUrl) {
+                    allImages = [item.imageUrl];
+                }
+                if (allImages.length === 0 && item.thumbnail) {
+                    allImages = [item.thumbnail];
+                }
+                
+                // Build gallery HTML
+                if (allImages.length > 1) {
+                    imagesHtml = `<div class="detail-gallery" style="display:flex;flex-direction:column;gap:8px">
+                        ${allImages.map((src, i) => `<img src="${src}" style="width:100%;border-radius:12px;object-fit:cover;max-height:300px" onerror="this.src='${defaultImg}'">`).join('')}
+                    </div>`;
+                } else if (allImages.length === 1) {
+                    imagesHtml = `<img src="${allImages[0]}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
+                } else {
+                    imagesHtml = `<img src="${defaultImg}" style="width:100%;border-radius:16px;margin-bottom:16px">`;
                 }
 
                 const priceText =
