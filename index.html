@@ -4785,6 +4785,14 @@
                                                     timestamp: Date.now(),
                                                 });
                                                 console.log("[IMG_CHUNK] 💾 Saved blob to DB, hash:", imageHash);
+                                                
+                                                // Release download slot and process next
+                                                if (window.currentDownloadingCount > 0) {
+                                                    window.currentDownloadingCount--;
+                                                }
+                                                if (window.imageDownloadQueue.length > 0) {
+                                                    processDownloadQueue();
+                                                }
 
                                                 // Update item if found
                                                 if (targetItemId) {
