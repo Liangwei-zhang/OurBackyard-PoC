@@ -2955,46 +2955,66 @@
                 }
             }
 
-            // Auto-refresh items when image arrives
+            // Targeted image update - update only affected images
+            window.updateImageInUI = async function(imageHash) {
+                console.log("[🎯] Targeted update for hash:", imageHash);
+                
+                // Find all items with this imageHash
+                const items = await db.items.where("imageHash").equals(imageHash).toArray();
+                if (items.length === 0) {
+                    // Try imageHashes array
+                    const allItems = await db.items.toArray();
+                    const matching = allItems.filter(item => 
+                        item.imageHashes && item.imageHashes.includes(imageHash)
+                    );
+                    items.push(...matching);
+                }
+                
+                if (items.length === 0) {
+                    console.log("[🎯] No items found for hash:", imageHash);
+                    return;
+                }
+                
+                // Get blob
+                const blobs = await db.blobs.where("hash").equals(imageHash).toArray();
+                if (blobs.length === 0) return;
+                
+                const blob = blobs[0].blob;
+                const url = URL.createObjectURL(blob);
+                
+                // Update all matching image elements
+                for (const item of items) {
+                    const img = document.querySelector(`img[data-item-id="${item.id}"]`);
+                    if (img && !img.dataset.loaded) {
+                        img.src = url;
+                        img.dataset.loaded = 'true';
+                        img.style.filter = 'none';
+                        console.log("[🎯] Updated image for item:", item.title);
+                    }
+                }
+            }
+
+            // Auto-refresh items when image arrives - use targeted update
             window.addEventListener("p2p-image-ready", (e) => {
-                console.log(
-                    "[ImageReady] Refreshing items for hash:",
-                    e.detail.imageHash,
-                );
-                loadItems();
+                console.log("[ImageReady] Targeted update for hash:", e.detail.imageHash);
+                window.updateImageInUI(e.detail.imageHash);
             });
 
-            // Periodic check for images that need loading
+            // Periodic check - use targeted update instead of full reload
             setInterval(async () => {
                 try {
-                    const items = await db.items
-                        .where("imageHash")
-                        .notEqual("")
-                        .toArray();
-                    for (const item of items) {
-                        if (item.imageHash) {
-                            const blobs = await db.blobs
-                                .where("hash")
-                                .equals(item.imageHash)
-                                .toArray();
-                            if (blobs.length > 0) {
-                                // Image exists, check if we need to refresh
-                                const img = document.querySelector(
-                                    `img[data-item-id="${item.id}"]`,
-                                );
-                                if (img && (!img.src || img.src === "")) {
-                                    console.log(
-                                        "[Periodic] Refreshing image for:",
-                                        item.title,
-                                    );
-                                    loadItems();
-                                    break;
-                                }
-                            }
+                    const blobs = await db.blobs.toArray();
+                    for (const blob of blobs) {
+                        const img = document.querySelector(`img[data-hash="${blob.hash}"]`);
+                        if (img && !img.dataset.loaded) {
+                            const url = URL.createObjectURL(blob.blob);
+                            img.src = url;
+                            img.dataset.loaded = 'true';
+                            img.style.filter = 'none';
                         }
                     }
                 } catch (err) {}
-            }, 3000); // Check every 3 seconds
+            }, 2000); // Check every 3 seconds
 
             // ============ Stability: Backpressure Control ============
             async function sendWithBackpressure(dc, data) {
