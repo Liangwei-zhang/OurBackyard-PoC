@@ -2275,6 +2275,9 @@
                     blocklist: "itemHash, reason, timestamp",
                 });
                 console.log("IndexedDB initialized v5 with imageHash index");
+                
+                // Initialize other modules that need db
+                AppUpdater.db = db;
                 AppUpdater.init();
 
                 // Auto-login - generate display name if not saved
@@ -2289,7 +2292,10 @@
                     document.getElementById("input-name").value = displayName;
                     connect(); // Auto-connect
                 });
-            }
+            } // end initDB
+            
+            // Initialize db and then run app
+            initDB();
             
             // Run init now or wait for DexieReady
             if (typeof Dexie !== 'undefined') {
