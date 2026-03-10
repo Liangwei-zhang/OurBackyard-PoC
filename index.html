@@ -3463,6 +3463,11 @@
                 // Prevent concurrent loads
                 if (window._loadingItems) return;
                 window._loadingItems = true;
+                
+                // Clear existing items in DOM before loading
+                const container = document.getElementById("market-grid");
+                if (container) container.innerHTML = '';
+                
                 try {
                     let items = await db.items
                         .where("status")
@@ -3577,7 +3582,27 @@
 
             async function renderMarketGrid(items, container) {
                 try {
-                // ===== Layer 3: UI Deduplication =====
+                // ===== Layer 0: Clear container before render =====
+                container.innerHTML = '';
+                
+                // ===== Layer 1: Remove items already in DOM =====
+                const existingIds = new Set();
+                container.querySelectorAll('[data-item-id]').forEach(el => {
+                    existingIds.add(parseInt(el.dataset.itemId));
+                });
+                if (existingIds.size > 0) {
+                    console.log('[Dedupe] Removing', existingIds.size, 'existing items from render');
+                    items = items.filter(item => !existingIds.has(item.id));
+                }
+
+                // ===== Layer 2: JS-level deduplication =====
+                const seenIds = new Set();
+                items = items.filter(item => {
+                    const id = item.id || item.itemId;
+                    if (seenIds.has(id)) return false;
+                    seenIds.add(id);
+                    return true;
+                });
                 const seenIds = new Set();
                 items = items.filter(item => {
                     const id = item.id || item.itemId;
