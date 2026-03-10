@@ -3371,21 +3371,21 @@
                 window._loadingItems = true;
                 try {
                     let items = await db.items
-                    .where("status")
-                    .notEqual("gone")
-                    .toArray();
-                if (selectedCategory !== "All") {
-                    items = items.filter(
-                        (i) => i.category === selectedCategory,
-                    );
-                }
-                // Store for sorting
-                currentItems = items;
-                // Apply current sort
-                items = sortItemsData(items, selectedSort);
-                renderMarketGrid(items, document.getElementById("market-grid"));
-                // Load AI recommendations
-                loadAIRecommendations();
+                        .where("status")
+                        .notEqual("gone")
+                        .toArray();
+                    if (selectedCategory !== "All") {
+                        items = items.filter(
+                            (i) => i.category === selectedCategory,
+                        );
+                    }
+                    // Store for sorting
+                    currentItems = items;
+                    // Apply current sort
+                    items = sortItemsData(items, selectedSort);
+                    renderMarketGrid(items, document.getElementById("market-grid"));
+                    // Load AI recommendations
+                    loadAIRecommendations();
                 } catch (err) {
                     console.error("[loadItems] Error:", err);
                 }
@@ -3593,9 +3593,6 @@
                     const images = container.querySelectorAll(".lazy");
                     images.forEach((img) => observer.observe(img));
                 }, 100);
-            } finally {
-                window._loadingItems = false;
-            }
             }
 
             // ============ Item Detail ============
