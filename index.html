@@ -937,6 +937,12 @@
                         <span class="stat-label">Rank</span>
                         <span class="stat-value" id="leader-rank">#--</span>
                     </div>
+                    <!-- Reset / Danger Zone -->
+                    <div class="stat-item full-width" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+                        <span class="stat-icon">🗑️</span>
+                        <span class="stat-label">重置</span>
+                        <button class="btn btn-sm" style="background:#f44336;color:white" onclick="resetApp()">清除數據</button>
+                    </div>
                     <!-- App Update -->
                     <div class="stat-item full-width" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
                         <span class="stat-icon">🔄</span>
@@ -2534,6 +2540,29 @@
                 document.getElementById("theme-toggle").textContent = isDay
                     ? "☀️"
                     : "🌙";
+            }
+            
+            // Reset app - clear all IndexedDB data
+            window.resetApp = async function() {
+                if (!confirm("確定要清除所有數據嗎？這將刪除所有商品和設置！")) return;
+                
+                try {
+                    // Delete IndexedDB databases
+                    await indexedDB.deleteDatabase("OurBackyardDB");
+                    console.log("[Reset] IndexedDB deleted");
+                    
+                    // Clear localStorage
+                    localStorage.clear();
+                    console.log("[Reset] localStorage cleared");
+                    
+                    alert("數據已清除，頁面將重新載入...");
+                    
+                    // Reload page
+                    location.reload();
+                } catch (err) {
+                    console.error("[Reset] Error:", err);
+                    alert("清除失敗: " + err.message);
+                }
             }
 
             // ============ Haptic Feedback ============
