@@ -1175,13 +1175,19 @@
                 }).then(function() {
                     // Trigger app init when ready
                     if (typeof Dexie !== 'undefined') {
-                        document.dispatchEvent(new Event('DexieReady'));
+                        window.appReady = true; document.dispatchEvent(new Event('AppReady'));
                     }
                 });
             })();
         </script>
 
         <script>
+            // Wait for libraries to load
+            if (!window.appReady) {
+                document.addEventListener('AppReady', function() { location.reload(); });
+                throw new Error('Waiting for libraries...');
+            }
+            
             // ============ Image Utilities ============
 
             // Compress image to max 800px for storage
