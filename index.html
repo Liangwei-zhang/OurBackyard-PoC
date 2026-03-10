@@ -726,7 +726,7 @@
              .hidden { display: none !important; }
         </style>
     </head>
-    <body>
+    <body class="day-mode">
         <!-- Unified Header -->
         <div class="header">
             <div class="header-left">
@@ -2447,17 +2447,20 @@
             const drawerPeerId = document.getElementById("peer-id-drawer");
             if (drawerPeerId) drawerPeerId.textContent = peerId.substring(0, 20) + (peerId.length > 20 ? '...' : '');
 
-            // Load theme preference
-            const isDayMode =
-                localStorage.getItem("ourbackyard_daymode") === "true";
-            if (isDayMode) {
+            // Load theme preference (default is day/white)
+            const isDarkMode =
+                localStorage.getItem("ourbackyard_darkmode") === "true";
+            if (isDarkMode) {
+                document.body.classList.remove("day-mode");
+                document.getElementById("theme-toggle").textContent = "🌙";
+            } else {
                 document.body.classList.add("day-mode");
                 document.getElementById("theme-toggle").textContent = "☀️";
             }
 
             function toggleTheme() {
                 const isDay = document.body.classList.toggle("day-mode");
-                localStorage.setItem("ourbackyard_daymode", isDay);
+                localStorage.setItem("ourbackyard_darkmode", !isDay);
                 document.getElementById("theme-toggle").textContent = isDay
                     ? "☀️"
                     : "🌙";
