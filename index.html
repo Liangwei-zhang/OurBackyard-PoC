@@ -3870,54 +3870,29 @@
                             );
                         }
 
-                        // Process multiple images (max 4)
-                        let imageUrls = [];
-                        let imageHashes = [];
-                        let thumbnails = [];
-                        let microThumbnails = [];
+                        // Compress first image to 800px for storage
+                        imageBlob = await compressImage(
+                            selectedPhotos[0],
+                            800,
+                            0.7,
+                        );
+                        if (imageBlob) {
+                            // 完全 P2P 模式：跳過 HTTP 上傳
+                            const tempItemId = "p2p_" + Date.now();
 
-                        if (selectedPhotos.length > 0) {
-                            const photosToProcess = selectedPhotos.slice(0, 4);
-                            
-                            for (let i = 0; i < photosToProcess.length; i++) {
-                                const photo = photosToProcess[i];
-                                
-                                // Generate micro-thumbnail
-                                const microBlob = await generateMicroThumbnail(photo);
-                                if (microBlob) {
-                                    microThumbnails.push(blobToObjectURL(microBlob, "micro_" + Date.now() + "_" + i));
-                                }
-                                
-                                // Compress to 800px
-                                const imageBlob = await compressImage(photo, 800, 0.7);
-                                if (imageBlob) {
-                                    const tempItemId = "p2p_" + Date.now() + "_" + i;
-                                    const objectUrl = blobToObjectURL(imageBlob, tempItemId);
-                                    thumbnails.push(objectUrl);
-                                    imageUrls.push("p2p://" + tempItemId);
-                                    
-                                    // Compute hash
-                                    const imageHash = await ImageRegistry.computeHash(imageBlob);
-                                    imageHashes.push(imageHash);
-                                    
-                                    // Save blob
-                                    await db.blobs.put({
-                                        itemId: tempItemId,
-                                        hash: imageHash,
-                                        blob: imageBlob,
-                                        timestamp: Date.now(),
-                                    });
-                                    
-                                    ImageRegistry.register(tempItemId, imageHash);
-                                    
-                                    // Broadcast via P2P
-                                    if (P2PStreamer.getPeers().length > 0) {
-                                        await P2PStreamer.sendImage(tempItemId, imageBlob);
-                                    }
-                                }
-                            }
+                            // 使用 Object URL 替代 base64 (更高效，無 +33% 開銷)
+                            const objectUrl = blobToObjectURL(
+                                imageBlob,
+                                tempItemId,
+                            );
 
-                            // Store item with multiple images
+                            imageUrl = "p2p://" + tempItemId;
+
+                            // Compute image hash for content-addressable storage
+                            imageHash =
+                                await ImageRegistry.computeHash(imageBlob);
+
+                            // Store item with imageHash (content-addressable)
                             const itemId = await db.items.add({
                                 type: "marketplace",
                                 status: "available",
@@ -3930,16 +3905,36 @@
                                 sellerName: displayName,
                                 h3Index: currentH3Index,
                                 timestamp: Date.now(),
-                                imageUrl: imageUrls[0] || null,
-                                thumbnail: thumbnails[0] || null,
-                                microThumbnail: microThumbnails[0] || null,
-                                imageHash: imageHashes[0] || null,
-                                imageHashes: imageHashes,
-                                thumbnails: thumbnails,
+                                imageUrl: imageUrl, // P2P marker
+                                thumbnail: objectUrl, // Object URL (efficient!)
+                                microThumbnail: microThumbnail, // Micro thumbnail (50px)
+                                imageHash: imageHash, // Content ID for P2P
                             });
-                        }
 
-                    if (imageHashes.length === 0) {
+                            // Save blob to IndexedDB - include itemId as key for backwards compatibility
+                            await db.blobs.put({
+                                itemId: itemId,
+                                hash: imageHash,
+                                blob: imageBlob,
+                                timestamp: Date.now(),
+                            });
+
+                            // Register in ImageRegistry
+                            ImageRegistry.register(itemId, imageHash);
+
+                            console.log(
+                                "[P2P] Broadcasting image with hash:",
+                                imageHash,
+                            );
+
+                            // 通過 P2P 廣播圖片 (二進制，無 base64)
+                            if (P2PStreamer.getPeers().length > 0) {
+                                await P2PStreamer.sendImage(itemId, imageBlob);
+                            }
+                        }
+                    }
+
+                    if (!imageBlob && !imageUrl) {
                         await db.items.add({
                             type: "marketplace",
                             status: "available",
