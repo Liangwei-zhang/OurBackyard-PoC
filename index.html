@@ -714,7 +714,6 @@
                 padding: 12px;
                 border: 1px solid rgba(255,255,255,0.1);
                 border-radius: 8px;
-                background: #2a2a2a;
                 color: var(--text);
                 font-size: 14px;
                 transition: box-shadow 0.2s, border-color 0.2s;
@@ -825,8 +824,6 @@
                     <div class="status-dot" id="status-dot"></div>
                     <span id="status-text">0</span>
                 </div>
-                
-                
             </div>
         </div>
 
@@ -1691,7 +1688,6 @@
                 currentVersion: "1.0.0",
                 currentBundleHash: null,
                 trustedPublicKey: "ourbackyard-demo-key-v1", // In production, use real ED25519 public key
-                
                 async init() {
                     const saved = await db.systemAssets.get("app-bundle");
                     if (saved) {
@@ -1700,12 +1696,10 @@
                         console.log("[Update] Current version:", this.currentVersion);
                     }
                 },
-                
                 async checkForUpdates() {
                     console.log("[Update] Broadcasting APP_UPDATE_CHECK...");
                     broadcast({ type: "APP_UPDATE_CHECK", version: this.currentVersion, peerId: peerId });
                 },
-                
                 async handleUpdateMessage(msg) {
                     if (msg.type === "APP_UPDATE_AVAILABLE") {
                         console.log("[Update] New version available:", msg.version);
@@ -1730,7 +1724,6 @@
                         await this.saveBundle(msg.bundle, msg.bundleHash, msg.version);
                     }
                 },
-                
                 // Verify bundle signature
                 verifySignature(signature, bundleHash) {
                     // In real implementation, use WebCrypto API with ED25519
@@ -1741,7 +1734,6 @@
                     console.log("[Update] Verifying signature for:", bundleHash);
                     return true; // Demo passes
                 },
-                
                 async saveBundle(bundleBlob, bundleHash, version) {
                     // Store in IndexedDB
                     await db.systemAssets.put({ url: "app-bundle", blob: bundleBlob, hash: bundleHash, version: version, timestamp: Date.now() });
@@ -1754,7 +1746,6 @@
                         await this.activateUpdate();
                     }
                 },
-                
                 async activateUpdate() {
                     try {
                         const registration = await navigator.serviceWorker.getRegistration();
@@ -1771,7 +1762,6 @@
                         window.location.reload();
                     }
                 },
-                
                 compareVersion(v1, v2) {
                     const p1 = v1.split(".").map(Number);
                     const p2 = v2.split(".").map(Number);
@@ -1781,7 +1771,6 @@
                     }
                     return 0;
                 },
-                
                 async publishUpdate(bundleBlob) {
                     const version = prompt("輸入新版本號 (例如 1.0.1):");
                     if (!version) return;
@@ -1792,7 +1781,6 @@
                     broadcast({ type: "APP_UPDATE_AVAILABLE", version: version, bundleHash: hash, peerId: peerId });
                     alert("版本 " + version + " 已發布！");
                 },
-                
                 // ============ Delta Update (Module 57) ============
                 async checkDeltaUpdates(remoteManifest) {
                     const localManifest = await db.systemAssets.get("app-manifest");
@@ -1805,7 +1793,6 @@
                     console.log("[Delta] Local blocks: " + localBlocks.size + ", Missing: " + missingBlocks.length);
                     return missingBlocks;
                 },
-                
                 async applyDeltaUpdate(remoteBundle, missingBlocks) {
                     // Get local blocks
                     const localBundle = await db.systemAssets.get("app-bundle");
@@ -1832,14 +1819,12 @@
                     
                     console.log("[Delta] ✅ Delta update applied!");
                 },
-                
                 extractFileFromBlocks(blocks, filename) {
                     // This is a simplified version - real implementation needs block boundaries
                     // For now, return the full content
                     const allData = blocks.map(b => atob(b.data)).join('');
                     return allData;
                 },
-                
                 // Request specific blocks from neighbors
                 async requestDeltaBlocks(peerId, version, missingHashes) {
                     console.log("[Delta] Requesting " + missingHashes.length + " blocks from neighbor");
@@ -1859,13 +1844,11 @@
                 // Block threshold for consensus
                 BLOCK_THRESHOLD: 5,
                 BLOCK_WINDOW_MS: 10 * 60 * 1000, // 10 minutes
-                
                 // Check if item is blocked
                 async isBlocked(itemHash) {
                     const blocked = await db.blocklist.get(itemHash);
                     return !!blocked;
                 },
-                
                 // Submit a report (ZK-Proof would be used in production)
                 async reportItem(itemHash, reason) {
                     const report = {
@@ -1887,7 +1870,6 @@
                     
                     alert("舉報已提交，等待鄰里裁決");
                 },
-                
                 // Handle incoming report
                 async handleReport(msg) {
                     const { report } = msg;
@@ -1915,7 +1897,6 @@
                         }
                     }
                 },
-                
                 // Block an item
                 async blockItem(itemHash, reason) {
                     await db.blocklist.put({
@@ -1940,7 +1921,6 @@
                         renderItems();
                     }
                 },
-                
                 // Handle block broadcast
                 async handleBlockBroadcast(msg) {
                     const { itemHash, reason } = msg;
@@ -1965,7 +1945,6 @@
                         renderItems();
                     }
                 },
-                
                 // Filter items before rendering
                 async filterItems(items) {
                     const blocked = await db.blocklist.toArray();
@@ -1976,7 +1955,6 @@
                         return !blockedHashes.has(itemHash);
                     });
                 },
-                
                 // Get blocklist count
                 async getBlockCount() {
                     return await db.blocklist.count();
@@ -4209,30 +4187,24 @@
              */
             function resolveConflict(localItem, incomingItem) {
                 const now = Date.now();
-                
                 // If no local item, incoming wins
                 if (!localItem) {
                     return { item: incomingItem, updated: true, reason: 'new' };
                 }
-                
                 // If no timestamp on incoming, reject it
                 if (!incomingItem.updatedAt) {
                     return { item: localItem, updated: false, reason: 'no-timestamp' };
                 }
-                
                 // If no timestamp on local, incoming wins (first sync)
                 if (!localItem.updatedAt) {
                     return { item: incomingItem, updated: true, reason: 'first-sync' };
                 }
-                
                 const localTime = localItem.updatedAt || 0;
                 const incomingTime = incomingItem.updatedAt || 0;
-                
                 // Incoming is newer
                 if (incomingTime > localTime) {
                     return { item: incomingItem, updated: true, reason: 'newer' };
                 }
-                
                 // Local is newer or equal - keep local
                 return { item: localItem, updated: false, reason: 'local-newer' };
             }
@@ -4246,10 +4218,8 @@
             function mergeItems(localItem, incomingItem) {
                 if (!localItem) return incomingItem;
                 if (!incomingItem) return localItem;
-                
                 const resolved = resolveConflict(localItem, incomingItem);
                 if (!resolved.updated) return localItem;
-                
                 // Merge: take incoming but preserve local-only fields
                 return {
                     ...localItem,
@@ -5199,14 +5169,12 @@
                     alert('只能編輯自己的商品');
                     return;
                 }
-                
                 document.getElementById('edit-item-id').value = item.id;
                 document.getElementById('edit-title').value = item.title || '';
                 document.getElementById('edit-price').value = item.price || '';
                 document.getElementById('edit-description').value = item.description || '';
                 document.getElementById('edit-category').value = item.category || 'Other';
                 document.getElementById('edit-status').value = item.status || 'available';
-                
                 document.getElementById('edit-modal').classList.add('show');
             };
 
@@ -5221,18 +5189,15 @@
                 const description = document.getElementById('edit-description').value.trim();
                 const category = document.getElementById('edit-category').value;
                 const status = document.getElementById('edit-status').value;
-                
                 if (!title) {
                     alert('請輸入標題');
                     return;
                 }
-                
                 const item = await db.items.get(id);
                 if (!item) {
                     alert('商品不存在');
                     return;
                 }
-                
                 // Update locally
                 const updatedItem = {
                     ...item,
@@ -5243,13 +5208,10 @@
                     status,
                     updatedAt: Date.now()
                 };
-                
                 await db.items.put(updatedItem);
                 console.log('[Edit] Item updated:', id);
-                
                 // Broadcast to neighbors
                 broadcastItemUpdate(updatedItem);
-                
                 closeEditModal();
                 loadItems();
             };
@@ -5266,17 +5228,14 @@
                     updatedAt: item.updatedAt,
                     sellerId: item.sellerId
                 };
-                
                 // Via P2P
                 if (P2PStreamer && P2PStreamer.broadcast) {
                     P2PStreamer.broadcast(msg);
                 }
-                
                 // Via WebSocket
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify(msg));
                 }
-                
                 console.log('[Edit] Broadcasted update for item:', item.id);
             }
 
