@@ -2903,17 +2903,19 @@
             // Request image from neighbors (On-Demand Pull)
             // Broadcast to ALL connected peers, not just the original seller!
             function requestImageFromNeighbors(imageHash, sellerId) {
-                // Debounce: prevent request storms
-                if (activeImageRequests.has(imageHash)) {
-                    console.log("[P2P] Already requesting:", imageHash);
+                // Check if already in queue or downloading
+                if (window.imageDownloadQueue.some(item => item.hash === imageHash) || 
+                    incomingImages[imageHash]) {
+                    console.log("[Queue] Already queued/downloading:", imageHash);
                     return;
                 }
-                activeImageRequests.add(imageHash);
                 
-                // Clear after 15 seconds to allow retry
-                setTimeout(() => activeImageRequests.delete(imageHash), 15000);
+                // Add to queue
+                window.imageDownloadQueue.push({ hash: imageHash, sellerId: sellerId });
+                console.log("[Queue] Added to queue:", imageHash, "Queue length:", window.imageDownloadQueue.length);
                 
-                console.log("[P2P] Requesting image from ALL neighbors:", imageHash);
+                // Process queue
+                processDownloadQueue();
 
                 // Broadcast via P2P data channels (Selfless Neighbor!)
                 if (P2PStreamer && P2PStreamer.broadcast) {
@@ -2999,14 +3001,16 @@
                 window.updateImageInUI(e.detail.imageHash);
             });
 
-            // Timeout retry - clean stalled buffers
+            // Timeout retry - clean stalled buffers and release queue slots
             setInterval(() => {
                 for (const hash in incomingImages) {
                     const img = incomingImages[hash];
-                    if (Date.now() - (img.lastUpdate || 0) > 8000) {
-                        console.log("[Retry] Image stalled, clearing buffer:", hash);
+                    if (Date.now() - (img.lastUpdate || 0) > 10000) {
+                        console.log("[Retry] Image stalled, releasing slot:", hash);
                         delete incomingImages[hash];
                         activeImageRequests.delete(hash);
+                        window.currentDownloadingCount = Math.max(0, window.currentDownloadingCount - 1);
+                        processDownloadQueue();
                     }
                 }
             }, 5000);
@@ -4289,6 +4293,41 @@
             // WebSocket message queue for offline/reconnecting
             let pendingWsMessages = [];
             let activeImageRequests = new Set();
+            
+            // Download queue management
+            window.imageDownloadQueue = [];
+            window.currentDownloadingCount = 0;
+            const MAX_CONCURRENT_DOWNLOADS = 3;
+            
+            function processDownloadQueue() {
+                while (window.currentDownloadingCount < MAX_CONCURRENT_DOWNLOADS && window.imageDownloadQueue.length > 0) {
+                    const task = window.imageDownloadQueue.shift();
+                    executeImageRequest(task.hash, task.sellerId);
+                }
+            }
+            
+            function executeImageRequest(imageHash, sellerId) {
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    // Put back in queue if not connected
+                    window.imageDownloadQueue.unshift({ hash: imageHash, sellerId: sellerId });
+                    return;
+                }
+                
+                window.currentDownloadingCount++;
+                console.log("[Queue] Starting download:", imageHash, "Active:", window.currentDownloadingCount);
+                
+                ws.send(JSON.stringify({
+                    type: "REQ_IMAGE",
+                    imageHash: imageHash,
+                    requesterId: peerId,
+                    sellerId: sellerId,
+                }));
+            }
+            
+            function onImageDownloadComplete() {
+                window.currentDownloadingCount = Math.max(0, window.currentDownloadingCount - 1);
+                processDownloadQueue();
+            }
             
             // Helper to send WS messages with queue support
             function sendWsMessage(msg) {
