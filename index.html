@@ -4114,6 +4114,69 @@
                 }
             }
 
+
+            // ============ Conflict Resolution (updatedAt-based) ============
+            /**
+             * Resolve conflicts using updatedAt timestamp
+             * @param {Object} localItem - Local item from IndexedDB
+             * @param {Object} incomingItem - Incoming item from P2P network
+             * @returns {Object} - { item: resolved item, updated: boolean }
+             */
+            function resolveConflict(localItem, incomingItem) {
+                const now = Date.now();
+                
+                // If no local item, incoming wins
+                if (!localItem) {
+                    return { item: incomingItem, updated: true, reason: 'new' };
+                }
+                
+                // If no timestamp on incoming, reject it
+                if (!incomingItem.updatedAt) {
+                    return { item: localItem, updated: false, reason: 'no-timestamp' };
+                }
+                
+                // If no timestamp on local, incoming wins (first sync)
+                if (!localItem.updatedAt) {
+                    return { item: incomingItem, updated: true, reason: 'first-sync' };
+                }
+                
+                const localTime = localItem.updatedAt || 0;
+                const incomingTime = incomingItem.updatedAt || 0;
+                
+                // Incoming is newer
+                if (incomingTime > localTime) {
+                    return { item: incomingItem, updated: true, reason: 'newer' };
+                }
+                
+                // Local is newer or equal - keep local
+                return { item: localItem, updated: false, reason: 'local-newer' };
+            }
+
+            /**
+             * Merge item changes intelligently
+             * @param {Object} localItem - Local item
+             * @param {Object} incomingItem - Incoming item
+             * @returns {Object} - Merged item
+             */
+            function mergeItems(localItem, incomingItem) {
+                if (!localItem) return incomingItem;
+                if (!incomingItem) return localItem;
+                
+                const resolved = resolveConflict(localItem, incomingItem);
+                if (!resolved.updated) return localItem;
+                
+                // Merge: take incoming but preserve local-only fields
+                return {
+                    ...localItem,
+                    ...incomingItem,
+                    // Always use the newer timestamp
+                    updatedAt: Math.max(
+                        localItem.updatedAt || 0,
+                        incomingItem.updatedAt || 0
+                    )
+                };
+            }
+
             async function handleMessage(data) {
                 try {
                     const msg = JSON.parse(data);
@@ -4189,7 +4252,20 @@
                                     ? "has image"
                                     : "no image",
                             );
-                            saveNeighborItem(msg.item);
+                            // Use conflict resolution to prevent duplicates
+                            if (msg.item && msg.item.id) {
+                                db.items.get(msg.item.id).then(localItem => {
+                                    const resolved = resolveConflict(localItem, msg.item);
+                                    if (resolved.updated) {
+                                        console.log("[Conflict] NEW_ITEM:", resolved.reason, "- updating");
+                                        saveNeighborItem(resolved.item);
+                                    } else {
+                                        console.log("[Conflict] NEW_ITEM:", resolved.reason, "- keeping local");
+                                    }
+                                });
+                            } else {
+                                saveNeighborItem(msg.item);
+                            }
                             break;
                         case "CHAT":
                             // Handle incoming chat message
@@ -4199,9 +4275,14 @@
                             break;
                         case "ITEM_UPDATE":
                             if (msg.itemId) {
-                                db.items
-                                    .update(msg.itemId, { status: msg.status })
-                                    .then(loadItems);
+                                db.items.get(msg.itemId).then(localItem => {
+                                    const updatedItem = { ...localItem, ...msg, updatedAt: msg.updatedAt || Date.now() };
+                                    const resolved = resolveConflict(localItem, updatedItem);
+                                    if (resolved.updated) {
+                                        db.items.put(resolved.item).then(() => loadItems());
+                                        console.log("[Conflict] ITEM_UPDATE:", resolved.reason);
+                                    }
+                                });
                             }
                             break;
                         case "IMG_HEADER":
