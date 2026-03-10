@@ -2286,7 +2286,7 @@
                         displayName = record.value;
                     } else {
                         // Generate random display name
-                        displayName = "User" + Math.floor(Math.random() * 10000);
+                        displayName = "User" + Math.floor(Math.random() * 10000))
                         db.userData.put({ key: "displayName", value: displayName });
                     }
                     document.getElementById("input-name").value = displayName;
