@@ -3603,13 +3603,6 @@
                     seenIds.add(id);
                     return true;
                 });
-                const seenIds = new Set();
-                items = items.filter(item => {
-                    const id = item.id || item.itemId;
-                    if (seenIds.has(id)) return false;
-                    seenIds.add(id);
-                    return true;
-                });
 
                 if (items.length === 0) {
                     container.innerHTML =
