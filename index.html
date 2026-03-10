@@ -2917,22 +2917,14 @@
                     });
                 }
 
-                // Also send via WebSocket for broader reach
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    const msg = {
-                        type: "REQ_IMAGE",
-                        imageHash: imageHash,
-                        requesterId: peerId,
-                        sellerId: sellerId,
-                    };
-                    console.log(
-                        "[P2P] Sending REQ_IMAGE via WS:",
-                        JSON.stringify(msg),
-                    );
-                    ws.send(JSON.stringify(msg));
-                } else {
-                    console.log("[P2P] WS not connected, cannot request image");
-                }
+                // Also send via WebSocket for broader reach (use queue if not connected)
+                const msg = {
+                    type: "REQ_IMAGE",
+                    imageHash: imageHash,
+                    requesterId: peerId,
+                    sellerId: sellerId,
+                };
+                sendWsMessage(msg);
             }
 
             // Handle incoming image request from neighbor
@@ -4272,6 +4264,29 @@
             }
 
             // ============ WebSocket ============
+            // WebSocket message queue for offline/reconnecting
+            let pendingWsMessages = [];
+            
+            // Helper to send WS messages with queue support
+            function sendWsMessage(msg) {
+                const data = JSON.stringify(msg);
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(data);
+                    console.log("[WS] Sent:", msg.type);
+                } else {
+                    console.log("[WS] Queueing:", msg.type);
+                    pendingWsMessages.push(msg);
+                }
+            }
+            
+            // Flush pending messages when WS connects
+            function flushWsQueue() {
+                while (pendingWsMessages.length > 0) {
+                    const msg = pendingWsMessages.shift();
+                    sendWsMessage(msg);
+                }
+            }
+            
             function connect() {
                 displayName =
                     document.getElementById("input-name").value || peerId;
@@ -4290,15 +4305,17 @@
 
                 ws.onopen = () => {
                     updateStatus("connected", "Connected");
+                    // Flush pending messages
+                    flushWsQueue();
                     document.getElementById("setup").classList.add("hidden");
                     document.getElementById("app").classList.remove("hidden");
                     loadItems();
 
                     // Request history from server
-                    ws.send(JSON.stringify({ type: "REQUEST_HISTORY" }));
+                    sendWsMessage({ type: "REQUEST_HISTORY" });
 
                     // Request peer list
-                    ws.send(JSON.stringify({ type: "get-peers" }));
+                    sendWsMessage({ type: "get-peers" });
 
                     // Merkle sync - request items from peers
                     MerkleSync.createSyncRequest().then((syncMsg) => {
@@ -4311,7 +4328,7 @@
                     // Refresh peer count periodically
                     setInterval(() => {
                         if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({ type: "get-peers" }));
+                            sendWsMessage({ type: "get-peers" });
                         }
                     }, 10000);
                 };
