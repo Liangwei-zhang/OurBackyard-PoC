@@ -3623,6 +3623,9 @@
                     const images = container.querySelectorAll(".lazy");
                     images.forEach((img) => observer.observe(img));
                 }, 100);
+                } catch (err) {
+                    console.error("[renderMarketGrid] Error:", err);
+                }
             }
 
             // ============ Item Detail ============
