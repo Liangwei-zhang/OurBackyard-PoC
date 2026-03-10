@@ -2765,15 +2765,32 @@
             }
 
             // Receive binary image chunks - keyed by hash (content-addressable)
-            const incomingImages = {}; // imageHash -> { itemId, chunks:[], size:0, mimeType:'' }
+            const incomingImages = {}; // imageHash -> { itemId, chunks:[], size:0, mimeType:'', lastUpdate:timestamp }
+            
+            // Timeout retry mechanism - re-request stalled images
+            setInterval(() => {
+                for (const hash in incomingImages) {
+                    const img = incomingImages[hash];
+                    if (!img.complete && Date.now() - (img.lastUpdate || 0) > 5000) {
+                        console.log("[Retry] Image stalled, re-requesting:", hash);
+                        // Re-request from neighbors
+                        const item = Object.values(incomingImages).find(i => i.hash === hash);
+                        if (item && item.sellerId) {
+                            requestImageFromNeighbors(hash, item.sellerId);
+                        }
+                        img.lastUpdate = Date.now();
+                    }
+                }
+            }, 5000);
 
-            function handleBinaryImageChunk(imageHash, chunk, isLastChunk) {
+            function handleBinaryImageChunk(imageHash, chunk, isLastChunk, sellerId) {
                 if (!incomingImages[imageHash]) {
-                    incomingImages[imageHash] = { chunks: [], received: 0 };
+                    incomingImages[imageHash] = { chunks: [], received: 0, lastUpdate: Date.now(), sellerId: sellerId };
                 }
 
                 incomingImages[imageHash].chunks.push(chunk);
                 incomingImages[imageHash].received += chunk.byteLength;
+                incomingImages[imageHash].lastUpdate = Date.now();
 
                 // If complete, assemble and save by hash
                 if (isLastChunk) {
