@@ -2249,13 +2249,11 @@
                 },
             };
 
-            // Initialize after Dexie is ready
-            function initApp() {
-                // Initialize DID on load
-                DIDService.init();
-
-                // ============ Initialize IndexedDB (Dexie) ============
-                const db = new Dexie("OurBackyardDB");
+            // Global db reference - initialize immediately after Dexie loads
+            let db;
+            
+            function initDB() {
+                db = window.db = new Dexie("OurBackyardDB");
                 db.version(4).stores({
                     items: "++id, title, category, price, status, sellerId, h3Index, timestamp",
                     blobs: "itemId, hash",
@@ -2275,6 +2273,15 @@
                     blocklist: "itemHash, reason, timestamp",
                 });
                 console.log("IndexedDB initialized v5 with imageHash index");
+            }
+            
+            // Initialize after Dexie is ready
+            function initApp() {
+                // Initialize DID on load
+                DIDService.init();
+
+                // Initialize IndexedDB
+                initDB();
                 
                 // Initialize other modules that need db
                 AppUpdater.db = db;
@@ -2292,10 +2299,7 @@
                     document.getElementById("input-name").value = displayName;
                     connect(); // Auto-connect
                 });
-            } // end initDB
-            
-            // Initialize db and then run app
-            initDB();
+            } // end initApp
             
             // Run init now or wait for DexieReady
             if (typeof Dexie !== 'undefined') {
