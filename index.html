@@ -1149,32 +1149,8 @@
 
         <!-- Scripts -->
         <!-- Load libraries with async fallback -->
-        <script>
-            (function() {
-                function loadLib(src, global) {
-                    return new Promise(function(resolve) {
-                        var s = document.createElement('script');
-                        s.src = src;
-                        s.onload = function() { console.log('[Lib] Loaded:', src); resolve(); };
-                        s.onerror = function() { console.warn('[Lib] Failed:', src); resolve(); };
-                        document.head.appendChild(s);
-                    });
-                }
-                
-                // Try local first
-                loadLib('js/dexie.js').then(function() {
-                    if (typeof Dexie === 'undefined') {
-                        return loadLib('https://unpkg.com/dexie@4.0.4/dist/dexie.js');
-                    }
-                }).then(function() {
-                    return loadLib('js/h3-js.js');
-                }).then(function() {
-                    if (typeof h3 === 'undefined') {
-                        return loadLib('https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js');
-                    }
-                }).then(function() {
-                    // Trigger app init when ready
-                    if (typeof Dexie !== 'undefined') {
+        <script src="https://unpkg.com/dexie@4.0.4/dist/dexie.js"></script>
+        <script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
                         window.appReady = true; document.dispatchEvent(new Event('AppReady'));
                     }
                 });
