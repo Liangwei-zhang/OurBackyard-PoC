@@ -3771,15 +3771,72 @@
             document
                 .getElementById("item-photos")
                 .addEventListener("change", async (e) => {
-                    selectedPhotos = Array.from(e.target.files);
+                    // Limit to 4 photos
+                    const newFiles = Array.from(e.target.files).slice(0, 4 - selectedPhotos.length);
+                    selectedPhotos = [...selectedPhotos, ...newFiles];
+                    
+                    renderPhotoPreview();
+                    
+                    // Clear input so same file can be selected again
+                    e.target.value = "";
+                });
+                
+                // Render photo preview with delete buttons
+                window.renderPhotoPreview = function() {
                     const preview = document.getElementById("photo-preview");
                     preview.innerHTML = "";
-                    for (const file of selectedPhotos) {
+                    selectedPhotos.forEach((file, index) => {
+                        const wrapper = document.createElement("div");
+                        wrapper.style.position = "relative";
+                        wrapper.style.display = "inline-block";
+                        wrapper.style.marginRight = "8px";
+                        
                         const img = document.createElement("img");
                         img.src = URL.createObjectURL(file);
-                        preview.appendChild(img);
+                        img.style.width = "60px";
+                        img.style.height = "60px";
+                        img.style.objectFit = "cover";
+                        img.style.borderRadius = "8px";
+                        if (index === 0) img.style.border = "2px solid var(--primary)";
+                        
+                        // Delete button
+                        const delBtn = document.createElement("button");
+                        delBtn.innerHTML = "✕";
+                        delBtn.style.position = "absolute";
+                        delBtn.style.top = "-8px";
+                        delBtn.style.right = "-8px";
+                        delBtn.style.width = "20px";
+                        delBtn.style.height = "20px";
+                        delBtn.style.borderRadius = "50%";
+                        delBtn.style.border = "none";
+                        delBtn.style.background = "#f44336";
+                        delBtn.style.color = "white";
+                        delBtn.style.cursor = "pointer";
+                        delBtn.style.fontSize = "12px";
+                        delBtn.style.lineHeight = "1";
+                        delBtn.onclick = function(e) {
+                            e.stopPropagation();
+                            selectedPhotos.splice(index, 1);
+                            renderPhotoPreview();
+                        };
+                        
+                        wrapper.appendChild(img);
+                        wrapper.appendChild(delBtn);
+                        preview.appendChild(wrapper);
+                    });
+                    
+                    // Update button text
+                    const btn = document.getElementById("btn-select-photos");
+                    if (selectedPhotos.length >= 4) {
+                        btn.textContent = "📷 已選4張";
+                        btn.disabled = true;
+                        btn.style.opacity = "0.5";
+                    } else {
+                        btn.textContent = "📷 Add Photos (" + selectedPhotos.length + "/4)";
+                        btn.disabled = false;
+                        btn.style.opacity = "1";
                     }
-                });
+                };
 
             document
                 .getElementById("btn-publish")
