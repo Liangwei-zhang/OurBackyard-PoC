@@ -1151,19 +1151,8 @@
         <!-- Load libraries with async fallback -->
         <script src="https://unpkg.com/dexie@4.0.4/dist/dexie.js"></script>
         <script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
-                        window.appReady = true; document.dispatchEvent(new Event('AppReady'));
-                    }
-                });
-            })();
-        </script>
 
         <script>
-            // Wait for libraries to load
-            if (!window.appReady) {
-                document.addEventListener('AppReady', function() { location.reload(); });
-                throw new Error('Waiting for libraries...');
-            }
-            
             // ============ Image Utilities ============
 
             // Compress image to max 800px for storage
