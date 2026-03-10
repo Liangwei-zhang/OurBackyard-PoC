@@ -44,7 +44,7 @@
 
              body {
                font-family: 'Inter', system-ui, -apple-system, sans-serif;
-               background: #ffffff;
+               background: #eeeeee;
                color: var(--text);
                min-height: 100vh;
                padding-bottom: 10px;
@@ -352,17 +352,14 @@
              .info-row:last-child { margin-bottom: 0; }
              .info-label { color: var(--text-muted); }
              .info-value { font-weight: 500; font-family: monospace; font-size: 12px; }
-               background: #ffffff;
 
              /* Tab Bar */
              .tab-bar {
                display: flex;
                gap: 8px;
                padding: 10px 16px;
-               background: #eeeeee;
                overflow-x: auto;
                scrollbar-width: none;
-               white-space: nowrap;
              }
              .tab-bar::-webkit-scrollbar { display: none; }
              .tab {
@@ -376,7 +373,6 @@
                font-weight: 500;
                cursor: pointer;
                transition: all 0.2s;
-               display: flex;
                align-items: center;
                gap: 8px;
              }
@@ -397,13 +393,11 @@
                padding: 0 20px 16px;
                overflow-x: auto;
                scrollbar-width: none;
-               white-space: nowrap;
              }
              .category-bar::-webkit-scrollbar { display: none; }
              .category-tag {
                flex-shrink: 0;
                padding: 10px 16px;
-               background: #eeeeee;
                border-radius: 20px;
                font-size: 13px;
                white-space: nowrap;
@@ -420,7 +414,6 @@
                align-items: center;
                gap: 8px;
                padding: 10px 16px;
-               background: #eeeeee;
                background: var(--bg-card);
                border-bottom: 1px solid var(--border);
              }
@@ -565,6 +558,7 @@
                cursor: pointer;
                font-size: 14px;
                transition: all 0.2s;
+               background: #ffffff;
              }
              .btn-secondary:hover {
                background: rgba(255,255,255,0.1);
@@ -810,7 +804,7 @@
             <div class="header-left">
                 <button class="header-menu-btn" id="statsDrawerBtn">☰</button>
                 <div class="logo">
-                    
+
                     OurBackyard
                 </div>
             </div>
@@ -975,9 +969,7 @@
         </div>
 
         <!-- Main App -->
-        <div id="app" class="hidden">
-            <!-- Info -->
-            </div>
+        <div id="app">
 
             <!-- Tabs -->
             <div class="tab-bar">
@@ -1695,7 +1687,7 @@
                     }
                     if (msg.type === "APP_BUNDLE") {
                         console.log("[Update] Received app bundle:", msg.bundleHash);
-                        
+
                         // Verify signature if present
                         if (msg.signature) {
                             const verified = this.verifySignature(msg.signature, msg.bundleHash);
@@ -1706,7 +1698,7 @@
                             }
                             console.log("[Update] ✅ Signature verified");
                         }
-                        
+
                         await this.saveBundle(msg.bundle, msg.bundleHash, msg.version);
                     }
                 },
@@ -1726,7 +1718,7 @@
                     this.currentVersion = version;
                     this.currentBundleHash = bundleHash;
                     console.log("[Update] Bundle saved, version:", version);
-                    
+
                     // Smooth SW update with user consent
                     if (confirm("新版本 " + version + " 已下載完成，是否立即更新？")) {
                         await this.activateUpdate();
@@ -1771,11 +1763,11 @@
                 async checkDeltaUpdates(remoteManifest) {
                     const localManifest = await db.systemAssets.get("app-manifest");
                     if (!localManifest || !remoteManifest) return null;
-                    
+
                     // Find missing blocks
                     const localBlocks = new Set(localManifest.blocks?.map(b => b.hash) || []);
                     const missingBlocks = remoteManifest.blocks.filter(b => !localBlocks.has(b.hash));
-                    
+
                     console.log("[Delta] Local blocks: " + localBlocks.size + ", Missing: " + missingBlocks.length);
                     return missingBlocks;
                 },
@@ -1783,10 +1775,10 @@
                     // Get local blocks
                     const localBundle = await db.systemAssets.get("app-bundle");
                     const localBlocks = localBundle?.blocks || [];
-                    
+
                     // Merge blocks
                     const mergedBlocks = [...localBundle?.blocks || [], ...missingBlocks];
-                    
+
                     // Reassemble files
                     for (const [filename, expectedHash] of Object.entries(remoteBundle.fileHashes)) {
                         const fileContent = this.extractFileFromBlocks(mergedBlocks, filename);
@@ -1799,10 +1791,10 @@
                             });
                         }
                     }
-                    
+
                     // Save manifest
                     await db.systemAssets.put({ url: "app-manifest", ...remoteBundle });
-                    
+
                     console.log("[Delta] ✅ Delta update applied!");
                 },
                 extractFileFromBlocks(blocks, filename) {
@@ -1822,7 +1814,7 @@
                     });
                 }
             };
-            
+
             // AppUpdater.init() - moved after db
 
             // ============ Module 58: P2P Content Moderation ============
@@ -1844,35 +1836,35 @@
                         reporterRep: parseInt(document.getElementById("reputation")?.textContent || "50"),
                         timestamp: Date.now()
                     };
-                    
+
                     console.log("[Moderation] Report submitted for:", itemHash);
-                    
+
                     // Broadcast report to neighbors
                     broadcast({
                         type: "ITEM_REPORT",
                         report: report,
                         peerId: peerId
                     });
-                    
+
                     alert("舉報已提交，等待鄰里裁決");
                 },
                 // Handle incoming report
                 async handleReport(msg) {
                     const { report } = msg;
                     if (!report) return;
-                    
+
                     console.log("[Moderation] Received report for:", report.itemHash);
-                    
+
                     // Check reporter's reputation
                     if (report.reporterRep < 50) {
                         console.log("[Moderation] Reporter reputation too low, ignoring");
                         return;
                     }
-                    
+
                     // Store report locally
                     const reports = await db.blocklist.where("itemHash").equals(report.itemHash).toArray();
                     reports.push(report);
-                    
+
                     // Check consensus
                     if (reports.length >= this.BLOCK_THRESHOLD) {
                         // Get unique reporters
@@ -1891,9 +1883,9 @@
                         timestamp: Date.now(),
                         blockedBy: "neighbor-consensus"
                     });
-                    
+
                     console.log("[Moderation] ❌ Item BLOCKED:", itemHash);
-                    
+
                     // Broadcast block to all neighbors
                     broadcast({
                         type: "ITEM_BLOCKED",
@@ -1901,7 +1893,7 @@
                         reason: reason,
                         peerId: peerId
                     });
-                    
+
                     // Refresh the view
                     if (typeof renderItems === "function") {
                         renderItems();
@@ -1911,13 +1903,13 @@
                 async handleBlockBroadcast(msg) {
                     const { itemHash, reason } = msg;
                     if (!itemHash) return;
-                    
+
                     console.log("[Moderation] Received block broadcast:", itemHash);
-                    
+
                     // Already blocked?
                     const existing = await db.blocklist.get(itemHash);
                     if (existing) return;
-                    
+
                     // Add to local blocklist
                     await db.blocklist.put({
                         itemHash: itemHash,
@@ -1925,7 +1917,7 @@
                         timestamp: Date.now(),
                         blockedBy: "network"
                     });
-                    
+
                     // Refresh UI
                     if (typeof renderItems === "function") {
                         renderItems();
@@ -1935,7 +1927,7 @@
                 async filterItems(items) {
                     const blocked = await db.blocklist.toArray();
                     const blockedHashes = new Set(blocked.map(b => b.itemHash));
-                    
+
                     return items.filter(item => {
                         const itemHash = item.imageHash || "item-" + item.id;
                         return !blockedHashes.has(itemHash);
@@ -1946,7 +1938,7 @@
                     return await db.blocklist.count();
                 }
             };
-            
+
             // Add report button to item cards
             function addReportButtonToItem(itemId, itemHash) {
                 // This would be called when rendering items
@@ -2246,7 +2238,7 @@
 
             // Global db reference - initialize immediately after Dexie loads
             let db;
-            
+
             function initDB() {
                 db = window.db = new Dexie("OurBackyardDB");
                 db.version(4).stores({
@@ -2257,7 +2249,7 @@
                     systemAssets: "url, hash, version",
                     blocklist: "itemHash, reason, timestamp",
                 });
-                
+
                 // v5: Add imageHash index
                 db.version(5).stores({
                     items: "++id, imageHash, title, category, price, status, sellerId, h3Index, timestamp",
@@ -2269,7 +2261,7 @@
                 });
                 console.log("IndexedDB initialized v5 with imageHash index");
             }
-            
+
             // Initialize after Dexie is ready
             function initApp() {
                 // Initialize DID on load
@@ -2277,7 +2269,7 @@
 
                 // Initialize IndexedDB
                 initDB();
-                
+
                 // Initialize other modules that need db
                 AppUpdater.db = db;
                 AppUpdater.init();
@@ -2295,7 +2287,7 @@
                     connect(); // Auto-connect
                 });
             } // end initApp
-            
+
             // Run init now or wait for DexieReady
             if (typeof Dexie !== 'undefined') {
                 initApp();
@@ -4359,11 +4351,11 @@
                                         updatedAt: msg.updatedAt || Date.now(),
                                         sellerId: msg.sellerId
                                     };
-                                    
+
                                     const resolved = resolveConflict(localItem, incomingItem);
                                     if (resolved.updated) {
-                                        const finalItem = { 
-                                            ...(localItem || {}), 
+                                        const finalItem = {
+                                            ...(localItem || {}),
                                             ...incomingItem,
                                             updatedAt: Math.max(localItem?.updatedAt || 0, incomingItem.updatedAt)
                                         };
@@ -4506,7 +4498,7 @@
                                             )
                                             .toArray();
                                         const targetItemId = items.length > 0 ? items[0].id : null;
-                                        
+
                                         // Directly assemble and save here (don't call assembleAndSaveImage recursively!)
                                         if (imgData.chunks.length > 0) {
                                             try {
@@ -4519,12 +4511,12 @@
                                                     timestamp: Date.now(),
                                                 });
                                                 console.log("[IMG_CHUNK] 💾 Saved blob to DB, hash:", imageHash);
-                                                
+
                                                 // Update item if found
                                                 if (targetItemId) {
                                                     await db.items.update(targetItemId, { imageHash: imageHash });
                                                 }
-                                                
+
                                                 // Notify and refresh - wait a bit for IndexedDB to finish
                                                 setTimeout(() => {
                                                     notifyImageReady(imageHash);
@@ -4534,7 +4526,7 @@
                                                 console.error("[IMG_CHUNK] Save error:", err);
                                             }
                                         }
-                                        
+
                                         // Clear the received chunks
                                         delete incomingImages[imageHash];
                                     }
