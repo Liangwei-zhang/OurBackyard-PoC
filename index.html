@@ -2057,7 +2057,7 @@
                         console.log("OPFS not supported, using fallback");
                         return false;
                     } catch (err) {
-                        console.log("OPFS init failed:", e);
+                        console.log("OPFS init failed:", err);
                         return false;
                     }
                 },
@@ -2291,6 +2291,8 @@
                     }
                     document.getElementById("input-name").value = displayName;
                     connect(); // Auto-connect
+                }); // end then
+
             } // end initApp
 
             // Run init now or wait for DexieReady
@@ -4520,8 +4522,9 @@
                     // ===== Layer 1: Skip deduplication for image chunks =====
                     // Only deduplicate non-image messages
                     let shouldSkip = false;
+                    let msgId = null;
                     if (msg.type !== "IMG_CHUNK" && msg.type !== "IMG_HEADER" && msg.type !== "IMG_END") {
-                        let msgId = msg.type + (msg.item?.id || msg.itemId || msg.hash || msg.imageHash || '') + (msg.timestamp || Date.now());
+                        msgId = msg.type + (msg.item?.id || msg.itemId || msg.hash || msg.imageHash || '') + (msg.timestamp || Date.now());
                         if (window._seenMsgIds && window._seenMsgIds.has(msgId)) {
                             console.log('[Dedupe] Already processed:', msg.type);
                             shouldSkip = true;
@@ -4529,7 +4532,9 @@
                     }
                     if (shouldSkip) return;
                     if (!window._seenMsgIds) window._seenMsgIds = new Set();
-                    window._seenMsgIds.add(msgId);
+                    if (msgId) {
+                        window._seenMsgIds.add(msgId);
+                    }
                     if (window._seenMsgIds.size > 500) {
                         const first = window._seenMsgIds.values().next().value;
                         window._seenMsgIds.delete(first);
