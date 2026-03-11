@@ -270,6 +270,15 @@ async def root():
     return FileResponse(os.path.join(BASE_DIR, "index.html"))
 
 
+@app.get("/{filename}")
+async def serve_static(filename: str):
+    """Serve static files including sw.js"""
+    file_path = os.path.join(BASE_DIR, filename)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    return HTTPException(status_code=404, detail="File not found")
+
+
 @app.get("/v2")
 async def root_v2():
     """V2 新版頁面 - 開發測試版本"""
@@ -384,4 +393,4 @@ async def get_uploaded_image(filename: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=80)
