@@ -6,7 +6,9 @@
             name="viewport"
             content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
         />
-        <meta name="theme-color" content="#1a1a2e" />
+        <meta name="theme-color" content="#6366f1" />
+        <meta name="description" content="Decentralized P2P community marketplace" />
+        <link rel="manifest" href="/manifest.json" />
         <title>🏡 OurBackyard - 社區微商城</title>
         <style>
              /* ============================
@@ -493,6 +495,22 @@
              .status-available { background: var(--accent-green); color: #000; }
              .status-pending { background: var(--accent-orange); color: #000; }
              .status-gone { background: var(--text-muted); color: #fff; }
+             
+             /* Online Status Indicator */
+             .online-dot {
+                 display: inline-block;
+                 width: 8px;
+                 height: 8px;
+                 border-radius: 50%;
+                 background: #4CAF50;
+                 margin-right: 4px;
+                 animation: pulse 2s infinite;
+             }
+             @keyframes pulse {
+                 0% { opacity: 1; }
+                 50% { opacity: 0.5; }
+                 100% { opacity: 1; }
+             }
 
              /* Empty State */
              .empty-state {
@@ -976,6 +994,12 @@
 
         <!-- Main App -->
         <div id="app">
+        
+            <!-- PWA Install Banner -->
+            <div id="pwa-install-banner" style="display:none; background: var(--primary); color: white; padding: 12px; text-align: center; position: sticky; top: 0; z-index: 1000;">
+                <span>📲 安裝到桌面體驗更佳</span>
+                <button id="btn-install-pwa" style="margin-left: 12px; background: white; color: var(--primary); border: none; padding: 6px 16px; border-radius: 16px; cursor: pointer; font-weight: 600;">安裝</button>
+            </div>
 
             <!-- Tabs -->
             <div class="tab-bar">
@@ -1196,7 +1220,9 @@
                         if (blob?.blob) {
                             return URL.createObjectURL(blob.blob);
                         }
-                    } catch (err) {}
+                    } catch (err) {
+                        console.error("[ImageLoader] Error getting blob:", err);
+                    }
 
                     // Fallback: return null (will show placeholder)
                     return null;
@@ -1364,7 +1390,9 @@
                             );
                             this.handleImageRequestDC(msg.imageHash, msg.responderId);
                         }
-                    } catch (err) {}
+                    } catch (err) {
+                        console.error("[P2PStreamer] DataChannel error:", err);
+                    }
                 },
 
                 async handleBinaryChunk(peerId, data) {
@@ -1682,13 +1710,13 @@
                 },
                 async checkForUpdates() {
                     console.log("[Update] Broadcasting APP_UPDATE_CHECK...");
-                    broadcast({ type: "APP_UPDATE_CHECK", version: this.currentVersion, peerId: peerId });
+                    P2PStreamer.broadcast({ type: "APP_UPDATE_CHECK", version: this.currentVersion, peerId: peerId });
                 },
                 async handleUpdateMessage(msg) {
                     if (msg.type === "APP_UPDATE_AVAILABLE") {
                         console.log("[Update] New version available:", msg.version);
                         if (this.compareVersion(msg.version, this.currentVersion) > 0) {
-                            broadcast({ type: "REQ_APP_BUNDLE", version: msg.version, bundleHash: msg.bundleHash, peerId: peerId });
+                            P2PStreamer.broadcast({ type: "REQ_APP_BUNDLE", version: msg.version, bundleHash: msg.bundleHash, peerId: peerId });
                         }
                     }
                     if (msg.type === "APP_BUNDLE") {
@@ -1762,7 +1790,7 @@
                     const hashArray = Array.from(new Uint8Array(hashBuffer));
                     const hash = "app1-" + hashArray.slice(0, 20).map(b => b.toString(16).padStart(2, "0")).join("");
                     await this.saveBundle(bundleBlob, hash, version);
-                    broadcast({ type: "APP_UPDATE_AVAILABLE", version: version, bundleHash: hash, peerId: peerId });
+                    P2PStreamer.broadcast({ type: "APP_UPDATE_AVAILABLE", version: version, bundleHash: hash, peerId: peerId });
                     alert("版本 " + version + " 已發布！");
                 },
                 // ============ Delta Update (Module 57) ============
@@ -1812,7 +1840,7 @@
                 // Request specific blocks from neighbors
                 async requestDeltaBlocks(peerId, version, missingHashes) {
                     console.log("[Delta] Requesting " + missingHashes.length + " blocks from neighbor");
-                    broadcast({
+                    P2PStreamer.broadcast({
                         type: "REQ_DELTA_BLOCKS",
                         version: version,
                         hashes: missingHashes,
@@ -1846,7 +1874,7 @@
                     console.log("[Moderation] Report submitted for:", itemHash);
 
                     // Broadcast report to neighbors
-                    broadcast({
+                    P2PStreamer.broadcast({
                         type: "ITEM_REPORT",
                         report: report,
                         peerId: peerId
@@ -1893,7 +1921,7 @@
                     console.log("[Moderation] ❌ Item BLOCKED:", itemHash);
 
                     // Broadcast block to all neighbors
-                    broadcast({
+                    P2PStreamer.broadcast({
                         type: "ITEM_BLOCKED",
                         itemHash: itemHash,
                         reason: reason,
@@ -2103,7 +2131,9 @@
 
                     try {
                         await this.dirHandle.removeEntry(`img_${itemId}.jpg`);
-                    } catch (err) {}
+                    } catch (err) {
+                        console.error("[OPFS] Delete image error:", err);
+                    }
                 },
             };
 
@@ -2242,6 +2272,63 @@
                 },
             };
 
+            // ============ Secure Messenger - Unified Message Wrapping ============
+            // Provides consistent signing for all outgoing messages
+            const SecureMessenger = {
+                // Wrap and sign any message
+                async send(type, payload) {
+                    if (!DIDService || !DIDService.getDID) {
+                        console.error('[SecureMessenger] DID not initialized');
+                        return;
+                    }
+                    
+                    const message = {
+                        type,
+                        ...payload,
+                        timestamp: Date.now(),
+                        did: DIDService.getDID(),
+                    };
+                    
+                    try {
+                        const signature = await DIDService.sign(message);
+                        const signedMessage = {
+                            ...message,
+                            signature,
+                        };
+                        
+                        // Send via P2P DataChannels
+                        for (const [_, dc] of Object.entries(dataChannels)) {
+                            if (dc.readyState === 'open') {
+                                dc.send(JSON.stringify(signedMessage));
+                            }
+                        }
+                        
+                        // Send via WebSocket
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify(signedMessage));
+                        }
+                        
+                        console.log('[SecureMessenger] Sent:', type);
+                    } catch (err) {
+                        console.error('[SecureMessenger] Send failed:', err);
+                    }
+                },
+                
+                // Verify incoming message
+                async verify(msg) {
+                    if (!msg.signature || !msg.did) return false;
+                    
+                    const dataToVerify = {
+                        type: msg.type,
+                        itemId: msg.itemId,
+                        status: msg.status,
+                        timestamp: msg.timestamp,
+                    };
+                    
+                    return await DIDService.verify(dataToVerify, msg.signature, msg.did);
+                }
+            };
+
             // Global db reference - initialize immediately after Dexie loads
             let db;
 
@@ -2259,7 +2346,7 @@
                 // v5: Add imageHash index
                 db.version(5).stores({
                     items: "++id, imageHash, title, category, price, status, sellerId, h3Index, timestamp",
-                    blobs: "itemId, hash",
+                    blobs: "hash, itemId, timestamp", // timestamp index for LRU cleanup
                     sync: "key",
                     userData: "key",
                     systemAssets: "url, hash, version",
@@ -2295,11 +2382,33 @@
 
             } // end initApp
 
-            // Run init now or wait for DexieReady
+            // ============ Bootstrap - Safe Startup Order ============
+            async function bootstrap() {
+                try {
+                    console.log('🚀 Starting OurBackyard...');
+                    
+                    // 1. Wait for DID service
+                    if (typeof DIDService !== 'undefined' && DIDService.init) {
+                        await DIDService.init();
+                    }
+                    
+                    // 2. Initialize database
+                    await initDB();
+                    
+                    // 3. Initialize app (connects P2P network)
+                    await initApp();
+                    
+                    console.log('🚀 OurBackyard started successfully');
+                } catch (err) {
+                    console.error('❌ Startup failed:', err);
+                }
+            }
+
+            // Run bootstrap
             if (typeof Dexie !== 'undefined') {
-                initApp();
+                bootstrap();
             } else {
-                document.addEventListener('DexieReady', initApp);
+                document.addEventListener('DexieReady', bootstrap);
             }
 
             // ============ Initialize OPFS ============
@@ -2626,6 +2735,37 @@
             const CHUNK_SIZE = 16384;
             const HEARTBEAT_INTERVAL = 15000; // 15 seconds (foreground)
             const HEARTBEAT_INTERVAL_BACKGROUND = 60000; // 60 seconds (background)
+            
+            // ============ Debounce & Throttle Utilities ============
+            function debounce(fn, delay) {
+                let timeout;
+                return function(...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => fn.apply(this, args), delay);
+                };
+            }
+            
+            function throttle(fn, limit) {
+                let inThrottle;
+                return function(...args) {
+                    if (!inThrottle) {
+                        fn.apply(this, args);
+                        inThrottle = true;
+                        setTimeout(() => inThrottle = false, limit);
+                    }
+                };
+            }
+
+            // ============ Efficient Base64 Converter ============
+            function bufferToBase64(buffer) {
+                let binary = '';
+                const bytes = new Uint8Array(buffer);
+                const len = bytes.byteLength;
+                for (let i = 0; i < len; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return btoa(binary);
+            }
 
             // Stability: Connection monitoring
             let peerConnections = {}; // peerId -> RTCPeerConnection
@@ -2634,6 +2774,168 @@
             let dataChannels = {};
             let heartbeatInterval = null;
             let isBackground = false;
+
+            // ============ Object URL Manager (Memory Leak Prevention) ============
+            const ObjectUrlManager = {
+                urls: new Map(),
+                maxCacheSize: 50,
+                
+                getOrCreate(hash, blob) {
+                    if (!hash || !blob) return null;
+                    
+                    if (this.urls.has(hash)) {
+                        return this.urls.get(hash);
+                    }
+                    
+                    // Create new URL
+                    const url = URL.createObjectURL(blob);
+                    this.urls.set(hash, url);
+                    
+                    // Simple cache management - if too many, clear oldest
+                    if (this.urls.size > this.maxCacheSize) {
+                        const firstKey = this.urls.keys().next().value;
+                        if (firstKey) {
+                            URL.revokeObjectURL(this.urls.get(firstKey));
+                            this.urls.delete(firstKey);
+                        }
+                    }
+                    
+                    return url;
+                },
+                
+                revoke(hash) {
+                    if (this.urls.has(hash)) {
+                        URL.revokeObjectURL(this.urls.get(hash));
+                        this.urls.delete(hash);
+                    }
+                },
+                
+                clear() {
+                    for (const url of this.urls.values()) {
+                        URL.revokeObjectURL(url);
+                    }
+                    this.urls.clear();
+                }
+            };
+            
+            // ============ Quota Management ============
+            const MAX_BLOB_CACHE = 500;
+            
+            // ============ Gossip Message Deduplication ============
+            // 維護最近 500 條消息 ID 集合，防止網絡風暴
+            const recentMsgIds = new Set();
+            const MAX_MSG_CACHE = 500;
+            
+            function isMessageSeen(msgId) {
+                if (!msgId) return false;
+                return recentMsgIds.has(msgId);
+            }
+            
+            function markMessageSeen(msgId) {
+                if (!msgId) return false;
+                if (recentMsgIds.size >= MAX_MSG_CACHE) {
+                    // 移除最舊的
+                    const first = recentMsgIds.values().next().value;
+                    if (first) recentMsgIds.delete(first);
+                }
+                recentMsgIds.add(msgId);
+                return true;
+            }
+            
+            function generateMsgId(msg) {
+                // 為消息生成唯一指紋
+                return msg.type + '-' + (msg.messageId || msg.itemId || msg.id || '') + '-' + (msg.timestamp || Date.now());
+            }
+            
+            async function saveBlobWithQuotaCheck(hash, blobData) {
+                try {
+                    await db.transaction('rw', db.blobs, async () => {
+                        const count = await db.blobs.count();
+                        if (count >= MAX_BLOB_CACHE) {
+                            console.warn("[Quota] Cache full, cleaning oldest entries...");
+                            const oldest = await db.blobs.orderBy('timestamp').limit(10).toArray();
+                            for (const old of oldest) {
+                                await db.blobs.delete(old.hash);
+                                ObjectUrlManager.revoke(old.hash);
+                            }
+                        }
+                        await db.blobs.put({
+                            hash,
+                            blob: blobData,
+                            timestamp: Date.now()
+                        });
+                    });
+                    console.log("[Quota] Blob saved:", hash);
+                } catch (e) {
+                    console.error("[Quota] Storage failed:", e);
+                    throw e;
+                }
+            };
+
+            // ============ Intersection Observer for Lazy Image Loading ============
+            const ImageLazyLoader = {
+                observer: null,
+                activeRequests: new Set(),
+                
+                init() {
+                    this.observer = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) {
+                                const img = entry.target;
+                                const hash = img.dataset.hash;
+                                if (hash && img.dataset.loaded !== "true" && !this.activeRequests.has(hash)) {
+                                    console.log("[Lazy] Viewport triggered request:", hash);
+                                    this.requestImage(hash);
+                                }
+                            }
+                        });
+                    }, { rootMargin: '200px' }); // Preload 200px before visible
+                },
+                
+                observe(el) {
+                    if (this.observer) {
+                        this.observer.observe(el);
+                    }
+                },
+                
+                unobserve(el) {
+                    if (this.observer) {
+                        this.observer.unobserve(el);
+                    }
+                },
+                
+                requestImage(hash) {
+                    if (this.activeRequests.has(hash)) return;
+                    this.activeRequests.add(hash);
+                    
+                    // Check local DB first - if blob exists, update UI directly
+                    db.blobs.where("hash").equals(hash).toArray().then(blobs => {
+                        if (blobs.length > 0) {
+                            // Local has it, update UI directly
+                            window.updateImageInUI(hash);
+                            this.activeRequests.delete(hash);
+                            return;
+                        }
+                        
+                        // Local not found, send P2P request to neighbors
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({
+                                type: "REQ_IMAGE",
+                                imageHash: hash,
+                                requesterId: peerId
+                            }));
+                        }
+                        
+                        // Auto-release lock after 15 seconds
+                        setTimeout(() => {
+                            this.activeRequests.delete(hash);
+                        }, 15000);
+                    });
+                }
+            };
+
+            // Initialize lazy loader
+            ImageLazyLoader.init();
 
             // ============ Adaptive Heartbeat (Battery Optimization) ============
             function startHeartbeat(interval = HEARTBEAT_INTERVAL) {
@@ -2767,6 +3069,17 @@
 
             // Receive binary image chunks - keyed by hash (content-addressable)
             const incomingImages = {}; // imageHash -> { itemId, chunks:[], size:0, mimeType:'', lastUpdate:timestamp }
+            
+            // GC: Clean up stale image transfers every 30 seconds
+            setInterval(() => {
+                const now = Date.now();
+                for (const hash in incomingImages) {
+                    if (now - (incomingImages[hash].lastUpdate || 0) > 60000) {
+                        console.log(`[GC] Cleaned stale image transfer: ${hash}`);
+                        delete incomingImages[hash];
+                    }
+                }
+            }, 30000);
             
             // Timeout retry mechanism - re-request stalled images
             setInterval(() => {
@@ -2961,39 +3274,35 @@
             window.updateImageInUI = async function(imageHash) {
                 console.log("[🎯] Targeted update for hash:", imageHash);
                 
-                // Find all items with this imageHash
-                const items = await db.items.where("imageHash").equals(imageHash).toArray();
-                if (items.length === 0) {
-                    // Try imageHashes array
-                    const allItems = await db.items.toArray();
-                    const matching = allItems.filter(item => 
-                        item.imageHashes && item.imageHashes.includes(imageHash)
-                    );
-                    items.push(...matching);
-                }
-                
-                if (items.length === 0) {
-                    console.log("[🎯] No items found for hash:", imageHash);
+                // Directly find DOM elements that need this image - no DB query needed!
+                const imgs = document.querySelectorAll(`img[data-hash="${imageHash}"]:not([data-loaded="true"])`);
+                if (imgs.length === 0) {
+                    console.log("[🎯] No DOM elements need this image:", imageHash);
                     return;
                 }
                 
-                // Get blob
+                // Only query DB when DOM actually needs the image
                 const blobs = await db.blobs.where("hash").equals(imageHash).toArray();
-                if (blobs.length === 0) return;
+                if (blobs.length === 0) {
+                    console.log("[🎯] No blob found for hash:", imageHash);
+                    return;
+                }
                 
-                const blob = blobs[0].blob;
-                const url = URL.createObjectURL(blob);
+                // Use ObjectUrlManager to avoid memory leaks
+                const url = ObjectUrlManager.getOrCreate(imageHash, blobs[0].blob);
+                if (!url) return;
                 
                 // Update all matching image elements
-                for (const item of items) {
-                    const img = document.querySelector(`img[data-item-id="${item.id}"]`);
-                    if (img && !img.dataset.loaded) {
+                let updatedCount = 0;
+                for (const img of imgs) {
+                    if (!img.dataset.loaded) {
                         img.src = url;
                         img.dataset.loaded = 'true';
                         img.style.filter = 'none';
-                        console.log("[🎯] Updated image for item:", item.title);
+                        updatedCount++;
                     }
                 }
+                console.log(`[🎯] Updated ${updatedCount} images for hash:`, imageHash);
             }
 
             // Auto-refresh items when image arrives - use targeted update
@@ -3015,52 +3324,6 @@
                     }
                 }
             }, 5000);
-
-            // Aggressive periodic check - load all missing images
-            setInterval(async () => {
-                try {
-                    // Get all items with images
-                    const items = await db.items.where("imageHash").notEqual("").toArray();
-                    // Also get items with imageHashes
-                    const allItems = await db.items.toArray();
-                    const itemsWithHashes = allItems.filter(i => i.imageHashes && i.imageHashes.length > 0);
-                    
-                    for (const item of items) {
-                        if (!item.imageHash) continue;
-                        
-                        // Find blob
-                        const blobs = await db.blobs.where("hash").equals(item.imageHash).toArray();
-                        if (blobs.length === 0) continue;
-                        
-                        // Update image element by data-item-id
-                        const img = document.querySelector(`img[data-item-id="${item.id}"]`);
-                        if (img && !img.dataset.loaded) {
-                            const url = URL.createObjectURL(blobs[0].blob);
-                            img.src = url;
-                            img.dataset.loaded = 'true';
-                            img.style.filter = 'none';
-                        }
-                    }
-                    
-                    // Check items with imageHashes array
-                    for (const item of itemsWithHashes) {
-                        for (const hash of item.imageHashes) {
-                            const blobs = await db.blobs.where("hash").equals(hash).toArray();
-                            if (blobs.length === 0) continue;
-                            
-                            const img = document.querySelector(`img[data-item-id="${item.id}"]`);
-                            if (img && !img.dataset.loaded) {
-                                const url = URL.createObjectURL(blobs[0].blob);
-                                img.src = url;
-                                img.dataset.loaded = 'true';
-                                img.style.filter = 'none';
-                            }
-                        }
-                    }
-                } catch (err) {
-                    console.log("[ImageCheck] Error:", err);
-                }
-            }, 1500); // Check every 3 seconds
 
             // ============ Stability: Backpressure Control ============
             async function sendWithBackpressure(dc, data) {
@@ -3288,7 +3551,29 @@
                         );
                         const el = document.getElementById("storage");
                         el.innerHTML = `${used}MB`;
+                        
+                        // Check quota and cleanup if needed (>80%)
+                        const quotaPercent = (estimate.usage / estimate.quota) * 100;
+                        if (quotaPercent > 80) {
+                            console.warn("[Storage] Quota at", quotaPercent.toFixed(1) + "%, running cleanup...");
+                            cleanupOldBlobs();
+                        }
                     });
+                }
+            }
+            
+            // LRU cleanup for storage quota
+            async function cleanupOldBlobs() {
+                try {
+                    const blobs = await db.blobs.orderBy('timestamp').limit(20).toArray();
+                    for (const blob of blobs) {
+                        await db.blobs.delete(blob.hash);
+                        // Revoke Object URL if cached
+                        ObjectUrlManager.revoke(blob.hash);
+                    }
+                    console.log("[Storage] Cleaned up", blobs.length, "old blobs");
+                } catch (err) {
+                    console.error("[Storage] Cleanup error:", err);
                 }
             }
 
@@ -3489,6 +3774,12 @@
                         .where("status")
                         .notEqual("gone")
                         .toArray();
+                    
+                    // Filter out blocked items using ContentModerator
+                    if (typeof ContentModerator !== 'undefined' && ContentModerator.filterItems) {
+                        items = await ContentModerator.filterItems(items);
+                    }
+                    
                     if (selectedCategory !== "All") {
                         items = items.filter(
                             (i) => i.category === selectedCategory,
@@ -3500,31 +3791,20 @@
                     items = sortItemsData(items, selectedSort);
                     renderMarketGrid(items, document.getElementById("market-grid"));
                     
-                    // Load images immediately after render
-                    setTimeout(async () => {
-                        try {
-                            for (const item of items) {
-                                const hashes = item.imageHashes || (item.imageHash ? [item.imageHash] : []);
-                                for (const hash of hashes) {
-                                    const blobs = await db.blobs.where("hash").equals(hash).toArray();
-                                    if (blobs.length > 0) {
-                                        const img = document.querySelector(`img[data-item-id="${item.id}"]`);
-                                        if (img && !img.dataset.loaded) {
-                                            img.src = URL.createObjectURL(blobs[0].blob);
-                                            img.dataset.loaded = 'true';
-                                        }
-                                    }
-                                }
-                            }
-                        } catch(e) {}
-                    }, 100);
+                    // Images are loaded lazily via IntersectionObserver
                     
                     // Load AI recommendations
                     loadAIRecommendations();
                 } catch (err) {
                     console.error("[loadItems] Error:", err);
+                } finally {
+                    // Always release the lock, even if an error occurs
+                    window._loadingItems = false;
                 }
             }
+            
+            // Debounced loadItems to prevent高频调用
+            const debouncedLoadItems = debounce(loadItems, 300);
 
             // ============ Sort Items ============
             function sortItems(sortBy) {
@@ -3598,20 +3878,29 @@
 
             async function renderMarketGrid(items, container) {
                 try {
-                // ===== Layer 0: Clear container before render =====
-                container.innerHTML = '';
-                
-                // ===== Layer 1: Remove items already in DOM =====
-                const existingIds = new Set();
-                container.querySelectorAll('[data-item-id]').forEach(el => {
-                    existingIds.add(parseInt(el.dataset.itemId));
-                });
-                if (existingIds.size > 0) {
-                    console.log('[Dedupe] Removing', existingIds.size, 'existing items from render');
-                    items = items.filter(item => !existingIds.has(item.id));
+                // Disconnect old IntersectionObserver to prevent memory leak
+                if (window.ImageLazyLoader && window.ImageLazyLoader.observer) {
+                    window.ImageLazyLoader.observer.disconnect();
                 }
-
-                // ===== Layer 2: JS-level deduplication =====
+                
+                // ===== Incremental DOM Update Strategy =====
+                // Get existing cards in DOM
+                const existingCards = new Map();
+                container.querySelectorAll('[data-item-id]').forEach(el => {
+                    existingCards.set(parseInt(el.dataset.itemId), el);
+                });
+                
+                // Get new item IDs
+                const newItemIds = new Set(items.map(i => i.id));
+                
+                // Remove cards that are no longer in the list
+                existingCards.forEach((card, id) => {
+                    if (!newItemIds.has(id)) {
+                        card.remove();
+                    }
+                });
+                
+                // Deduplicate incoming items
                 const seenIds = new Set();
                 items = items.filter(item => {
                     const id = item.id || item.itemId;
@@ -3621,8 +3910,12 @@
                 });
 
                 if (items.length === 0) {
-                    container.innerHTML =
-                        '<div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-text">No items nearby</div></div>';
+                    // Show "Syncing..." if WebSocket is still connecting
+                    if (ws && ws.readyState === WebSocket.CONNECTING) {
+                        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔄</div><div class="empty-text">同步社區數據中...</div></div>';
+                    } else {
+                        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-text">附近暫無商品</div></div>';
+                    }
                     return;
                 }
 
@@ -3633,113 +3926,60 @@
                         '<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><rect fill="%23444" width="50" height="50"/></svg>',
                     );
 
-                // Render items first without images, then load from IndexedDB
-                container.innerHTML = items
-                    .map((item) => {
-                        const statusClass =
-                            item.status === "available"
-                                ? "status-available"
-                                : item.status === "pending"
-                                  ? "status-pending"
-                                  : "status-gone";
-                        const priceText =
-                            item.price === 0
-                                ? "🎁 Free"
-                                : item.price === "swap"
-                                  ? "☕ Swap"
-                                  : `$${item.price}`;
-
-                        return `
-          <div class="item-card ${item.status}" onclick="showItemDetail(${item.id})">
+                // ===== Incremental render: update existing + add new =====
+                items.forEach(item => {
+                    const existingCard = existingCards.get(item.id);
+                    
+                    if (existingCard) {
+                        // Only update if timestamp changed (avoid full redraw)
+                        if (parseInt(existingCard.dataset.updatedAt || 0) < (item.updatedAt || 0)) {
+                            // Update price and status only
+                            const priceEl = existingCard.querySelector('.item-price');
+                            const statusEl = existingCard.querySelector('.item-status');
+                            if (priceEl) priceEl.textContent = item.price === 0 ? '🎁 Free' : item.price === 'swap' ? '☕ Swap' : `$${item.price}`;
+                            if (statusEl) statusEl.textContent = item.status;
+                            existingCard.dataset.updatedAt = item.updatedAt || Date.now();
+                        }
+                    } else {
+                        // Insert new card
+                        const statusClass = item.status === "available" ? "status-available" : item.status === "pending" ? "status-pending" : "status-gone";
+                        const priceText = item.price === 0 ? "🎁 Free" : item.price === "swap" ? "☕ Swap" : `$${item.price}`;
+                        const sellerOnline = typeof onlineNeighbors !== 'undefined' && onlineNeighbors.has(item.sellerId);
+                        const onlineBadge = sellerOnline ? '<span class="online-dot"></span>' : '';
+                        
+                        const cardHTML = `
+          <div class="item-card ${item.status}" onclick="showItemDetail(${item.id})" data-item-id="${item.id}" data-updated-at="${item.updatedAt || 0}">
             <img class="item-image lazy"
                  data-item-id="${item.id}"
-                 data-item-id="${item.id}" data-hash="${item.imageHash || ''}"
+                 data-hash="${item.imageHash || ''}"
                  src="${microPlaceholder}"
                  alt="${item.title}"
                  style="filter: blur(3px)"
                  onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 x=%2250%22 y=%2255%22 text-anchor=%22middle%22>📷</text></svg>'">
             <div class="item-info">
-              <div class="item-title">${item.title}</div>
+              <div class="item-title">${onlineBadge}${item.title}</div>
               <div class="item-price">${priceText}</div>
               <div class="item-footer">
                 <span class="item-status ${statusClass}">${item.status}</span>
-                ${item.sellerId === peerId ? `<button class="btn-edit" onclick="event.stopPropagation(); editItem(${item.id})" title="編輯">✏️</button>` : ''}
+                ${item.sellerId === peerId ? `<button class="btn-edit" data-id="${item.id}" title="編輯">✏️</button>` : ''}
                 <button class="btn-report" onclick="event.stopPropagation(); ContentModerator.reportItem('item-${item.id}', 'inappropriate')" title="舉報">🚩</button>
               </div>
             </div>
-          </div>
-        `;
-                    })
-                    .join("");
-
-                // Load images from IndexedDB asynchronously (by hash - content-addressable)
-                for (const item of items) {
-                    console.log(
-                        "[List] Processing item:",
-                        item.title,
-                        "hash:",
-                        item.imageHash,
-                    );
-                    try {
-                        let imgSrc = null;
-
-                        // Use ONLY imageHash (content-addressable) - DO NOT use itemId
-                        if (item.imageHash) {
-                            console.log(
-                                "[List] Looking for hash:",
-                                item.imageHash,
-                            );
-                            const hashBlobs = await db.blobs
-                                .where("hash")
-                                .equals(item.imageHash)
-                                .toArray();
-                            console.log(
-                                "[List] Found blobs:",
-                                hashBlobs.length,
-                            );
-                            if (hashBlobs.length > 0) {
-                                imgSrc = URL.createObjectURL(hashBlobs[0].blob);
-                                console.log(
-                                    "[List] ✅ Loaded by hash:",
-                                    item.imageHash,
-                                );
-                            } else {
-                                console.log(
-                                    "[List] ❌ No blob for hash:",
-                                    item.imageHash,
-                                );
-                                // REQUEST IMAGE FROM NEIGHBORS!
-                                requestImageFromNeighbors(
-                                    item.imageHash,
-                                    item.sellerId,
-                                );
-                            }
-                        } else {
-                            console.log(
-                                "[List] ❌ No imageHash for item:",
-                                item.title,
-                            );
-                        }
-
-                        if (imgSrc) {
-                            const img = container.querySelector(
-                                `img[data-item-id="${item.id}"]`,
-                            );
-                            if (img) {
-                                img.src = imgSrc;
-                                img.style.filter = "none";
-                            }
-                        }
-                    } catch (err) {
-                        console.error("[List] Error:", err);
+          </div>`;
+                        container.insertAdjacentHTML('beforeend', cardHTML);
                     }
-                }
+                });
 
-                // Initialize lazy loading with binary-first loader
+                // Initialize lazy loading with IntersectionObserver
                 setTimeout(() => {
-                    const observer = ImageLoader.init();
-                    const images = container.querySelectorAll(".lazy");
-                    images.forEach((img) => observer.observe(img));
+                    if (window.ImageLazyLoader) {
+                        const images = container.querySelectorAll('img[data-hash]');
+                        images.forEach((img) => {
+                            if (!img.dataset.loaded) {
+                                window.ImageLazyLoader.observe(img);
+                            }
+                        });
+                    }
                 }, 100);
                 } catch (err) {
                     console.error("[renderMarketGrid] Error:", err);
@@ -3852,17 +4092,34 @@
                 broadcastItemUpdate(id, "gone").catch(console.error);
             };
 
-            async function broadcastItemUpdate(itemId, status) {
+            async function broadcastItemUpdate(itemOrId, statusOrNull) {
+                // Support both signatures: broadcastItemUpdate(item) or broadcastItemUpdate(itemId, status)
+                let item, status;
+                if (typeof itemOrId === 'object') {
+                    item = itemOrId;
+                    status = itemOrId.status;
+                } else {
+                    item = await db.items.get(itemOrId);
+                    status = statusOrNull;
+                }
+                if (!item) return;
+                
                 // Sign the message with DID
                 const message = {
                     type: "ITEM_UPDATE",
-                    itemId,
-                    status,
+                    itemId: item.id || item.itemId,
+                    status: status || item.status,
                     timestamp: Date.now(),
+                    sellerId: item.sellerId,
                 };
-                DIDService.sign(message).then((signature) => {
+                try {
+                    const signature = await DIDService.sign(message);
                     const msg = {
                         ...message,
+                        title: item.title,
+                        price: item.price,
+                        description: item.description,
+                        category: item.category,
                         signature,
                         did: DIDService.getDID(),
                     };
@@ -3873,7 +4130,9 @@
                     }
                     if (ws && ws.readyState === WebSocket.OPEN)
                         ws.send(JSON.stringify(msg));
-                });
+                } catch (err) {
+                    console.error("[broadcastItemUpdate] Error:", err);
+                }
             }
 
             // ============ Add Item ============
@@ -3899,6 +4158,14 @@
                 // Render photo preview with delete buttons
                 window.renderPhotoPreview = function() {
                     const preview = document.getElementById("photo-preview");
+                    
+                    // Revoke old URLs before clearing
+                    Array.from(preview.querySelectorAll('img')).forEach(img => {
+                        if (img.src && img.src.startsWith('blob:')) {
+                            URL.revokeObjectURL(img.src);
+                        }
+                    });
+                    
                     preview.innerHTML = "";
                     selectedPhotos.forEach((file, index) => {
                         const wrapper = document.createElement("div");
@@ -3907,7 +4174,10 @@
                         wrapper.style.marginRight = "8px";
                         
                         const img = document.createElement("img");
-                        img.src = URL.createObjectURL(file);
+                        const objectUrl = URL.createObjectURL(file);
+                        img.src = objectUrl;
+                        // Store URL for cleanup
+                        img.dataset.objectUrl = objectUrl;
                         img.style.width = "60px";
                         img.style.height = "60px";
                         img.style.objectFit = "cover";
@@ -3956,6 +4226,13 @@
             document
                 .getElementById("btn-publish")
                 .addEventListener("click", async () => {
+                    // Debounce: prevent multiple clicks
+                    const btn = document.getElementById("btn-publish");
+                    if (btn.disabled) return;
+                    btn.disabled = true;
+                    btn.textContent = "發布中...";
+                    
+                    try {
                     const title = document
                         .getElementById("item-title")
                         .value.trim();
@@ -3989,10 +4266,9 @@
                             selectedPhotos[0],
                         );
                         if (microBlob) {
-                            microThumbnail = blobToObjectURL(
-                                microBlob,
-                                "micro_" + Date.now(),
-                            );
+                            // Use ObjectUrlManager instead
+                            const hash = "micro_" + Date.now();
+                            microThumbnail = ObjectUrlManager.getOrCreate(hash, microBlob);
                         }
 
                         // Compress first image to 800px for storage
@@ -4005,17 +4281,11 @@
                             // 完全 P2P 模式：跳過 HTTP 上傳
                             const tempItemId = "p2p_" + Date.now();
 
-                            // 使用 Object URL 替代 base64 (更高效，無 +33% 開銷)
-                            const objectUrl = blobToObjectURL(
-                                imageBlob,
-                                tempItemId,
-                            );
+                            // 使用 ObjectUrlManager 替代 blobToObjectURL
+                            imageHash = await ImageRegistry.computeHash(imageBlob);
+                            const objectUrl = ObjectUrlManager.getOrCreate(imageHash, imageBlob);
 
                             imageUrl = "p2p://" + tempItemId;
-
-                            // Compute image hash for content-addressable storage
-                            imageHash =
-                                await ImageRegistry.computeHash(imageBlob);
                             
                             // Collect for multiple images
                             imageHashes.push(imageHash);
@@ -4081,7 +4351,7 @@
                         });
                     }
 
-                    // Broadcast to neighbors
+                    // Broadcast to neighbors (or queue if offline)
                     const fullItem = {
                         title,
                         category,
@@ -4093,13 +4363,30 @@
                         status: "available",
                         timestamp: Date.now(),
                         imageUrl,
-                        imageHash: imageHash || null, // Include imageHash for P2P!
+                        imageHash: imageHash || null,
                     };
-                    console.log(
-                        "[Broadcast] Sending item with imageHash:",
-                        imageHash,
-                    );
-                    broadcastNewItem(fullItem);
+                    
+                    // Try to broadcast immediately, queue if offline
+                    const broadcastNow = () => {
+                        broadcastNewItem(fullItem);
+                    };
+                    
+                    if ('serviceWorker' in navigator && 'sync' in ServiceWorkerRegistration.prototype) {
+                        // Register background sync for offline publishing
+                        try {
+                            const registration = await navigator.serviceWorker.ready;
+                            await registration.sync.register('sync-publish');
+                            console.log('[BG-Sync] Registered for offline publish');
+                            // Store pending item for later sync
+                            const pending = await db.sync.put({ key: 'pending-publish', data: fullItem, timestamp: Date.now() });
+                        } catch (err) {
+                            console.log('[BG-Sync] Failed, broadcasting now:', err);
+                            broadcastNow();
+                        }
+                    } else {
+                        // No background sync support, broadcast directly
+                        broadcastNow();
+                    }
 
                     alert("🎉 Item published!");
                     document.getElementById("item-title").value = "";
@@ -4109,6 +4396,12 @@
 
                     loadItems();
                     document.querySelector('[data-tab="browse"]').click();
+                    } finally {
+                        // Re-enable button after completion
+                        const btn = document.getElementById("btn-publish");
+                        btn.disabled = false;
+                        btn.textContent = "發布";
+                    }
                 });
 
             function createThumbnail(file) {
@@ -4132,45 +4425,46 @@
             }
 
             async function broadcastNewItem(item) {
-                console.log("[broadcastNewItem] Input item:", {
-                    title: item.title,
-                    imageUrl: item.imageUrl,
-                    imageHash: item.imageHash,
-                });
+                try {
+                    console.log("[broadcastNewItem] Input item:", {
+                        title: item.title,
+                        imageUrl: item.imageUrl,
+                        imageHash: item.imageHash,
+                    });
 
-                // Broadcast item - send image separately as binary if present
-                const itemForBroadcast = {
-                    ...item,
-                    title: item.title,
-                    category: item.category,
-                    price: item.price,
-                    condition: item.condition,
-                    description: item.description,
-                    sellerId: item.sellerId,
-                    sellerName: item.sellerName,
-                    status: item.status,
-                    hasImage: !!(item.thumbnail || item.imageHash),
-                    imageHash: item.imageHash, // Make sure this is included!
-                };
+                    // Broadcast item - send image separately as binary if present
+                    const itemForBroadcast = {
+                        ...item,
+                        title: item.title,
+                        category: item.category,
+                        price: item.price,
+                        condition: item.condition,
+                        description: item.description,
+                        sellerId: item.sellerId,
+                        sellerName: item.sellerName,
+                        status: item.status,
+                        hasImage: !!(item.thumbnail || item.imageHash),
+                        imageHash: item.imageHash, // Make sure this is included!
+                    };
 
-                console.log("[broadcastNewItem] Broadcasting:", {
-                    hasImage: itemForBroadcast.hasImage,
-                    imageHash: itemForBroadcast.imageHash,
-                });
+                    console.log("[broadcastNewItem] Broadcasting:", {
+                        hasImage: itemForBroadcast.hasImage,
+                        imageHash: itemForBroadcast.imageHash,
+                    });
 
-                // Sign the item with DID
-                const message = {
-                    type: "NEW_ITEM",
-                    item: itemForBroadcast,
-                    h3Index: currentH3Index,
-                    timestamp: Date.now(),
-                };
-                const signature = await DIDService.sign(message);
-                const signedMsg = {
-                    ...message,
-                    signature,
-                    did: DIDService.getDID(),
-                };
+                    // Sign the item with DID
+                    const message = {
+                        type: "NEW_ITEM",
+                        item: itemForBroadcast,
+                        h3Index: currentH3Index,
+                        timestamp: Date.now(),
+                    };
+                    const signature = await DIDService.sign(message);
+                    const signedMsg = {
+                        ...message,
+                        signature,
+                        did: DIDService.getDID(),
+                    };
 
                 // Send item metadata first via WebSocket
                 if (ws && ws.readyState === WebSocket.OPEN) {
@@ -4213,6 +4507,9 @@
 
                 // Note: P2P DataChannel transfer would go here when WebRTC is fully implemented
                 console.log("Item broadcasted:", item.title);
+                } catch (err) {
+                    console.error("[broadcastNewItem] Error:", err);
+                }
             }
 
             // Send image as binary via WebSocket
@@ -4254,16 +4551,15 @@
 
                         const chunk = buffer.slice(offset, offset + CHUNK_SIZE);
                         const chunkIndex = offset / CHUNK_SIZE;
-                        // Encode as base64 string for WebSocket transport
-                        const chunkBase64 = btoa(
-                            String.fromCharCode(...new Uint8Array(chunk)),
-                        );
+                        // Encode as base64 string for WebSocket transport (safer method)
+                        const chunkBase64 = bufferToBase64(chunk);
                         ws.send(
                             JSON.stringify({
                                 type: "IMG_CHUNK",
                                 data: chunkBase64,
                                 imageHash: hash,
                                 chunkIndex: chunkIndex,
+                                totalChunks: Math.ceil(totalSize / CHUNK_SIZE),
                                 expectedSize: totalSize,
                             }),
                         );
@@ -4301,6 +4597,9 @@
             const MAX_CONCURRENT_DOWNLOADS = 3;
             
             function processDownloadQueue() {
+                // Pause queue processing if network is disconnected
+                if (!ws || ws.readyState !== WebSocket.OPEN) return;
+                
                 while (window.currentDownloadingCount < MAX_CONCURRENT_DOWNLOADS && window.imageDownloadQueue.length > 0) {
                     const task = window.imageDownloadQueue.shift();
                     executeImageRequest(task.hash, task.sellerId);
@@ -4309,8 +4608,9 @@
             
             function executeImageRequest(imageHash, sellerId) {
                 if (!ws || ws.readyState !== WebSocket.OPEN) {
-                    // Put back in queue if not connected
-                    window.imageDownloadQueue.unshift({ hash: imageHash, sellerId: sellerId });
+                    // Re-queue instead of dropping - will retry when network reconnects
+                    console.log("[Queue] Network down, re-queuing request:", imageHash);
+                    window.imageDownloadQueue.push({ hash: imageHash, sellerId: sellerId });
                     return;
                 }
                 
@@ -4370,6 +4670,11 @@
                     updateStatus("connected", "Connected");
                     // Flush pending messages
                     flushWsQueue();
+                    // Flush pending image download queue
+                    if (window.imageDownloadQueue && window.imageDownloadQueue.length > 0) {
+                        console.log("[Queue] Flushing queued image requests on reconnect, count:", window.imageDownloadQueue.length);
+                        processDownloadQueue();
+                    }
                     document.getElementById("setup").classList.add("hidden");
                     document.getElementById("app").classList.remove("hidden");
                     loadItems();
@@ -4380,10 +4685,12 @@
                     // Request peer list
                     sendWsMessage({ type: "get-peers" });
 
-                    // Merkle sync - request items from peers
-                    MerkleSync.createSyncRequest().then((syncMsg) => {
-                        ws.send(JSON.stringify(syncMsg));
-                    });
+                    // Merkle sync - request items from peers (with random jitter to prevent thundering herd)
+                    setTimeout(() => {
+                        MerkleSync.createSyncRequest().then((syncMsg) => {
+                            ws.send(JSON.stringify(syncMsg));
+                        });
+                    }, 500 + Math.random() * 1500);
 
                     // Start heartbeat
                     startHeartbeat();
@@ -4524,7 +4831,14 @@
                     let shouldSkip = false;
                     let msgId = null;
                     if (msg.type !== "IMG_CHUNK" && msg.type !== "IMG_HEADER" && msg.type !== "IMG_END") {
-                        msgId = msg.type + (msg.item?.id || msg.itemId || msg.hash || msg.imageHash || '') + (msg.timestamp || Date.now());
+                        // Use messageId if available, otherwise construct from type + content + sender's timestamp
+                        msgId = msg.messageId || (msg.from && msg.timestamp ? `${msg.from}-${msg.timestamp}` : null);
+                        
+                        // Fallback: use content hash if no sender timestamp
+                        if (!msgId) {
+                            msgId = msg.type + (msg.item?.id || msg.itemId || msg.hash || msg.imageHash || msg.item?.title || '') + (msg.timestamp || '');
+                        }
+                        
                         if (window._seenMsgIds && window._seenMsgIds.has(msgId)) {
                             console.log('[Dedupe] Already processed:', msg.type);
                             shouldSkip = true;
@@ -4561,7 +4875,24 @@
                             else updatePeerCount(connectedPeers + 1);
                             break;
                         case "peer-left":
-                            if (msg.peerId) knownPeers.delete(msg.peerId);
+                            // Clean up peer connections when peer leaves
+                            if (msg.peerId) {
+                                knownPeers.delete(msg.peerId);
+                                // Close WebRTC connection
+                                if (peerConnections[msg.peerId]) {
+                                    try {
+                                        peerConnections[msg.peerId].close();
+                                    } catch (e) {}
+                                    delete peerConnections[msg.peerId];
+                                }
+                                // Close data channel
+                                if (dataChannels[msg.peerId]) {
+                                    try {
+                                        dataChannels[msg.peerId].close();
+                                    } catch (e) {}
+                                    delete dataChannels[msg.peerId];
+                                }
+                            }
                             if (msg.peerCount) updatePeerCount(msg.peerCount);
                             else
                                 updatePeerCount(
@@ -4590,6 +4921,20 @@
                                     ? "has image"
                                     : "no image",
                             );
+                            
+                            // Verify DID signature before accepting
+                            if (msg.signature && msg.did) {
+                                const isValid = await DIDService.verify(
+                                    { type: "NEW_ITEM", item: msg.item, h3Index: msg.h3Index, timestamp: msg.timestamp },
+                                    msg.signature,
+                                    msg.did
+                                );
+                                if (!isValid) {
+                                    console.error("🚨 Invalid signature for NEW_ITEM, rejecting");
+                                    break;
+                                }
+                            }
+                            
                             // Use conflict resolution to prevent duplicates
                             if (msg.item && msg.item.id) {
                                 db.items.get(msg.item.id).then(localItem => {
@@ -4613,6 +4958,24 @@
                             break;
                         case "ITEM_UPDATE":
                             // Handle full item update from neighbors
+                            // Verify DID signature and permission
+                            if (msg.signature && msg.did) {
+                                const isValid = await DIDService.verify(
+                                    { type: "ITEM_UPDATE", itemId: msg.itemId, status: msg.status, timestamp: msg.timestamp },
+                                    msg.signature,
+                                    msg.did
+                                );
+                                if (!isValid) {
+                                    console.error("🚨 Invalid signature for ITEM_UPDATE, rejecting");
+                                    break;
+                                }
+                                // Also verify the signer is the original seller
+                                if (msg.sellerId && msg.did !== msg.sellerId) {
+                                    console.error("🚨 ITEM_UPDATE sender mismatch - not original seller");
+                                    break;
+                                }
+                            }
+                            
                             if (msg.itemId) {
                                 db.items.get(msg.itemId).then(localItem => {
                                     // Create incoming item from message
@@ -4718,6 +5081,7 @@
                                 const msg = JSON.parse(data);
                                 const chunkData = msg.data;
                                 const imageHash = msg.imageHash; // Use hash from message!
+                                const expectedSize = msg.expectedSize; // Get expectedSize from message!
                                 const binaryString = atob(chunkData);
                                 const bytes = new Uint8Array(
                                     binaryString.length,
@@ -4738,11 +5102,14 @@
 
                                     if (!incomingImages[imageHash]) {
                                         incomingImages[imageHash] = {
-                                            expectedSize: 999999999, // Will be updated when header arrives
+                                            expectedSize: expectedSize || 999999999, // Use from message!
                                             chunks: [],
                                             received: 0,
                                             mimeType: "image/jpeg",
                                         };
+                                    } else if (expectedSize && incomingImages[imageHash].expectedSize === 999999999) {
+                                        // Update expectedSize if it was not set yet
+                                        incomingImages[imageHash].expectedSize = expectedSize;
                                     }
 
                                     incomingImages[imageHash].chunks.push(
@@ -4755,14 +5122,15 @@
                                         "[IMG_CHUNK] Progress:",
                                         incomingImages[imageHash].received,
                                         "/",
-                                        msg.expectedSize || "unknown",
+                                        incomingImages[imageHash].expectedSize,
                                     );
 
                                     // Auto-assemble when all chunks received
-                                    // Track expectedSize per-image in incomingImages
                                     const imgData = incomingImages[imageHash];
-                                    const expectedSize = imgData && imgData.expectedSize ? imgData.expectedSize : 999999999;
-                                    if (imgData && imgData.received >= expectedSize) {
+                                    if (imgData && imgData.received >= imgData.expectedSize && !imgData.isAssembling) {
+                                        // Mark as assembling to prevent duplicate assembly
+                                        imgData.isAssembling = true;
+                                        
                                         console.log(
                                             "[IMG_CHUNK] All chunks received, auto-assembling...",
                                         );
@@ -4779,25 +5147,23 @@
                                             try {
                                                 const blob = new Blob(imgData.chunks, { type: imgData.mimeType || "image/jpeg" });
                                                 const storeItemId = targetItemId || imgData.itemId || Date.now();
-                                                await db.blobs.put({
-                                                    itemId: storeItemId,
-                                                    hash: imageHash,
-                                                    blob: blob,
-                                                    timestamp: Date.now(),
-                                                });
+                                                
+                                                // Use quota-managed save
+                                                await saveBlobWithQuotaCheck(imageHash, blob);
+                                                
+                                                // Update item if found
+                                                if (targetItemId) {
+                                                    await db.items.update(targetItemId, { imageHash: imageHash });
+                                                }
+                                                
                                                 console.log("[IMG_CHUNK] 💾 Saved blob to DB, hash:", imageHash);
                                                 
                                                 // Release download slot and process next
                                                 if (window.currentDownloadingCount > 0) {
                                                     window.currentDownloadingCount--;
                                                 }
-                                                if (window.imageDownloadQueue.length > 0) {
+                                                if (window.imageDownloadQueue && window.imageDownloadQueue.length > 0) {
                                                     processDownloadQueue();
-                                                }
-
-                                                // Update item if found
-                                                if (targetItemId) {
-                                                    await db.items.update(targetItemId, { imageHash: imageHash });
                                                 }
 
                                                 // Notify and refresh - wait a bit for IndexedDB to finish
@@ -4945,7 +5311,9 @@
                             );
                             break;
                     }
-                } catch (err) {}
+                } catch (err) {
+                    console.error("[handleMessage] Error:", err);
+                }
             }
 
             // Handle binary WebSocket messages (image chunks)
@@ -5091,21 +5459,42 @@
                     return;
                 }
 
-                container.innerHTML = chatMessages[activeChatPeer]
-                    .map(
-                        (m) => `
+                const messages = chatMessages[activeChatPeer];
+                const existingCount = container.children.length;
+                
+                // Incremental update: only add new messages
+                if (messages.length > existingCount) {
+                    const newMessages = messages.slice(existingCount);
+                    const newHTML = newMessages
+                        .map(
+                            (m) => `
         <div class="chat-message ${m.sent ? "sent" : "received"}">
           ${m.text}
           <div class="meta">${m.from?.substring(0, 8)}... • ${new Date(m.timestamp).toLocaleTimeString()}</div>
         </div>
       `,
-                    )
-                    .join("");
+                        )
+                        .join("");
+                    container.insertAdjacentHTML('beforeend', newHTML);
+                } else if (messages.length < existingCount) {
+                    // Full rebuild if message count decreased
+                    container.innerHTML = messages
+                        .map(
+                            (m) => `
+        <div class="chat-message ${m.sent ? "sent" : "received"}">
+          ${m.text}
+          <div class="meta">${m.from?.substring(0, 8)}... • ${new Date(m.timestamp).toLocaleTimeString()}</div>
+        </div>
+      `,
+                        )
+                        .join("");
+                }
                 container.scrollTop = container.scrollHeight;
             }
 
             window.sendChatMessage = function () {
                 const input = document.getElementById("chat-input");
+                if (!input) return;
                 const text = input.value.trim();
                 if (!text || !activeChatPeer) return;
 
@@ -5117,15 +5506,13 @@
                     timestamp: Date.now(),
                 };
 
-                // Send via WebSocket (main communication channel)
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify(msg));
-                }
-
-                // Also try DataChannel if available
+                // Use DataChannel first (WebRTC), fallback to WebSocket
                 const dc = dataChannels[activeChatPeer];
                 if (dc && dc.readyState === "open") {
                     dc.send(JSON.stringify(msg));
+                } else if (ws && ws.readyState === WebSocket.OPEN) {
+                    // Fallback to WebSocket if DataChannel not available
+                    ws.send(JSON.stringify(msg));
                 }
 
                 // Store locally
@@ -5138,11 +5525,12 @@
                 triggerHaptic("light");
             };
 
-            document
-                .getElementById("chat-input")
-                .addEventListener("keypress", (e) => {
+            const chatInput = document.getElementById("chat-input");
+            if (chatInput) {
+                chatInput.addEventListener("keypress", (e) => {
                     if (e.key === "Enter") sendChatMessage();
                 });
+            }
 
             // Handle incoming chat messages
             function handleChatMessage(msg) {
@@ -5166,8 +5554,8 @@
             }
 
             // Show chat button when peers connect
-            const originalUpdatePeerCount = updatePeerCount;
-            updatePeerCount = function (count) {
+            const originalUpdatePeerCount = window.updatePeerCount || function(count) {};
+            window.updatePeerCount = function (count) {
                 originalUpdatePeerCount(count);
                 const chatBtn = document.getElementById("btn-chat"); // Old button (bottom)
                 const chatBtnHeader =
@@ -5239,9 +5627,28 @@
 
             // Register Service Worker for P2P updates
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/sw.js')
+                navigator.serviceWorker.register('./sw.js')
                     .then(reg => console.log('[SW] Registered:', reg.scope))
                     .catch(err => console.log('[SW] Registration failed:', err));
+                    
+                // PWA Install Prompt
+                let deferredPrompt;
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    deferredPrompt = e;
+                    document.getElementById('pwa-install-banner').style.display = 'block';
+                });
+                
+                document.getElementById('btn-install-pwa')?.addEventListener('click', async () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        if (outcome === 'accepted') {
+                            document.getElementById('pwa-install-banner').style.display = 'none';
+                        }
+                        deferredPrompt = null;
+                    }
+                });
             }
 
             // ============ Capacitor Native Features ============
@@ -5337,7 +5744,9 @@
                             "mDNS_" + peerId,
                             JSON.stringify(presence),
                         );
-                    } catch (err) {}
+                    } catch (err) {
+                        console.error("[Presence] LocalStorage error:", err);
+                    }
                 },
 
                 scanForPeers() {
@@ -5369,10 +5778,14 @@
                                             lastSeen: now,
                                         });
                                     }
-                                } catch (err) {}
+                                } catch (err) {
+                                    console.error("[Presence] Parse error:", err);
+                                }
                             }
                         }
-                    } catch (err) {}
+                    } catch (err) {
+                        console.error("[Presence] Scan error:", err);
+                    }
 
                     // Clean stale
                     for (const [id, p] of this.peerList) {
@@ -5507,27 +5920,37 @@
                 loadItems();
             };
 
-            function broadcastItemUpdate(item) {
-                const msg = {
-                    type: 'ITEM_UPDATE',
-                    itemId: item.id,
-                    title: item.title,
-                    price: item.price,
-                    description: item.description,
-                    category: item.category,
-                    status: item.status,
-                    updatedAt: item.updatedAt,
-                    sellerId: item.sellerId
-                };
-                // Via P2P
-                if (P2PStreamer && P2PStreamer.broadcast) {
-                    P2PStreamer.broadcast(msg);
-                }
-                // Via WebSocket
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify(msg));
-                }
-                console.log('[Edit] Broadcasted update for item:', item.id);
+            // ============ Service Worker Registration ============
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('./sw.js')
+                        .then(reg => {
+                            console.log('[SW] Registered:', reg.scope);
+                            
+                            // Check for updates
+                            reg.onupdatefound = () => {
+                                const installingWorker = reg.installing;
+                                installingWorker.onstatechange = () => {
+                                    if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                        // New version available
+                                        console.log('[SW] New version available');
+                                        if (typeof showToast === 'function') {
+                                            showToast('發現新版本，點擊刷新', () => location.reload());
+                                        }
+                                    }
+                                };
+                            };
+                        })
+                        .catch(err => console.log('[SW] Failed:', err));
+                });
+                
+                // Listen for SW messages
+                navigator.serviceWorker.addEventListener('message', event => {
+                    if (event.data.type === 'SYNC_REQUEST') {
+                        console.log('[SW] Received sync request, reloading items...');
+                        loadItems();
+                    }
+                });
             }
 
     </script>
