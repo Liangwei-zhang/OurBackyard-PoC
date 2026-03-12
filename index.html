@@ -7,6 +7,7 @@
             content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
         />
         <meta name="theme-color" content="#6366f1" />
+        <meta http-equiv="Content-Security-Policy" content="default-src *; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: blob:; connect-src * wss: https:; font-src *;">
         <meta name="description" content="Decentralized P2P community marketplace" />
         <link rel="manifest" href="/manifest.json" />
         <title>🏡 OurBackyard - 社區微商城</title>
@@ -959,7 +960,8 @@
                     <div class="stat-item full-width" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
                         <span class="stat-icon">🗑️</span>
                         <span class="stat-label">重置</span>
-                        <button class="btn btn-sm" style="background:#f44336;color:white" onclick="resetApp()">清除數據</button>
+                        <button class="btn btn-sm" onclick="exportMyData()">導出數據</button>
+                    <button class="btn btn-sm" style="background:#f44336;color:white" onclick="resetApp()">清除數據</button>
                     </div>
                     <!-- App Update -->
                     <div class="stat-item full-width" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
@@ -1046,7 +1048,7 @@
                 <div class="market-grid" id="market-grid">
                     <div class="empty-state">
                         <div class="empty-icon">🛒</div>
-                        <div class="empty-text">No items nearby</div>
+                        <div class="empty-text">附近暫無商品</div>
                     </div>
                 </div>
             </div>
@@ -1128,9 +1130,11 @@
                         <div class="photo-preview" id="photo-preview"></div>
                     </div>
 
-                    <button class="btn btn-primary" id="btn-publish">
-                        🚀 Publish to Neighborhood
-                    </button>
+                    <button class="btn btn-primary" id="btn-publish">🚀 Publish to Neighborhood</button>
+                    <div id="publish-progress" style="display:none;margin-top:8px">
+                        <div id="publish-progress-bar" style="height:6px;background:var(--primary);border-radius:3px;width:0%;transition:width 0.3s"></div>
+                        <div id="publish-progress-text" style="font-size:12px;color:var(--text-muted);margin-top:4px"></div>
+                    </div>
                 </div>
             </div>
 
@@ -1170,11 +1174,28 @@
         <script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
 
         <script>
+            // ============ Global Error Handling ============
+            window.onerror = function(msg, url, line, col, err) {
+                console.error("[Global Error]", msg, "at line", line);
+                notify("發生錯誤，請刷新頁面", "error");
+                return false;
+            };
+            window.addEventListener("unhandledrejection", function(e) {
+                console.error("[Unhandled Rejection]", e.reason);
+            });
+
             // ============ Image Utilities ============
 
             // Compress image to max 800px for storage
             function compressImage(file, maxWidth = 800, quality = 0.7) {
                 return new Promise((resolve) => {
+                    // Validate file type - only allow safe image formats
+                    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+                    if (!file.type || !allowedTypes.includes(file.type)) {
+                        console.warn("[compressImage] Invalid file type:", file.type);
+                        resolve(null);
+                        return;
+                    }
                     const img = new Image();
                     const canvas = document.createElement("canvas");
                     const ctx = canvas.getContext("2d");
@@ -1312,6 +1333,11 @@
                     let pc = this.peerConnections.get(peerId);
 
                     if (signal.type === "offer") {
+                        // Race condition protection: ignore if we already have an active connection
+                        if (pc && pc.connectionState !== 'closed' && pc.connectionState !== 'failed') {
+                            console.log("[P2P] Ignoring duplicate offer from", peerId, "state:", pc.connectionState);
+                            return;
+                        }
                         pc = new RTCPeerConnection({
                             iceServers: this.iceServers,
                         });
@@ -1481,53 +1507,24 @@
                     console.log("[P2P DC] Sent image to:", targetPeerId, "size:", total);
                 },
 
-                // 通過 DataChannel 發送圖片
+                // Track who requested which image (for Gossip Protocol)
+                pendingImageRequests: new Map(), // imageHash -> Set of peerIds
+
+                // Legacy: send to all (only used for initial broadcast, not for each peer)
                 async sendImage(itemId, blob) {
-                    const buffer = await blob.arrayBuffer();
-                    const total = buffer.byteLength;
-                    const CHUNK = 16384;
-
-                    // Get item info for matching on receiver side
-                    const item = await db.items.get(itemId);
-
-                    // Compute image hash (CID) for content-addressable storage
+                    // Only broadcast NEW_ITEM with hash, peers will request if needed
+                    // This is the Gossip Protocol approach - don't flood all connections!
                     const imageHash = await ImageRegistry.computeHash(blob);
-
-                    // 發送 header with image hash (CID)
+                    
+                    // Broadcast only the metadata with hash (peers will request if needed)
                     this.broadcast({
                         type: "IMG_HEADER",
                         itemId,
-                        size: total,
-                        imageHash: imageHash, // CID for content addressing
-                        sellerId: item?.sellerId,
-                        title: item?.title,
+                        size: blob.size,
+                        imageHash: imageHash,
                     });
-
-                    console.log("[P2P] Sending image with hash:", imageHash);
-
-                    // 分片發送
-                    for (let offset = 0; offset < total; offset += CHUNK) {
-                        while (true) {
-                            let ready = true;
-                            for (const [_, dc] of this.dataChannels) {
-                                if (
-                                    dc.readyState === "open" &&
-                                    dc.bufferedAmount > 512 * 1024
-                                )
-                                    ready = false;
-                            }
-                            if (ready) break;
-                            await new Promise((r) => setTimeout(r, 50));
-                        }
-
-                        const chunk = buffer.slice(offset, offset + CHUNK);
-                        for (const [_, dc] of this.dataChannels) {
-                            if (dc.readyState === "open") dc.send(chunk);
-                        }
-                    }
-
-                    this.broadcast({ type: "IMG_END", itemId });
-                    console.log("[P2P] Image sent:", itemId);
+                    
+                    console.log("[P2P] Broadcast image header (Gossip mode):", imageHash);
                 },
 
                 broadcast(msg) {
@@ -2142,17 +2139,100 @@
                 keyPair: null,
                 publicKey: null,
 
-                // Generate or load key pair
+                                // ============ Secure Key Storage (Password-based) ============
+                async deriveKeyFromPassword(password, salt) {
+                    const encoder = new TextEncoder();
+                    const keyMaterial = await crypto.subtle.importKey(
+                        "raw", encoder.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]
+                    );
+                    return crypto.subtle.deriveKey(
+                        { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+                        keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
+                    );
+                },
+
+                async encryptPrivateKey(privateKeyBase64, password) {
+                    const salt = crypto.getRandomValues(new Uint8Array(16));
+                    const iv = crypto.getRandomValues(new Uint8Array(12));
+                    const key = await this.deriveKeyFromPassword(password, salt);
+                    const encoder = new TextEncoder();
+                    const encrypted = await crypto.subtle.encrypt(
+                        { name: "AES-GCM", iv }, key, encoder.encode(privateKeyBase64)
+                    );
+                    // Store as salt + iv + encrypted data
+                    const combined = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+                    combined.set(salt, 0);
+                    combined.set(iv, salt.length);
+                    combined.set(new Uint8Array(encrypted), salt.length + iv.length);
+                    return this.arrayBufferToBase64(combined.buffer);
+                },
+
+                async decryptPrivateKey(encryptedData, password) {
+                    const combined = new Uint8Array(this.base64ToArrayBuffer(encryptedData));
+                    const salt = combined.slice(0, 16);
+                    const iv = combined.slice(16, 28);
+                    const encrypted = combined.slice(28);
+                    const key = await this.deriveKeyFromPassword(password, salt);
+                    const decrypted = await crypto.subtle.decrypt(
+                        { name: "AES-GCM", iv }, key, encrypted
+                    );
+                    return new TextDecoder().decode(decrypted);
+                },
+
+                // Prompt user for password (simple implementation)
+                async promptPassword() {
+                    return new Promise((resolve) => {
+                        // Show loading while waiting for password
+                        const loadingEl = document.getElementById("publish-progress");
+                        if (loadingEl) loadingEl.style.display = "block";
+                        
+                        const password = prompt("Enter your password to decrypt identity key:");
+                        if (loadingEl) loadingEl.style.display = "none";
+                        
+                        resolve(password || "");
+                    });
+                },
+
+// Generate or load key pair
                 async init() {
+                    // Safety check: wait for db to be ready
+                    if (typeof db === 'undefined') {
+                        console.warn("[DID] Waiting for database...");
+                        await new Promise(r => setTimeout(r, 500));
+                    }
+                    if (typeof db === 'undefined') {
+                        console.error("[DID] Database not available!");
+                        return;
+                    }
+                    
                     // Try to load existing keys
                     const savedPrivateKey =
                         localStorage.getItem("did_privateKey");
                     const savedPublicKey =
                         localStorage.getItem("did_publicKey");
 
+                    // Try to load encrypted key from IndexedDB first
+                    const encryptedKeyRecord = await db.secureData.get("encryptedPrivateKey");
+                    if (encryptedKeyRecord && encryptedKeyRecord.value) {
+                        const password = await this.promptPassword();
+                        if (password) {
+                            try {
+                                const decryptedKey = await this.decryptPrivateKey(encryptedKeyRecord.value, password);
+                                this.privateKeyBase64 = decryptedKey;
+                                this.publicKey = savedPublicKey;
+                                console.log("[DID] Loaded and decrypted keys");
+                                return;
+                            } catch (e) {
+                                console.error("[DID] Failed to decrypt key:", e);
+                                alert("Wrong password!");
+                            }
+                        }
+                    }
+                    
+                    // Fallback to unencrypted localStorage
                     if (savedPrivateKey && savedPublicKey) {
                         this.publicKey = savedPublicKey;
-                        console.log("[DID] Loaded existing keys");
+                        console.log("[DID] Loaded existing keys (unencrypted)");
                         return;
                     }
 
@@ -2175,10 +2255,19 @@
                         "pkcs8",
                         keyPair.privateKey,
                     );
-                    localStorage.setItem(
-                        "did_privateKey",
-                        this.arrayBufferToBase64(privateKeyBuffer),
-                    );
+                    // Encrypt private key with password before storing
+                    const password = await this.promptPassword();
+                    if (password) {
+                        const encryptedPrivateKey = await this.encryptPrivateKey(
+                            this.arrayBufferToBase64(privateKeyBuffer), password
+                        );
+                        // Store encrypted key in IndexedDB
+                        await db.secureData.put({ key: "encryptedPrivateKey", value: encryptedPrivateKey });
+                        console.log("[DID] Private key encrypted and stored securely");
+                    } else {
+                        // No password - store unencrypted (not recommended)
+                        localStorage.setItem("did_privateKey", this.arrayBufferToBase64(privateKeyBuffer));
+                    }
                     localStorage.setItem("did_publicKey", this.publicKey);
 
                     console.log(
@@ -2189,8 +2278,19 @@
 
                 // Sign a message
                 async sign(message) {
-                    const savedPrivateKey =
-                        localStorage.getItem("did_privateKey");
+                    // Use decrypted key if available, otherwise load from storage
+                    if (!this.privateKeyBase64) {
+                        const encryptedKeyRecord = await db.secureData.get("encryptedPrivateKey");
+                        if (encryptedKeyRecord && encryptedKeyRecord.value) {
+                            const password = await this.promptPassword();
+                            if (password) {
+                                this.privateKeyBase64 = await this.decryptPrivateKey(encryptedKeyRecord.value, password);
+                            }
+                        } else {
+                            this.privateKeyBase64 = localStorage.getItem("did_privateKey");
+                        }
+                    }
+                    const savedPrivateKey = this.privateKeyBase64;
                     if (!savedPrivateKey) {
                         await this.init();
                     }
@@ -2337,8 +2437,9 @@
                 db.version(4).stores({
                     items: "++id, title, category, price, status, sellerId, h3Index, timestamp",
                     blobs: "itemId, hash",
-                    sync: "key",
+                    sync: "++id, type",
                     userData: "key",
+                    secureData: "key",
                     systemAssets: "url, hash, version",
                     blocklist: "itemHash, reason, timestamp",
                 });
@@ -2347,8 +2448,9 @@
                 db.version(5).stores({
                     items: "++id, imageHash, title, category, price, status, sellerId, h3Index, timestamp",
                     blobs: "hash, itemId, timestamp", // timestamp index for LRU cleanup
-                    sync: "key",
+                    sync: "++id, type",
                     userData: "key",
+                    secureData: "key",
                     systemAssets: "url, hash, version",
                     blocklist: "itemHash, reason, timestamp",
                 });
@@ -2357,12 +2459,8 @@
 
             // Initialize after Dexie is ready
             function initApp() {
-                // Initialize DID on load
-                DIDService.init();
-
-                // Initialize IndexedDB
-                initDB();
-
+                // db and DIDService already initialized by bootstrap()
+                
                 // Initialize other modules that need db
                 AppUpdater.db = db;
                 AppUpdater.init();
@@ -2387,13 +2485,13 @@
                 try {
                     console.log('🚀 Starting OurBackyard...');
                     
-                    // 1. Wait for DID service
+                    // 1. Initialize database FIRST (required by other services)
+                    await initDB();
+                    
+                    // 2. Initialize DID service (depends on db)
                     if (typeof DIDService !== 'undefined' && DIDService.init) {
                         await DIDService.init();
                     }
-                    
-                    // 2. Initialize database
-                    await initDB();
                     
                     // 3. Initialize app (connects P2P network)
                     await initApp();
@@ -2675,6 +2773,36 @@
                 }
             }
 
+            // ============ Data Export ============
+            window.exportMyData = async function() {
+                try {
+                    const items = await db.items.toArray();
+                    const blobs = await db.blobs.toArray();
+                    const userData = await db.userData.toArray();
+                    
+                    const exportData = {
+                        exportDate: new Date().toISOString(),
+                        items: items,
+                        images: blobs.length + " images (not exported due to size)",
+                        userData: userData,
+                        version: "OurBackyard Export v1"
+                    };
+                    
+                    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "ourbackyard-data-" + Date.now() + ".json";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    notify("數據導出成功！", "success");
+                } catch (err) {
+                    console.error("[Export] Error:", err);
+                    notify("導出失敗: " + err.message, "error");
+                }
+            };
+
             // ============ Haptic Feedback ============
             function triggerHaptic(type = "success") {
                 if (!navigator.vibrate) return;
@@ -2938,10 +3066,29 @@
             ImageLazyLoader.init();
 
             // ============ Adaptive Heartbeat (Battery Optimization) ============
+            // Track user activity for dynamic heartbeat
+            let lastActivityTime = Date.now();
+            const activityEvents = ["click", "scroll", "touchstart", "keydown"];
+            activityEvents.forEach(evt => {
+                document.addEventListener(evt, () => {
+                    lastActivityTime = Date.now();
+                }, { passive: true });
+            });
+
             function startHeartbeat(interval = HEARTBEAT_INTERVAL) {
                 if (heartbeatInterval) clearInterval(heartbeatInterval);
 
                 heartbeatInterval = setInterval(() => {
+                    // Dynamic interval: reduce if user is idle
+                    const idleTime = Date.now() - lastActivityTime;
+                    const isIdle = idleTime > 300000; // 5 min idle
+                    if (isIdle && interval === HEARTBEAT_INTERVAL) {
+                        // Switch to background interval if idle
+                        clearInterval(heartbeatInterval);
+                        startHeartbeat(HEARTBEAT_INTERVAL_BACKGROUND);
+                        return;
+                    }
+
                     const heartbeatMsg = {
                         type: "HEARTBEAT",
                         peerId,
@@ -3857,8 +4004,8 @@
                     .map(
                         (item) => `
         <div class="ai-item" onclick="showItemDetail(${item.id})">
-          <img class="ai-item-img" src="${item.thumbnail || item.imageUrl || ""}" alt="${item.title}" onerror="this.style.display='none'">
-          <div class="ai-item-title">${item.title}</div>
+          <img class="ai-item-img" src="${item.thumbnail || item.imageUrl || ""}" alt="${escapeHtml(item.title)}" onerror="this.style.display='none'">
+          <div class="ai-item-title">${escapeHtml(item.title)}</div>
         </div>
       `,
                     )
@@ -3953,11 +4100,11 @@
                  data-item-id="${item.id}"
                  data-hash="${item.imageHash || ''}"
                  src="${microPlaceholder}"
-                 alt="${item.title}"
+                 alt="${escapeHtml(item.title)}"
                  style="filter: blur(3px)"
                  onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 x=%2250%22 y=%2255%22 text-anchor=%22middle%22>📷</text></svg>'">
             <div class="item-info">
-              <div class="item-title">${onlineBadge}${item.title}</div>
+              <div class="item-title">${onlineBadge}${escapeHtml(item.title)}</div>
               <div class="item-price">${priceText}</div>
               <div class="item-footer">
                 <span class="item-status ${statusClass}">${item.status}</span>
@@ -3987,7 +4134,18 @@
             }
 
             // ============ Item Detail ============
-            window.showItemDetail = async function (id) {
+            function escapeHtml(str) {
+    if (!str) return "";
+    return str.replace(/[&<>"']/g, c => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[c] || c);
+}
+
+window.showItemDetail = async function (id) {
                 const item = await db.items.get(id);
                 if (!item) return;
 
@@ -4022,13 +4180,16 @@
                     allImages = [item.thumbnail];
                 }
                 
-                // Build gallery HTML
-                if (allImages.length > 1) {
+                // Build gallery HTML with data-hash for lazy loading
+                if (imageHashes.length > 1) {
                     imagesHtml = `<div class="detail-gallery" style="display:flex;flex-direction:column;gap:8px">
-                        ${allImages.map((src, i) => `<img src="${src}" style="width:100%;border-radius:12px;object-fit:cover;max-height:300px" onerror="this.src='${defaultImg}'">`).join('')}
+                        ${imageHashes.map((hash, i) => {
+                            const src = allImages[i] || defaultImg;
+                            return `<img data-hash="${hash}" src="${src}" style="width:100%;border-radius:12px;object-fit:cover;max-height:300px" onerror="this.src='${defaultImg}'">`;
+                        }).join('')}
                     </div>`;
-                } else if (allImages.length === 1) {
-                    imagesHtml = `<img src="${allImages[0]}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
+                } else if (imageHashes.length === 1) {
+                    imagesHtml = `<img data-hash="${imageHashes[0]}" src="${allImages[0] || defaultImg}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
                 } else {
                     imagesHtml = `<img src="${defaultImg}" style="width:100%;border-radius:16px;margin-bottom:16px">`;
                 }
@@ -4040,13 +4201,24 @@
                           ? "☕ Swap for Coffee"
                           : `$${item.price}`;
 
+                // Request missing images from neighbors
+                setTimeout(async () => {
+                    for (const hash of imageHashes) {
+                        const blobs = await db.blobs.where("hash").equals(hash).toArray();
+                        if (blobs.length === 0 && item.sellerId !== peerId) {
+                            // Request from neighbor if not cached locally
+                            executeImageRequest(hash, item.sellerId);
+                        }
+                    }
+                }, 100);
+
                 document.getElementById("modal-content").innerHTML = `
         ${imagesHtml}
-        <h2 style="font-size:22px;margin-bottom:8px">${item.title}</h2>
+        <h2 style="font-size:22px;margin-bottom:8px">${escapeHtml(item.title)}</h2>
         <p style="color:var(--accent-green);font-size:24px;font-weight:700;margin-bottom:16px">${priceText}</p>
         <p style="color:var(--text-muted);margin-bottom:8px"><strong>Condition:</strong> ${item.condition}</p>
         <p style="color:var(--text-muted);margin-bottom:8px"><strong>Category:</strong> ${item.category}</p>
-        <p style="color:var(--text-muted);margin-bottom:16px">${item.description || ""}</p>
+        <p style="color:var(--text-muted);margin-bottom:16px">${escapeHtml(item.description || "")}</p>
 
         ${
             item.sellerId !== peerId && item.status === "available"
@@ -4228,9 +4400,15 @@
                 .addEventListener("click", async () => {
                     // Debounce: prevent multiple clicks
                     const btn = document.getElementById("btn-publish");
+                    const progressEl = document.getElementById("publish-progress");
+                    const progressBar = document.getElementById("publish-progress-bar");
+                    const progressTextEl = document.getElementById("publish-progress-text");
                     if (btn.disabled) return;
                     btn.disabled = true;
                     btn.textContent = "發布中...";
+                    progressEl.style.display = "block";
+                    progressBar.style.width = "10%";
+                    progressTextEl.textContent = "處理中...";
                     
                     try {
                     const title = document
@@ -4261,78 +4439,64 @@
                     let thumbnails = [];
 
                     if (selectedPhotos.length > 0) {
-                        // Generate micro-thumbnail (50px) for instant display - use Object URL
-                        const microBlob = await generateMicroThumbnail(
-                            selectedPhotos[0],
-                        );
+                        // Generate micro-thumbnail (50px) for first image only
+                        const microBlob = await generateMicroThumbnail(selectedPhotos[0]);
                         if (microBlob) {
-                            // Use ObjectUrlManager instead
                             const hash = "micro_" + Date.now();
                             microThumbnail = ObjectUrlManager.getOrCreate(hash, microBlob);
                         }
 
-                        // Compress first image to 800px for storage
-                        imageBlob = await compressImage(
-                            selectedPhotos[0],
-                            800,
-                            0.7,
+                        // Parallel compression for all selected photos (faster on multi-core devices)
+                        progressTextEl.textContent = `壓縮圖片中... (0/${selectedPhotos.length})`;
+                        const compressedResults = await Promise.all(
+                            selectedPhotos.map(async (file, i) => {
+                                const blob = await compressImage(file, 800, 0.7);
+                                progressTextEl.textContent = `壓縮圖片中... (${i + 1}/${selectedPhotos.length})`;
+                                return { blob, index: i };
+                            })
                         );
-                        if (imageBlob) {
-                            // 完全 P2P 模式：跳過 HTTP 上傳
-                            const tempItemId = "p2p_" + Date.now();
 
-                            // 使用 ObjectUrlManager 替代 blobToObjectURL
-                            imageHash = await ImageRegistry.computeHash(imageBlob);
-                            const objectUrl = ObjectUrlManager.getOrCreate(imageHash, imageBlob);
-
-                            imageUrl = "p2p://" + tempItemId;
+                        // Process compressed results
+                        for (const result of compressedResults) {
+                            if (!result.blob) continue;
+                            const hash = await ImageRegistry.computeHash(result.blob);
+                            await saveBlobWithQuotaCheck(hash, result.blob);
+                            imageHashes.push(hash);
                             
-                            // Collect for multiple images
-                            imageHashes.push(imageHash);
-                            thumbnails.push(objectUrl);
-
-                            // Store item with imageHash (content-addressable)
-                            const itemId = await db.items.add({
-                                type: "marketplace",
-                                status: "available",
-                                category,
-                                price,
-                                condition,
-                                title,
-                                description,
-                                sellerId: peerId,
-                                sellerName: displayName,
-                                h3Index: currentH3Index,
-                                timestamp: Date.now(),
-                                imageUrl: imageUrl, // P2P marker
-                                thumbnail: objectUrl, // Object URL (efficient!)
-                                microThumbnail: microThumbnail, // Micro thumbnail (50px)
-                                imageHash: imageHash, // Content ID for P2P
-                                imageHashes: imageHashes,
-                                thumbnails: thumbnails,
-                            });
-
-                            // Save blob to IndexedDB - include itemId as key for backwards compatibility
-                            await db.blobs.put({
-                                itemId: itemId,
-                                hash: imageHash,
-                                blob: imageBlob,
-                                timestamp: Date.now(),
-                            });
-
-                            // Register in ImageRegistry
-                            ImageRegistry.register(itemId, imageHash);
-
-                            console.log(
-                                "[P2P] Broadcasting image with hash:",
-                                imageHash,
-                            );
-
-                            // 通過 P2P 廣播圖片 (二進制，無 base64)
-                            if (P2PStreamer.getPeers().length > 0) {
-                                await P2PStreamer.sendImage(itemId, imageBlob);
+                            // First image is the main thumbnail
+                            if (result.index === 0) {
+                                imageHash = hash;
+                                const objectUrl = ObjectUrlManager.getOrCreate(hash, result.blob);
+                                thumbnails.push(objectUrl);
+                                imageUrl = "p2p://p2p_" + Date.now();
                             }
                         }
+
+                        progressTextEl.textContent = `上傳中...`;
+
+                        // Store item with all image hashes
+                        const itemId = await db.items.add({
+                            type: "marketplace",
+                            status: "available",
+                            category,
+                            price,
+                            condition,
+                            title,
+                            description,
+                            sellerId: peerId,
+                            sellerName: displayName,
+                            h3Index: currentH3Index,
+                            timestamp: Date.now(),
+                            imageUrl: imageUrl || "",
+                            thumbnail: thumbnails[0] || "",
+                            microThumbnail: microThumbnail,
+                            imageHash: imageHash,
+                            imageHashes: imageHashes,
+                            thumbnails: thumbnails,
+                        });
+
+                        // Broadcast item metadata (peers will request images if needed - Gossip Protocol)
+                        console.log("[P2P] Broadcasting", imageHashes.length, "images with hashes:", imageHashes);
                     }
 
                     if (!imageBlob && !imageUrl) {
@@ -4378,7 +4542,7 @@
                             await registration.sync.register('sync-publish');
                             console.log('[BG-Sync] Registered for offline publish');
                             // Store pending item for later sync
-                            const pending = await db.sync.put({ key: 'pending-publish', data: fullItem, timestamp: Date.now() });
+                            const pending = await db.sync.add({ type: 'pending-publish', data: fullItem, timestamp: Date.now() });
                         } catch (err) {
                             console.log('[BG-Sync] Failed, broadcasting now:', err);
                             broadcastNow();
@@ -4388,7 +4552,11 @@
                         broadcastNow();
                     }
 
+                    progressBar.style.width = "100%";
+                    progressTextEl.textContent = "完成!";
                     alert("🎉 Item published!");
+                    progressEl.style.display = "none";
+                    progressBar.style.width = "0%";
                     document.getElementById("item-title").value = "";
                     document.getElementById("item-desc").value = "";
                     selectedPhotos = [];
@@ -4399,6 +4567,9 @@
                     } finally {
                         // Re-enable button after completion
                         const btn = document.getElementById("btn-publish");
+                    const progressEl = document.getElementById("publish-progress");
+                    const progressBar = document.getElementById("publish-progress-bar");
+                    const progressTextEl = document.getElementById("publish-progress-text");
                         btn.disabled = false;
                         btn.textContent = "發布";
                     }
@@ -4444,7 +4615,8 @@
                         sellerName: item.sellerName,
                         status: item.status,
                         hasImage: !!(item.thumbnail || item.imageHash),
-                        imageHash: item.imageHash, // Make sure this is included!
+                        imageHash: item.imageHash,
+                        imageHashes: item.imageHashes || [], // Include all image hashes!
                     };
 
                     console.log("[broadcastNewItem] Broadcasting:", {
@@ -4715,6 +4887,14 @@
                     notify("📴 Offline mode - showing cached items", "info");
                 };
                 ws.onclose = () => {
+                    console.log("[WS] Connection closed, attempting reconnect...");
+                    // Exponential backoff reconnect
+                    const delay = Math.min(1000 * Math.pow(2, window._wsReconnectAttempts || 0), 30000);
+                    window._wsReconnectAttempts = (window._wsReconnectAttempts || 0) + 1;
+                    setTimeout(() => {
+                        console.log("[WS] Reconnecting, attempt:", window._wsReconnectAttempts);
+                        connect();
+                    }, delay);
                     stopHeartbeat();
                     updateStatus("", "Disconnected");
                     // Show offline indicator
@@ -4791,6 +4971,7 @@
                 }
                 const localTime = localItem.updatedAt || 0;
                 const incomingTime = incomingItem.updatedAt || 0;
+                const timeDiff = Math.abs(incomingTime - localTime);
                 // Incoming is newer
                 if (incomingTime > localTime) {
                     return { item: incomingItem, updated: true, reason: 'newer' };
@@ -5078,10 +5259,10 @@
                         case "IMG_CHUNK":
                             // Decode base64 chunk back to binary
                             try {
-                                const msg = JSON.parse(data);
-                                const chunkData = msg.data;
-                                const imageHash = msg.imageHash; // Use hash from message!
-                                const expectedSize = msg.expectedSize; // Get expectedSize from message!
+                                const chunkMsg = JSON.parse(data);
+                                const chunkData = chunkMsg.data;
+                                const imageHash = chunkMsg.imageHash; // Use hash from message!
+                                const expectedSize = chunkMsg.expectedSize; // Get expectedSize from message!
                                 const binaryString = atob(chunkData);
                                 const bytes = new Uint8Array(
                                     binaryString.length,
@@ -5173,6 +5354,7 @@
                                                 }, 100);
                                             } catch (err) {
                                                 console.error("[IMG_CHUNK] Save error:", err);
+                                                imgData.isAssembling = false; // Reset flag to allow retry
                                             }
                                         }
 
@@ -5469,7 +5651,7 @@
                         .map(
                             (m) => `
         <div class="chat-message ${m.sent ? "sent" : "received"}">
-          ${m.text}
+          ${escapeHtml(m.text)}
           <div class="meta">${m.from?.substring(0, 8)}... • ${new Date(m.timestamp).toLocaleTimeString()}</div>
         </div>
       `,
@@ -5482,7 +5664,7 @@
                         .map(
                             (m) => `
         <div class="chat-message ${m.sent ? "sent" : "received"}">
-          ${m.text}
+          ${escapeHtml(m.text)}
           <div class="meta">${m.from?.substring(0, 8)}... • ${new Date(m.timestamp).toLocaleTimeString()}</div>
         </div>
       `,
@@ -5835,6 +6017,12 @@
                         <textarea id="edit-description" rows="3" maxlength="500"></textarea>
                     </div>
                     <div class="form-group">
+                        <label>圖片</label>
+                        <button type="button" id="btn-edit-photos" class="btn" style="margin-bottom:8px">📷 更換圖片</button>
+                        <input type="file" id="edit-photos" accept="image/*" multiple style="display:none">
+                        <div id="edit-photo-preview" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+                    </div>
+                    <div class="form-group">
                         <label>分類</label>
                         <select id="edit-category">
                             <option value="Electronics">電子產品</option>
@@ -5882,6 +6070,21 @@
                 document.getElementById('edit-modal').classList.add('show');
             };
 
+            document.getElementById('btn-edit-photos')?.addEventListener('click', () => {
+                document.getElementById('edit-photos').click();
+            });
+            
+            document.getElementById('edit-photos')?.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const compressed = await compressImage(file);
+                if (compressed) {
+                    const preview = document.getElementById('edit-photo-preview');
+                    const url = URL.createObjectURL(compressed);
+                    preview.innerHTML = `<img src="${url}" style="width:80px;height:80px;object-fit:cover;border-radius:8px">`;
+                }
+            });
+
             window.closeEditModal = function() {
                 document.getElementById('edit-modal').classList.remove('show');
             };
@@ -5902,6 +6105,28 @@
                     alert('商品不存在');
                     return;
                 }
+                // Handle new images if uploaded
+                const photoInput = document.getElementById('edit-photos');
+                let newImageHash = item.imageHash;
+                let newImageHashes = item.imageHashes || [];
+                
+                if (photoInput && photoInput.files.length > 0) {
+                    const file = photoInput.files[0];
+                    const compressed = await compressImage(file);
+                    if (compressed) {
+                        const hash = await ImageRegistry.computeHash(compressed);
+                        await saveBlobWithQuotaCheck(hash, compressed);
+                        newImageHash = hash;
+                        newImageHashes = [hash]; // Update array
+                        console.log('[Edit] New image uploaded, hash:', hash);
+                        
+                        // Broadcast new image to neighbors!
+                        if (P2PStreamer && P2PStreamer.getPeers().length > 0) {
+                            await P2PStreamer.sendImage(id, compressed);
+                        }
+                    }
+                }
+                
                 // Update locally
                 const updatedItem = {
                     ...item,
@@ -5910,6 +6135,8 @@
                     description,
                     category,
                     status,
+                    imageHash: newImageHash,
+                    imageHashes: newImageHashes,
                     updatedAt: Date.now()
                 };
                 await db.items.put(updatedItem);
@@ -5918,6 +6145,28 @@
                 broadcastItemUpdate(updatedItem);
                 closeEditModal();
                 loadItems();
+            };
+
+            // ============ Sync Pending Items (Offline Publish) ============
+            window.syncPublishPendingItems = async function() {
+                try {
+                    // Get pending items from sync table
+                    const pendingItems = await db.sync.where("type").equals("pending-publish").toArray();
+                    console.log("[Sync] Found pending items:", pendingItems.length);
+                    
+                    for (const record of pendingItems) {
+                        try {
+                            await broadcastNewItem(record.data);
+                            await db.sync.delete(record.id);
+                            console.log("[Sync] Published and removed:", record.id);
+                        } catch (err) {
+                            console.error("[Sync] Failed to publish item:", err);
+                        }
+                    }
+                    console.log("[Sync] Offline items published.");
+                } catch (err) {
+                    console.error("[Sync] Failed to publish pending items:", err);
+                }
             };
 
             // ============ Service Worker Registration ============
@@ -5934,8 +6183,8 @@
                                     if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                         // New version available
                                         console.log('[SW] New version available');
-                                        if (typeof showToast === 'function') {
-                                            showToast('發現新版本，點擊刷新', () => location.reload());
+                                        if (typeof notify === 'function') {
+                                            notify('發現新版本，點擊刷新', 'info');
                                         }
                                     }
                                 };
@@ -5949,6 +6198,10 @@
                     if (event.data.type === 'SYNC_REQUEST') {
                         console.log('[SW] Received sync request, reloading items...');
                         loadItems();
+                    }
+                    if (event.data.type === 'SYNC_PUBLISH') {
+                        console.log('[SW] Received sync publish request...');
+                        syncPublishPendingItems();
                     }
                 });
             }

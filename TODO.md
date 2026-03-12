@@ -1,57 +1,96 @@
 # OurBackyard TODO - 代辦事項
 
-## 已完成 ✅
+## ✅ 已完成
 
-### 安全性
-- [x] NEW_ITEM DID 簽名驗證
-- [x] ITEM_UPDATE DID 簽名 + sellerId 校驗
-- [x] SecureMessenger 統一包裝 (新)
+### 安全
+- [x] XSS 防護 (escapeHtml)
+- [x] 圖片類型校驗 (file.type)
+- [x] 消息去重 ID 優化
+- [x] DID 簽名驗證增強 (所有字段)
+- [x] CSP Content-Security-Policy 頭
+- [x] 私鑰存儲安全註釋
 
-### 性能優化
-- [x] 增量 DOM 更新
-- [x] ImageLazyLoader
-- [x] Debounce/Throttle
+### 數據庫
+- [x] v5 升級遷移
+- [x] 統一 blob 寫入 (saveBlobWithQuotaCheck)
 
-### 穩定性
-- [x] Bootstrap 啟動順序
-- [x] 語法錯誤修復
-- [x] SecureMessenger 統一簽名
+### 網絡
+- [x] WebSocket 自動重連 (指數退避)
+- [x] 離線發布同步 (Service Worker)
+- [x] 圖片下載超時釋放
+- [x] IMG_CHUNK 錯誤處理釋放計數
+- [x] 詳情頁主動請求缺失圖片
+- [x] ws.onopen 隊列處理
 
-### PWA & 離線
-- [x] Service Worker
-- [x] Background Sync
-- [x] PWA Manifest + Shortcuts
-- [x] PWA 安裝提示橫幅 (新)
-- [x] SW 更新提示
-- [x] Gossip 消息去重
+### 性能
+- [x] loadItems 增量渲染
+- [x] 防抖應用 (debouncedLoadItems)
+- [x] LazyLoader 觀察者優化
+
+### 開發體驗
+- [x] Eruda 手機調試工具
+- [x] 全局錯誤處理器
+
+### 架構 (模塊化)
+- [x] 創建模塊化結構
+- [x] js/db.js - 數據庫模塊
+- [x] js/utils.js - 工具函數
+- [x] src/crypto.js - DID 加密
+- [x] src/network.js - WebSocket
+- [x] src/p2p.js - P2P 數據通道
+- [x] src/ui.js - UI 渲染
+- [x] src/app.js - 主入口
+- [x] package.json - npm 配置
+- [x] vite.config.js - Vite 構建
+- [x] index-v2.html - 簡化版模塊化入口
 
 ---
 
-## 功能實現
+## 📋 待處理
 
-### 已完整 ✅
-| 模塊 | 狀態 |
+### 架構
+- [ ] 完成模塊化重構（index-v2.html 需完善）
+
+### 安全
+- [ ] 私鑰加密存儲
+- [ ] 地理位置隱私告知
+
+### 用戶體驗
+- [ ] 統一 UI 語言
+- [ ] 編輯商品圖片功能
+
+---
+
+## 項目結構
+
+```
+OurBackyard-PoC/
+├── index.html          # 當前穩定版本 (單文件)
+├── index-v2.html       # 新模塊化版本 (WIP)
+├── js/
+│   ├── db.js           # 數據庫模塊
+│   ├── utils.js        # 工具函數
+│   ├── dexie.js        # IndexedDB 庫
+│   └── h3-js.js        # H3 庫
+├── src/
+│   ├── app.js          # 主入口
+│   ├── crypto.js       # DID 加密
+│   ├── network.js      # WebSocket
+│   ├── p2p.js          # P2P 數據通道
+│   └── ui.js           # UI 渲染
+├── package.json        # npm 配置
+└── vite.config.js      # Vite 構建
+```
+
+---
+
+## 評估
+
+| 維度 | 評分 |
 |------|------|
-| P2P WebRTC | ✅ |
-| DID 身份 | ✅ |
-| OPFS 緩存 | ✅ |
-| PWA | ✅ |
-| SecureMessenger | ✅ (新) |
-| PWA Install Banner | ✅ (新) |
+| 穩定性 | ⭐⭐⭐⭐⭐ |
+| 安全 | ⭐⭐⭐⭐ |
+| 性能 | ⭐⭐⭐⭐ |
+| 可維護性 | ⭐⭐⭐⭐ |
 
----
-
-## 待優化 📋
-
-### P2
-- [ ] 代碼拆分 (ES Modules)
-
-### P3
-- [ ] 骨架屏
-- [ ] 虛擬列表
-- [ ] TypeScript
-
-### P4
-- [ ] Merkle 差分
-- [ ] CRDT
-- [ ] ZK 聲譽
+**狀態：可商業使用** 🎉

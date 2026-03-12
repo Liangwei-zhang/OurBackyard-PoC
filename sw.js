@@ -1,12 +1,11 @@
 // OurBackyard Service Worker
 // P2P caching and offline support
 
-const CACHE_NAME = 'ourbackyard-v12';
+const CACHE_NAME = "ourbackyard-v20";
 const urlsToCache = [
   '/',
   '/index.html',
-  '/js/dexie.js',
-  '/js/h3-js.js'
+  '/manifest.json'
 ];
 
 // Install event
@@ -14,7 +13,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('[SW] Opened cache v12');
+        console.log('[SW] Opened cache v13');
         return cache.addAll(urlsToCache).catch(() => {});
       })
   );
@@ -43,7 +42,9 @@ self.addEventListener('fetch', event => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
   
-  // Skip WebSocket and P2P requests
+  // Skip WebSocket, P2P and non-http requests
+  if (event.request.method !== 'GET') return;
+  if (!event.request.url.startsWith('http')) return;
   if (event.request.url.includes('ws:') || 
       event.request.url.includes('wss:') ||
       event.request.url.includes('peerjs')) {
@@ -84,23 +85,62 @@ self.addEventListener('fetch', event => {
 self.addEventListener('sync', event => {
   console.log('[SW] Background sync:', event.tag);
   
-  if (event.tag === 'sync-items') {
+  if (event.tag === 'sync-items' || event.tag === 'sync-publish') {
     event.waitUntil(
       self.clients.matchAll().then(clients => {
         clients.forEach(client => {
-          client.postMessage({ type: 'SYNC_REQUEST' });
+          client.postMessage({ 
+            type: event.tag === 'sync-publish' ? 'SYNC_PUBLISH' : 'SYNC_REQUEST' 
+          });
         });
       })
     );
   }
+});
+
+// Push notifications
+self.addEventListener('push', event => {
+  if (!event.data) return;
   
-  if (event.tag === 'sync-publish') {
-    event.waitUntil(
-      self.clients.matchAll().then(clients => {
-        clients.forEach(client => {
-          client.postMessage({ type: 'SYNC_PUBLISH' });
-        });
-      })
-    );
+  const data = event.data.json();
+  const title = data.title || 'OurBackyard';
+  const options = {
+    body: data.body || 'New update available',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: 'ourbackyard-notification',
+    data: data.data || {}
+  };
+  
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+// Notification click handler
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then(clients => {
+      // Focus existing window or open new
+      for (const client of clients) {
+        if (client.url.includes('index.html') && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow('/');
+      }
+    })
+  );
+});
+
+// Message from main thread
+self.addEventListener('message', event => {
+  console.log('[SW] Message:', event.data);
+  
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });
