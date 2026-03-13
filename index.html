@@ -4020,7 +4020,7 @@
             }
             
             // Debounced loadItems to prevent高频调用
-            let debouncedLoadItems = debounce(loadItems, 300);
+            debouncedLoadItems = debounce(loadItems, 300);
 
             // ============ Sort Items ============
             function sortItems(sortBy) {
@@ -4498,15 +4498,10 @@ window.showItemDetail = async function (id) {
                         .value.trim();
 
                     // Real-time validation
-                const title = document.getElementById("item-title").value.trim();
-                const category = document.getElementById("item-category").value;
                 if (!title || !category) {
                     notify("請填寫標題和分類", "warning");
                     return;
                 }
-                        alert("Please fill in title and category");
-                        return;
-                    }
 
                     // Compress images before storing
                     let imageUrl = null;
