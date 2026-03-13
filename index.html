@@ -4518,7 +4518,10 @@ window.showItemDetail = async function (id) {
                         .getElementById("item-desc")
                         .value.trim();
 
-                    // Real-time validation
+                    // Use timestamp to find item later
+                const timestamp = Date.now();
+
+                // Real-time validation
                 if (!title || !category) {
                     notify("請填寫標題和分類", "warning");
                     return;
@@ -4582,8 +4585,7 @@ window.showItemDetail = async function (id) {
                             sellerId: peerId,
                             sellerName: displayName,
                             h3Index: currentH3Index,
-                            timestamp: Date.now(),
-                            imageUrl: imageUrl || "",
+                            timestamp: timestamp,
                             thumbnail: thumbnails[0] || "",
                             microThumbnail: microThumbnail,
                             imageHash: imageHash,
@@ -4593,9 +4595,8 @@ window.showItemDetail = async function (id) {
 
                         // Broadcast item metadata (peers will request images if needed - Gossip Protocol)
                         console.log("[P2P] Broadcasting", imageHashes.length, "images with hashes:", imageHashes);
-                    }
-
-                    if (!imageBlob && !imageUrl) {
+                    } else {
+                        // No images - create item without images
                         await db.items.add({
                             type: "marketplace",
                             status: "available",
@@ -4607,8 +4608,9 @@ window.showItemDetail = async function (id) {
                             sellerId: peerId,
                             sellerName: displayName,
                             h3Index: currentH3Index,
-                            timestamp: Date.now(),
+                            timestamp: timestamp,
                         });
+                        console.log("[P2P] Broadcasting item without image");
                     }
 
                     // Get the item we just saved
