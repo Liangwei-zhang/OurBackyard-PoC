@@ -2371,12 +2371,21 @@
                 },
 
                 base64ToArrayBuffer(base64) {
-                    const binary = atob(base64);
+                    if (!base64 || typeof base64 !== 'string') {
+                        console.warn("[Base64] Invalid input:", base64);
+                        return new ArrayBuffer(0);
+                    }
+                    try {
+                        const binary = atob(base64);
                     const bytes = new Uint8Array(binary.length);
                     for (let i = 0; i < binary.length; i++) {
                         bytes[i] = binary.charCodeAt(i);
                     }
                     return bytes.buffer;
+                    } catch (e) {
+                        console.warn("[Base64] Decode error:", e);
+                        return new ArrayBuffer(0);
+                    }
                 },
             };
 
