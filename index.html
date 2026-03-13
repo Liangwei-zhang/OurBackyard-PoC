@@ -4158,7 +4158,7 @@
           <div class="item-card ${item.status}" onclick="showItemDetail(${item.id})" data-item-id="${item.id}" data-updated-at="${item.updatedAt || 0}">
             <img class="item-image lazy"
                  data-item-id="${item.id}"
-                 data-hash="${item.imageHash || ''}"
+                 data-hash="${item.imageHash || (item.imageHashes && item.imageHashes[0]) || ''}"
                  src="${microPlaceholder}"
                  alt="${escapeHtml(item.title)}"
                  style="filter: blur(3px)"
@@ -4182,7 +4182,13 @@
                     if (window.ImageLazyLoader) {
                         const images = container.querySelectorAll('img[data-hash]');
                         images.forEach((img) => {
-                            if (!img.dataset.loaded) {
+                            if (!img.dataset.loaded && img.dataset.hash) {
+                                // Check if blob exists locally, if so load immediately
+                                db.blobs.where("hash").equals(img.dataset.hash).toArray().then(blobs => {
+                                    if (blobs.length > 0 && blobs[0].blob) {
+                                        window.ImageLazyLoader.requestImage(img.dataset.hash);
+                                    }
+                                });
                                 window.ImageLazyLoader.observe(img);
                             }
                         });
