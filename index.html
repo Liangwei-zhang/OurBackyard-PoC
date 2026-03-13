@@ -5862,6 +5862,46 @@ window.showItemDetail = async function (id) {
                 if (count > 0) updateChatPeerSelector();
             };
 
+            // Connect to a peer by creating an offer
+            async function connectToPeer(remotePeerId) {
+                if (!remotePeerId || remotePeerId === peerId) return;
+                if (peerConnections[remotePeerId] && peerConnections[remotePeerId].connectionState === "connected") {
+                    console.log("[P2P] Already connected to", remotePeerId);
+                    return;
+                }
+                
+                console.log("[P2P] Creating offer for", remotePeerId);
+                const pc = new RTCPeerConnection({
+                    iceServers: [
+                        { urls: "stun:stun.l.google.com:19302" },
+                        { urls: "stun:stun1.l.google.com:19302" },
+                        { urls: "turn:68.147.37.150:3478", username: "ourbackyard", credential: "calgary2024" },
+                    ],
+                });
+                
+                pc.onicecandidate = (e) => {
+                    if (e.candidate) {
+                        sendSignal(remotePeerId, { type: "ice-candidate", candidate: e.candidate });
+                    }
+                };
+                
+                pc.ondatachannel = (e) => setupDataChannel(remotePeerId, e.channel);
+                pc.onconnectionstatechange = () => {
+                    if (pc.connectionState === "connected") {
+                        console.log("[P2P] Connected to", remotePeerId);
+                    }
+                };
+                
+                const channel = pc.createDataChannel("data");
+                setupDataChannel(remotePeerId, channel);
+                
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                
+                sendSignal(remotePeerId, { type: "offer", sdp: offer });
+                peerConnections[remotePeerId] = pc;
+            }
+
             // Track peers from server messages
             function trackPeer(newPeerId) {
                 if (newPeerId && newPeerId !== peerId) {
