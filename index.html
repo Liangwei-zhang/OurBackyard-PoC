@@ -6285,24 +6285,30 @@ window.showItemDetail = async function (id) {
                     alert('Itemdoes not exist');
                     return;
                 }
-                // Handle new images if uploaded
+                // Handle new images if uploaded - support multiple images!
                 const photoInput = document.getElementById('edit-photos');
                 let newImageHash = item.imageHash;
                 let newImageHashes = item.imageHashes || [];
                 
                 if (photoInput && photoInput.files.length > 0) {
-                    const file = photoInput.files[0];
-                    const compressed = await compressImage(file);
-                    if (compressed) {
-                        const hash = await ImageRegistry.computeHash(compressed);
-                        await saveBlobWithQuotaCheck(hash, compressed);
-                        newImageHash = hash;
-                        newImageHashes = [hash]; // Update array
-                        console.log('[Edit] New image uploaded, hash:', hash);
-                        
-                        // Broadcast new image to neighbors!
-                        if (P2PStreamer && P2PStreamer.getPeers().length > 0) {
-                            await P2PStreamer.sendImage(id, compressed);
+                    newImageHashes = []; // Clear array if new images
+                    
+                    for (let i = 0; i < photoInput.files.length; i++) {
+                        const file = photoInput.files[i];
+                        const compressed = await compressImage(file, 800, 0.7);
+                        if (compressed) {
+                            const hash = await ImageRegistry.computeHash(compressed);
+                            await saveBlobWithQuotaCheck(hash, compressed);
+                            
+                            newImageHashes.push(hash);
+                            if (i === 0) newImageHash = hash; // First as thumbnail
+                            
+                            console.log('[Edit] New image processed, hash:', hash);
+                            
+                            // Broadcast new image to neighbors!
+                            if (P2PStreamer && P2PStreamer.getPeers().length > 0) {
+                                await P2PStreamer.sendImage(id, compressed);
+                            }
                         }
                     }
                 }
