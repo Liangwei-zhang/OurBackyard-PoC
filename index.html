@@ -5873,8 +5873,8 @@ window.showItemDetail = async function (id) {
                     }
                 };
                 dc.onopen = () => console.log("[P2P] Channel open:", peerId);
-                if (!dataChannels.has(peerId)) {
-                    dataChannels.set(peerId, dc);
+                if (!dataChannels[peerId]) {
+                    dataChannels[peerId] = dc;
                 }
             };
 
