@@ -1998,16 +1998,21 @@
 
                 // Compute SHA-256 hash of blob
                 async computeHash(blob) {
-                    const buffer = await blob.arrayBuffer();
-                    const hashBuffer = await crypto.subtle.digest(
-                        "SHA-256",
-                        buffer,
-                    );
-                    const hashArray = Array.from(new Uint8Array(hashBuffer));
-                    const hex = hashArray
-                        .map((b) => b.toString(16).padStart(2, "0"))
-                        .join("");
-                    return "img1-" + hex.substring(0, 32); // Short hash
+                    // Fallback when crypto.subtle not available (non-HTTPS)
+                    if (!window.crypto || !window.crypto.subtle) {
+                        console.warn("[ImageRegistry] crypto.subtle not available, using fallback hash");
+                        return "img-fallback-" + blob.size + "-" + Date.now();
+                    }
+                    try {
+                        const buffer = await blob.arrayBuffer();
+                        const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+                        const hashArray = Array.from(new Uint8Array(hashBuffer));
+                        const hex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+                        return "img1-" + hex.substring(0, 32);
+                    } catch (err) {
+                        console.error("[ImageRegistry] computeHash failed:", err);
+                        return "img-fallback-" + blob.size + "-" + Date.now();
+                    }
                 },
 
                 // Register an item's image hash
@@ -3028,6 +3033,11 @@
             }
             
             async function saveBlobWithQuotaCheck(hash, blobData) {
+                // Ensure hash is valid string
+                if (!hash || typeof hash !== 'string') {
+                    hash = "img-fallback-" + Date.now();
+                    console.warn("[Quota] Generated fallback hash:", hash);
+                }
                 try {
                     await db.transaction('rw', db.blobs, async () => {
                         const count = await db.blobs.count();
@@ -4530,9 +4540,11 @@ window.showItemDetail = async function (id) {
                             })
                         );
 
-                        // Process compressed results
+                        // Check if any images were successfully compressed
+                        let hasValidImage = false;
                         for (const result of compressedResults) {
                             if (!result.blob) continue;
+                            hasValidImage = true;
                             const hash = await ImageRegistry.computeHash(result.blob);
                             await saveBlobWithQuotaCheck(hash, result.blob);
                             imageHashes.push(hash);
