@@ -4226,51 +4226,21 @@ window.showItemDetail = async function (id) {
                 const defaultImg = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 x=%2250%22 y=%2255%22 text-anchor=%22middle%22>📷</text></svg>";
                 
                 // Support multiple images
-                const thumbnails = item.thumbnails || [];
                 const imageHashes = item.imageHashes || (item.imageHash ? [item.imageHash] : []);
                 
-                // Try to load images from IndexedDB
-                let loadedImages = [];
-                for (const hash of imageHashes) {
+                // Fix: Create array with correct length to avoid index mismatch
+                let allImages = new Array(imageHashes.length).fill(null);
+                
+                // Single loop - fill correct positions
+                for (let i = 0; i < imageHashes.length; i++) {
+                    const hash = imageHashes[i];
                     try {
                         const hashBlobs = await db.blobs.where("hash").equals(hash).toArray();
-                        if (hashBlobs.length > 0) {
-                            loadedImages.push(URL.createObjectURL(hashBlobs[0].blob));
+                        if (hashBlobs.length > 0 && hashBlobs[0].blob) {
+                            allImages[i] = ObjectUrlManager.getOrCreate(hash, hashBlobs[0].blob);
                         }
                     } catch (err) {
                         console.log("[Detail] Hash query failed:", err);
-                    }
-                }
-                
-                // Combine thumbnails (HTTP URLs + blob queries) and loaded blobs
-                let allImages = [...loadedImages];
-                
-                // Also try loading from thumbnails - both HTTP URLs and local blob hashes
-                for (const thumb of thumbnails) {
-                    if (thumb.startsWith('http')) {
-                        allImages.push(thumb);
-                    } else {
-                        // It's a hash - query from blobs
-                        const thumbBlobs = await db.blobs.where("hash").equals(thumb).toArray();
-                        if (thumbBlobs.length > 0) {
-                            allImages.push(URL.createObjectURL(thumbBlobs[0].blob));
-                        }
-                    }
-                }
-                
-                // Load images from blob by hash (thumbnails now contains hashes)
-                for (const h of imageHashes) {
-                    const blobs = await db.blobs.where("hash").equals(h).toArray();
-                    if (blobs.length > 0 && blobs[0].blob) {
-                        allImages.push(URL.createObjectURL(blobs[0].blob));
-                    }
-                }
-                
-                // Fallback to thumbnail
-                if (allImages.length === 0 && item.thumbnail) {
-                    const blobs = await db.blobs.where("hash").equals(item.thumbnail).toArray();
-                    if (blobs.length > 0 && blobs[0].blob) {
-                        allImages = [URL.createObjectURL(blobs[0].blob)];
                     }
                 }
                 
