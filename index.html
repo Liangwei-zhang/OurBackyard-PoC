@@ -4589,15 +4589,22 @@ window.showItemDetail = async function (id) {
                     }
 
                     // Get the item we just saved
-                    const fullItem = await db.items.where("timestamp").equals(timestamp).first();
+                    let fullItem = await db.items.where("timestamp").equals(timestamp).first();
                     if (!fullItem) {
                         console.error("[Publish] Could not find published item");
                         return;
                     }
                     
+                    // Ensure broadcast has all image data
+                    const broadcastData = {
+                        ...fullItem,
+                        imageHash: fullItem.imageHash || null,
+                        imageHashes: fullItem.imageHashes || [],
+                    };
+                    
                     // Try to broadcast immediately, queue if offline
                     const broadcastNow = () => {
-                        broadcastNewItem(fullItem);
+                        broadcastNewItem(broadcastData);
                     };
                     
                     if ('serviceWorker' in navigator && 'sync' in ServiceWorkerRegistration.prototype) {
