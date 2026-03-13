@@ -4238,13 +4238,16 @@ window.showItemDetail = async function (id) {
                     }
                 }
                 
-                // Combine thumbnails (query blobs for each hash) and loaded blobs
+                // Combine thumbnails (HTTP URLs + blob queries) and loaded blobs
                 let allImages = [...loadedImages];
                 
-                // Also try loading from thumbnails hashes
-                for (const hash of thumbnails) {
-                    if (!hash.startsWith('http')) {
-                        const thumbBlobs = await db.blobs.where("hash").equals(hash).toArray();
+                // Also try loading from thumbnails - both HTTP URLs and local blob hashes
+                for (const thumb of thumbnails) {
+                    if (thumb.startsWith('http')) {
+                        allImages.push(thumb);
+                    } else {
+                        // It's a hash - query from blobs
+                        const thumbBlobs = await db.blobs.where("hash").equals(thumb).toArray();
                         if (thumbBlobs.length > 0) {
                             allImages.push(URL.createObjectURL(thumbBlobs[0].blob));
                         }
