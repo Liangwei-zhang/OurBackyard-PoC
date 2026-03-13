@@ -4556,7 +4556,7 @@ window.showItemDetail = async function (id) {
                                 imageHash = hash;
                                 const objectUrl = ObjectUrlManager.getOrCreate(hash, result.blob);
                                 thumbnails.push(hash); // Store hash, not blob URL
-                                imageUrl = "p2p://p2p_" + Date.now();
+                                imageUrl = "";
                             }
                         }
 
