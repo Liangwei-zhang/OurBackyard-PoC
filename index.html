@@ -2189,16 +2189,8 @@
 
                 // Prompt user for password (simple implementation)
                 async promptPassword() {
-                    return new Promise((resolve) => {
-                        // Show loading while waiting for password
-                        const loadingEl = document.getElementById("publish-progress");
-                        if (loadingEl) loadingEl.style.display = "block";
-                        
-                        const password = prompt("Enter your password to decrypt identity key:");
-                        if (loadingEl) loadingEl.style.display = "none";
-                        
-                        resolve(password || "");
-                    });
+                    // Password prompt disabled - return empty for now
+                    return Promise.resolve("");
                 },
 
 // Generate or load key pair
