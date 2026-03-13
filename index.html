@@ -4271,14 +4271,17 @@ window.showItemDetail = async function (id) {
                 
                 let allImages = results.map(r => r.url);
                 
-                // Build gallery - simple horizontal scroll with snap
+                // Build gallery with dots navigation
                 if (imageHashes.length > 1) {
+                    const gid = 'g' + item.id;
                     let slidesHtml = '';
+                    let dotsHtml = '';
                     for (let i = 0; i < imageHashes.length; i++) {
                         const src = allImages[i] || defaultImg;
-                        slidesHtml += '<img data-hash="' + imageHashes[i] + '" src="' + src + '" style="flex:0 0 100%;object-fit:contain;height:100%;min-width:100%;scroll-snap-align:center" onerror="this.src=\'' + defaultImg + '\'">';
+                        slidesHtml += '<img id="' + gid + 'img' + i + '" data-hash="' + imageHashes[i] + '" src="' + src + '" style="width:100%;height:100%;object-fit:contain;display:' + (i === 0 ? 'block' : 'none') + '" onerror="this.src=\'' + defaultImg + '\'">';
+                        dotsHtml += '<span id="' + gid + 'dot' + i + '" onclick="showSlide(\'' + gid + '\',' + i + ',' + imageHashes.length + ')" style="width:10px;height:10px;border-radius:50%;background:' + (i === 0 ? '#fff' : '#999') + ';display:inline-block;margin:0 4px;cursor:pointer"></span>';
                     }
-                    imagesHtml = '<div style="width:100%;aspect-ratio:4/3;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;display:flex;gap:0;background:#000;border-radius:12px">' + slidesHtml + '</div>';
+                    imagesHtml = '<div style="width:100%;aspect-ratio:4/3;background:#000;border-radius:12px;position:relative">' + slidesHtml + '<div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex">' + dotsHtml + '</div></div>';
                 } else if (imageHashes.length === 1) {
                     imagesHtml = `<img data-hash="${imageHashes[0]}" src="${allImages[0] || defaultImg}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
                 } else {
