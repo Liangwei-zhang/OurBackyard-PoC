@@ -5864,7 +5864,14 @@ window.showItemDetail = async function (id) {
 
             // Make setupDataChannel accessible globally
             window.setupDataChannelGlobal = function(peerId, dc) {
-                dc.onmessage = (e) => handleDataChannelMessage(peerId, e.data);
+                dc.onmessage = (e) => {
+                    // Handle incoming data
+                    if (e.data instanceof ArrayBuffer || e.data instanceof Blob) {
+                        console.log("[P2P] Received binary data from", peerId);
+                    } else {
+                        console.log("[P2P] Received message from", peerId, e.data);
+                    }
+                };
                 dc.onopen = () => console.log("[P2P] Channel open:", peerId);
                 if (!dataChannels.has(peerId)) {
                     dataChannels.set(peerId, dc);
