@@ -4032,7 +4032,14 @@
                 document.querySelectorAll(".sort-btn").forEach((btn) => {
                     btn.classList.toggle("active", btn.dataset.sort === sortBy);
                 });
-                // Re-render
+                
+                // If no items loaded yet, load them first
+                if (!currentItems || currentItems.length === 0) {
+                    loadItems();
+                    return;
+                }
+                
+                // Re-render with sorted items
                 const sorted = sortItemsData(currentItems, sortBy);
                 renderMarketGrid(
                     sorted,
