@@ -5862,6 +5862,15 @@ window.showItemDetail = async function (id) {
                 if (count > 0) updateChatPeerSelector();
             };
 
+            // Make setupDataChannel accessible globally
+            window.setupDataChannelGlobal = function(peerId, dc) {
+                dc.onmessage = (e) => handleDataChannelMessage(peerId, e.data);
+                dc.onopen = () => console.log("[P2P] Channel open:", peerId);
+                if (!dataChannels.has(peerId)) {
+                    dataChannels.set(peerId, dc);
+                }
+            };
+
             // Connect to a peer by creating an offer
             async function connectToPeer(remotePeerId) {
                 if (!remotePeerId || remotePeerId === peerId) return;
@@ -5885,7 +5894,7 @@ window.showItemDetail = async function (id) {
                     }
                 };
                 
-                pc.ondatachannel = (e) => setupDataChannel(remotePeerId, e.channel);
+                pc.ondatachannel = (e) => window.setupDataChannelGlobal(remotePeerId, e.channel);
                 pc.onconnectionstatechange = () => {
                     if (pc.connectionState === "connected") {
                         console.log("[P2P] Connected to", remotePeerId);
@@ -5893,7 +5902,7 @@ window.showItemDetail = async function (id) {
                 };
                 
                 const channel = pc.createDataChannel("data");
-                setupDataChannel(remotePeerId, channel);
+                window.setupDataChannelGlobal(remotePeerId, channel);
                 
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
