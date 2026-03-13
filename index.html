@@ -4603,20 +4603,12 @@ window.showItemDetail = async function (id) {
                         });
                     }
 
-                    // Broadcast to neighbors (or queue if offline)
-                    const fullItem = {
-                        title,
-                        category,
-                        price,
-                        condition,
-                        description,
-                        sellerId: peerId,
-                        sellerName: displayName,
-                        status: "available",
-                        timestamp: Date.now(),
-                        imageUrl,
-                        imageHash: imageHash || null,
-                    };
+                    // Get the item we just saved
+                    const fullItem = await db.items.where("timestamp").equals(timestamp).first();
+                    if (!fullItem) {
+                        console.error("[Publish] Could not find published item");
+                        return;
+                    }
                     
                     // Try to broadcast immediately, queue if offline
                     const broadcastNow = () => {
