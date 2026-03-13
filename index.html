@@ -4215,21 +4215,27 @@ window.showItemDetail = async function (id) {
                 // Support multiple images
                 const imageHashes = item.imageHashes || (item.imageHash ? [item.imageHash] : []);
                 
-                // Fix: Create array with correct length to avoid index mismatch
-                let allImages = new Array(imageHashes.length).fill(null);
-                
-                // Single loop - fill correct positions
-                for (let i = 0; i < imageHashes.length; i++) {
-                    const hash = imageHashes[i];
-                    try {
-                        const hashBlobs = await db.blobs.where("hash").equals(hash).toArray();
-                        if (hashBlobs.length > 0 && hashBlobs[0].blob) {
-                            allImages[i] = ObjectUrlManager.getOrCreate(hash, hashBlobs[0].blob);
+                // Use Promise.all for parallel loading
+                const results = await Promise.all(
+                    imageHashes.map(async (hash) => {
+                        try {
+                            const record = await db.blobs.where("hash").equals(hash).first();
+                            if (record && record.blob) {
+                                return { hash, url: ObjectUrlManager.getOrCreate(hash, record.blob) };
+                            }
+                            // Request from neighbor if not cached
+                            if (item.sellerId !== peerId) {
+                                executeImageRequest(hash, item.sellerId);
+                            }
+                            return { hash, url: null };
+                        } catch (err) {
+                            console.log("[Detail] Hash query failed:", err);
+                            return { hash, url: null };
                         }
-                    } catch (err) {
-                        console.log("[Detail] Hash query failed:", err);
-                    }
-                }
+                    })
+                );
+                
+                let allImages = results.map(r => r.url);
                 
                 // Build gallery HTML with data-hash for lazy loading
                 if (imageHashes.length > 1) {
