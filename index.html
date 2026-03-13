@@ -4279,7 +4279,7 @@ window.showItemDetail = async function (id) {
                     for (let i = 0; i < imageHashes.length; i++) {
                         const src = allImages[i] || defaultImg;
                         slidesHtml += '<img id="' + gid + 'img' + i + '" data-hash="' + imageHashes[i] + '" src="' + src + '" style="width:100%;height:100%;object-fit:contain;display:' + (i === 0 ? 'block' : 'none') + '" onerror="this.src=\'' + defaultImg + '\'">';
-                        dotsHtml += '<span id="' + gid + 'dot' + i + '" onclick="showSlide(\'' + gid + '\',' + i + ',' + imageHashes.length + ')" style="width:10px;height:10px;border-radius:50%;background:' + (i === 0 ? '#fff' : '#999') + ';display:inline-block;margin:0 4px;cursor:pointer"></span>';
+                        dotsHtml += '<span id="' + gid + 'dot' + i + '" onclick="showGallerySlide(\'' + gid + '\',' + i + ',' + imageHashes.length + ')" style="width:10px;height:10px;border-radius:50%;background:' + (i === 0 ? '#fff' : '#999') + ';display:inline-block;margin:0 4px;cursor:pointer"></span>';
                     }
                     imagesHtml = '<div style="width:100%;aspect-ratio:4/3;background:#000;border-radius:12px;position:relative">' + slidesHtml + '<div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex">' + dotsHtml + '</div></div>';
                 } else if (imageHashes.length === 1) {
