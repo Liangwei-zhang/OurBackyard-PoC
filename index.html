@@ -4271,12 +4271,12 @@ window.showItemDetail = async function (id) {
                 
                 let allImages = results.map(r => r.url);
                 
-                // Build gallery HTML with data-hash for lazy loading
+                // Build gallery HTML with horizontal sliding for multiple images
                 if (imageHashes.length > 1) {
-                    imagesHtml = `<div class="detail-gallery" style="display:flex;flex-direction:column;gap:8px">
+                    imagesHtml = `<div class="detail-gallery" style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:8px;padding:8px 0;aspect-ratio:4/3">
                         ${imageHashes.map((hash, i) => {
                             const src = allImages[i] || defaultImg;
-                            return `<img data-hash="${hash}" src="${src}" style="width:100%;border-radius:12px;object-fit:cover;max-height:300px" onerror="this.src='${defaultImg}'">`;
+                            return `<img data-hash="${hash}" src="${src}" style="flex:0 0 85%;scroll-snap-align:center;border-radius:12px;object-fit:cover;aspect-ratio:4/3" onerror="this.src='${defaultImg}'">`;
                         }).join('')}
                     </div>`;
                 } else if (imageHashes.length === 1) {
