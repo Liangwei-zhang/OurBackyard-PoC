@@ -2452,19 +2452,6 @@
                 db.version(4).stores({
                     items: "++id, imageHash, title, category, price, status, sellerId, h3Index, timestamp",
                     blobs: "++id, hash, itemId, timestamp",
-                    items: "++id, title, category, price, status, sellerId, h3Index, timestamp",
-                    blobs: "itemId, hash",
-                    sync: "++id, type",
-                    userData: "key",
-                    secureData: "key",
-                    systemAssets: "url, hash, version",
-                    blocklist: "itemHash, reason, timestamp",
-                });
-
-                // v5: Add imageHash index
-                db.version(5).stores({
-                    items: "++id, imageHash, title, category, price, status, sellerId, h3Index, timestamp",
-                    blobs: "hash, itemId, timestamp", // timestamp index for LRU cleanup
                     sync: "++id, type",
                     userData: "key",
                     secureData: "key",
