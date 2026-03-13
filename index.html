@@ -283,6 +283,34 @@
              .stat-label { font-size: 11px; color: #888; flex: 1; }
              .stat-value { font-size: 12px; font-weight: 600; color: var(--text); }
              .stat-item.full-width { grid-column: span 2; }
+
+            /* Scroll Snap Gallery */
+            .scroll-container {
+                display: flex;
+                overflow-x: auto;
+                scroll-snap-type: x mandatory;
+                gap: 0;
+                padding: 10px;
+                -webkit-overflow-scrolling: touch;
+                aspect-ratio: 4/3;
+                background: #000;
+                border-radius: 12px;
+            }
+            .scroll-container::-webkit-scrollbar { display: none; }
+            .scroll-container { -ms-overflow-style: none; scrollbar-width: none; }
+            .scroll-item {
+                flex: 0 0 85%;
+                scroll-snap-align: center;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .scroll-item img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                border-radius: 8px;
+            }
              .p2p-toggles { display: flex; gap: 8px; }
              .toggle-label { font-size: 10px; color: #666; display: flex; align-items: center; gap: 2px; }
              .toggle-label input { width: 12px; height: 12px; }
@@ -2752,6 +2780,23 @@
             window.openGallery = function(total) {
                 var scrollContainer = document.querySelector('.scroll-container');
                 if (!scrollContainer) return;
+                
+                // Add close button
+                var closeBtn = document.createElement('div');
+                closeBtn.innerHTML = '✕';
+                closeBtn.style.cssText = 'position:fixed;top:20px;right:20px;width:40px;height:40px;background:rgba(0,0,0,0.7);color:#fff;border-radius:50%;font-size:20px;display:flex;align-items:center;justify-content:center;z-index:10000;cursor:pointer';
+                closeBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    scrollContainer.style.position = '';
+                    scrollContainer.style.top = '';
+                    scrollContainer.style.left = '';
+                    scrollContainer.style.width = '';
+                    scrollContainer.style.height = '';
+                    scrollContainer.style.zIndex = '';
+                    scrollContainer.style.aspectRatio = '4/3';
+                    this.remove();
+                };
+                
                 scrollContainer.style.position = 'fixed';
                 scrollContainer.style.top = '0';
                 scrollContainer.style.left = '0';
@@ -2759,14 +2804,11 @@
                 scrollContainer.style.height = '100%';
                 scrollContainer.style.zIndex = '9999';
                 scrollContainer.style.aspectRatio = '';
-                scrollContainer.onclick = function() {
-                    this.style.position = '';
-                    this.style.top = '';
-                    this.style.left = '';
-                    this.style.width = '';
-                    this.style.height = '';
-                    this.style.zIndex = '';
-                    this.style.aspectRatio = '4/3';
+                document.body.appendChild(closeBtn);
+                
+                scrollContainer.onclick = function(e) {
+                    if (e.target === closeBtn) return;
+                    closeBtn.click();
                 };
             };
 
