@@ -4581,15 +4581,13 @@ window.showItemDetail = async function (id) {
                     let fullItem = await db.items.where("timestamp").equals(timestamp).first();
                     if (!fullItem) {
                         console.error("[Publish] Item not found");
-                    } else {
-                        // Ensure imageHashes is complete
-                        fullItem.imageHashes = fullItem.imageHashes || [];
-                        if (fullItem.imageHash && !fullItem.imageHashes.includes(fullItem.imageHash)) {
-                            fullItem.imageHashes.unshift(fullItem.imageHash);
-                        }
-                    }
-                        console.error("[Publish] Could not find published item");
                         return;
+                    }
+                    
+                    // Ensure imageHashes is complete
+                    fullItem.imageHashes = fullItem.imageHashes || [];
+                    if (fullItem.imageHash && !fullItem.imageHashes.includes(fullItem.imageHash)) {
+                        fullItem.imageHashes.unshift(fullItem.imageHash);
                     }
                     
                     // Ensure broadcast has all image data
