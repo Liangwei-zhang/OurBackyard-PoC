@@ -4254,12 +4254,20 @@ window.showItemDetail = async function (id) {
                     }
                 }
                 
-                // Fallback to single image
-                if (allImages.length === 0 && item.imageUrl) {
-                    allImages = [item.imageUrl];
+                // Load images from blob by hash (thumbnails now contains hashes)
+                for (const h of imageHashes) {
+                    const blobs = await db.blobs.where("hash").equals(h).toArray();
+                    if (blobs.length > 0 && blobs[0].blob) {
+                        allImages.push(URL.createObjectURL(blobs[0].blob));
+                    }
                 }
+                
+                // Fallback to thumbnail
                 if (allImages.length === 0 && item.thumbnail) {
-                    allImages = [item.thumbnail];
+                    const blobs = await db.blobs.where("hash").equals(item.thumbnail).toArray();
+                    if (blobs.length > 0 && blobs[0].blob) {
+                        allImages = [URL.createObjectURL(blobs[0].blob)];
+                    }
                 }
                 
                 // Build gallery HTML with data-hash for lazy loading
