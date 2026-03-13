@@ -4039,12 +4039,13 @@
                     return;
                 }
                 
+                // Clear container to force re-render with new order
+                const container = document.getElementById("market-grid");
+                if (container) container.innerHTML = '';
+                
                 // Re-render with sorted items
                 const sorted = sortItemsData(currentItems, sortBy);
-                renderMarketGrid(
-                    sorted,
-                    document.getElementById("market-grid"),
-                );
+                renderMarketGrid(sorted, container);
             }
 
             function sortItemsData(items, sortBy) {
