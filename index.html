@@ -3297,20 +3297,19 @@
             }, 30000);
             
             // Timeout retry mechanism - re-request stalled images
+            // Retry mechanism - re-request stalled images after 10 seconds
             setInterval(() => {
                 for (const hash in incomingImages) {
                     const img = incomingImages[hash];
-                    if (!img.complete && Date.now() - (img.lastUpdate || 0) > 5000) {
-                        console.log("[Retry] Image stalled, re-requesting:", hash);
+                    if (Date.now() - (img.lastUpdate || 0) > 10000 && img.sellerId) {
+                        console.log("[Retry] Image stalled, re-requesting:", hash, "from", img.sellerId);
                         // Re-request from neighbors
-                        const item = Object.values(incomingImages).find(i => i.hash === hash);
-                        if (item && item.sellerId) {
-                            requestImageFromNeighbors(hash, item.sellerId);
-                        }
-                        img.lastUpdate = Date.now();
+                        window.imageDownloadQueue.push({ hash: hash, sellerId: img.sellerId });
+                        processDownloadQueue();
+                        img.lastUpdate = Date.now(); // Prevent infinite retries
                     }
                 }
-            }, 5000);
+            }, 10000);
 
             function handleBinaryImageChunk(imageHash, chunk, isLastChunk, sellerId) {
                 if (!incomingImages[imageHash]) {
@@ -4879,7 +4878,7 @@ window.showItemDetail = async function (id) {
                 }
                 
                 window.currentDownloadingCount++;
-                console.log("[Queue] Starting download:", imageHash, "Active:", window.currentDownloadingCount);
+                console.log("[Image] Requesting from seller::", imageHash, "Active:", window.currentDownloadingCount);
                 
                 ws.send(JSON.stringify({
                     type: "REQ_IMAGE",
