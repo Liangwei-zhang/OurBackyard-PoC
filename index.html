@@ -3049,9 +3049,11 @@
                                 ObjectUrlManager.revoke(old.hash);
                             }
                         }
+                        // Ensure blobData is a Blob, not ArrayBuffer/Uint8Array
+                        const blob = blobData instanceof Blob ? blobData : new Blob([blobData]);
                         await db.blobs.put({
                             hash,
-                            blob: blobData,
+                            blob: blob,
                             timestamp: Date.now()
                         });
                     });
