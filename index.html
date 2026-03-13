@@ -5659,6 +5659,15 @@ window.showItemDetail = async function (id) {
                         window._itemIdMapping = window._itemIdMapping || {};
                         window._itemIdMapping[item.id] = localId;
                     }
+                    
+                    // Request ALL missing images from seller
+                    const hashes = item.imageHashes || (item.imageHash ? [item.imageHash] : []);
+                    for (const hash of hashes) {
+                        if (item.sellerId !== peerId) {
+                            executeImageRequest(hash, item.sellerId);
+                        }
+                    }
+                    
                     loadItems();
                 }
             }
