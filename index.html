@@ -7,7 +7,7 @@
             content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
         />
         <meta name="theme-color" content="#6366f1" />
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data:; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src * data: blob:; connect-src 'self' wss: https:; font-src https://fonts.gstatic.com;">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data:; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net 'unsafe-inline'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src * data: blob:; connect-src 'self' wss: https:; font-src https://fonts.gstatic.com;">
         <meta name="description" content="Decentralized P2P community marketplace" />
         <link rel="manifest" href="/manifest.json" />
         <title>🏡 OurBackyard - 社區微商城</title>
@@ -4238,8 +4238,18 @@ window.showItemDetail = async function (id) {
                     }
                 }
                 
-                // Combine thumbnails and loaded blobs
-                let allImages = [...thumbnails.filter(t => t.startsWith('http')), ...loadedImages];
+                // Combine thumbnails (query blobs for each hash) and loaded blobs
+                let allImages = [...loadedImages];
+                
+                // Also try loading from thumbnails hashes
+                for (const hash of thumbnails) {
+                    if (!hash.startsWith('http')) {
+                        const thumbBlobs = await db.blobs.where("hash").equals(hash).toArray();
+                        if (thumbBlobs.length > 0) {
+                            allImages.push(URL.createObjectURL(thumbBlobs[0].blob));
+                        }
+                    }
+                }
                 
                 // Fallback to single image
                 if (allImages.length === 0 && item.imageUrl) {
