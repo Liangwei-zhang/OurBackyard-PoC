@@ -1222,7 +1222,11 @@
                         );
                     };
 
-                    img.onerror = () => resolve(null);
+                    img.onerror = () => {
+                    // Suppress errors for invalid blob URLs - they're expected after refresh
+                    console.log("[Image] Failed to load, will retry");
+                    resolve(null);
+                };
                     img.src = URL.createObjectURL(file);
                 });
             }
@@ -4073,7 +4077,7 @@
                     .map(
                         (item) => `
         <div class="ai-item" onclick="showItemDetail(${item.id})">
-          <img class="ai-item-img" src="${item.thumbnail || item.imageUrl || ""}" alt="${escapeHtml(item.title)}" onerror="this.style.display='none'">
+          <img class="ai-item-img" src="${item.thumbnail || item.imageUrl || ""}" alt="${escapeHtml(item.title)}" onerror="this.style.display='none'" onload="this.classList.add('loaded'); this.style.filter='none'">
           <div class="ai-item-title">${escapeHtml(item.title)}</div>
         </div>
       `,
