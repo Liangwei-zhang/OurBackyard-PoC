@@ -4271,14 +4271,34 @@ window.showItemDetail = async function (id) {
                 
                 let allImages = results.map(r => r.url);
                 
-                // Build gallery HTML with horizontal sliding for multiple images
+                // Build gallery HTML with horizontal sliding and dots
                 if (imageHashes.length > 1) {
-                    imagesHtml = `<div class="detail-gallery" style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:8px;padding:8px 0;aspect-ratio:4/3">
-                        ${imageHashes.map((hash, i) => {
-                            const src = allImages[i] || defaultImg;
-                            return `<img data-hash="${hash}" src="${src}" style="flex:0 0 85%;scroll-snap-align:center;border-radius:12px;object-fit:cover;aspect-ratio:4/3" onerror="this.src='${defaultImg}'">`;
-                        }).join('')}
-                    </div>`;
+                    const dotsHtml = imageHashes.map((_, i) => `<span class="gallery-dot" data-index="${i}" style="width:8px;height:8px;border-radius:50%;background:#ccc;display:inline-block;margin:0 3px;cursor:pointer"></span>`).join('');
+                    imagesHtml = `
+                        <div class="detail-gallery" id="detailGallery" style="position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;border-radius:12px">
+                            <div class="gallery-slides" style="display:flex;transition:transform 0.3s ease;height:100%">
+                                ${imageHashes.map((hash, i) => {
+                                    const src = allImages[i] || defaultImg;
+                                    return `<img data-hash="${hash}" src="${src}" style="flex:0 0 100%;object-fit:cover;height:100%" onerror="this.src='${defaultImg}'">`;
+                                }).join('')}
+                            </div>
+                            <div class="gallery-dots" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:4px">${dotsHtml}</div>
+                        </div>
+                        <script>
+                            const gallery = document.getElementById('detailGallery');
+                            const slides = gallery.querySelector('.gallery-slides');
+                            const dots = gallery.querySelectorAll('.gallery-dot');
+                            let currentSlide = 0;
+                            dots.forEach((dot, i) => {
+                                dot.addEventListener('click', () => {
+                                    currentSlide = i;
+                                    slides.style.transform = 'translateX(-' + (i * 100) + '%)';
+                                    dots.forEach(d => d.style.background = '#ccc');
+                                    dot.style.background = '#fff';
+                                });
+                            });
+                            if(dots[0]) dots[0].style.background = '#fff';
+                        </script>`;
                 } else if (imageHashes.length === 1) {
                     imagesHtml = `<img data-hash="${imageHashes[0]}" src="${allImages[0] || defaultImg}" style="width:100%;border-radius:16px;margin-bottom:16px" onerror="this.src='${defaultImg}'">`;
                 } else {
