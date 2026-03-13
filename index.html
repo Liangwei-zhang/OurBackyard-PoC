@@ -7,7 +7,7 @@
             content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
         />
         <meta name="theme-color" content="#6366f1" />
-        <meta http-equiv="Content-Security-Policy" content="default-src *; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: blob:; connect-src * wss: https:; font-src *;">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data:; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src * data: blob:; connect-src 'self' wss: https:; font-src https://fonts.gstatic.com;">
         <meta name="description" content="Decentralized P2P community marketplace" />
         <link rel="manifest" href="/manifest.json" />
         <title>🏡 OurBackyard - 社區微商城</title>
@@ -961,6 +961,7 @@
                         <span class="stat-icon">🗑️</span>
                         <span class="stat-label">重置</span>
                         <button class="btn btn-sm" onclick="exportMyData()">導出數據</button>
+                    <button class="btn btn-sm" onclick="importIdentity()">恢復身份</button>
                     <button class="btn btn-sm" style="background:#f44336;color:white" onclick="resetApp()">清除數據</button>
                     </div>
                     <!-- App Update -->
@@ -1796,7 +1797,7 @@
                     if (!localManifest || !remoteManifest) return null;
 
                     // Find missing blocks
-                    const localBlocks = new Set(localManifest.blocks?.map(b => b.hash) || []);
+                    const localBlocks = new Set(localManifest.blocks ? localManifest.blocks.map(b => b.hash) : []);
                     const missingBlocks = remoteManifest.blocks.filter(b => !localBlocks.has(b.hash));
 
                     console.log("[Delta] Local blocks: " + localBlocks.size + ", Missing: " + missingBlocks.length);
@@ -1805,10 +1806,10 @@
                 async applyDeltaUpdate(remoteBundle, missingBlocks) {
                     // Get local blocks
                     const localBundle = await db.systemAssets.get("app-bundle");
-                    const localBlocks = localBundle?.blocks || [];
+                    const localBlocks = (localBundle ? localBundle.blocks : []) || [];
 
                     // Merge blocks
-                    const mergedBlocks = [...localBundle?.blocks || [], ...missingBlocks];
+                    const mergedBlocks = [...(localBundle ? localBundle.blocks : []) || [], ...missingBlocks];
 
                     // Reassemble files
                     for (const [filename, expectedHash] of Object.entries(remoteBundle.fileHashes)) {
@@ -1864,7 +1865,10 @@
                         itemHash: itemHash,
                         reason: reason,
                         reporterId: peerId,
-                        reporterRep: parseInt(document.getElementById("reputation")?.textContent || "50"),
+                        reporterRep: parseInt((async () => {
+                const repRecord = await db.userData.get("reputation");
+                return repRecord?.value || 50;
+            })()) || "50"),
                         timestamp: Date.now()
                     };
 
@@ -2266,7 +2270,7 @@
                         console.log("[DID] Private key encrypted and stored securely");
                     } else {
                         // No password - store unencrypted (not recommended)
-                        localStorage.setItem("did_privateKey", this.arrayBufferToBase64(privateKeyBuffer));
+                        // Private key already stored encrypted in IndexedDB, skip localStorage
                     }
                     localStorage.setItem("did_publicKey", this.publicKey);
 
@@ -2431,10 +2435,14 @@
 
             // Global db reference - initialize immediately after Dexie loads
             let db;
+            let debouncedLoadItems; // Forward declaration
 
-            function initDB() {
+            async function initDB() {
                 db = window.db = new Dexie("OurBackyardDB");
+                // Define schema BEFORE opening
                 db.version(4).stores({
+                    items: "++id, imageHash, title, category, price, status, sellerId, h3Index, timestamp",
+                    blobs: "++id, hash, itemId, timestamp",
                     items: "++id, title, category, price, status, sellerId, h3Index, timestamp",
                     blobs: "itemId, hash",
                     sync: "++id, type",
@@ -2454,7 +2462,8 @@
                     systemAssets: "url, hash, version",
                     blocklist: "itemHash, reason, timestamp",
                 });
-                console.log("IndexedDB initialized v5 with imageHash index");
+                await db.open();
+                console.log("IndexedDB initialized and opened");
             }
 
             // Initialize after Dexie is ready
@@ -2475,7 +2484,7 @@
                         db.userData.put({ key: "displayName", value: displayName });
                     }
                     document.getElementById("input-name").value = displayName;
-                    connect(); // Auto-connect
+                    // connect() will be called after initLocation
                 }); // end then
 
             } // end initApp
@@ -2783,7 +2792,11 @@
                     const exportData = {
                         exportDate: new Date().toISOString(),
                         items: items,
-                        images: blobs.length + " images (not exported due to size)",
+                        // Export images as base64 (limited to 10 for size)
+                    images: await Promise.all(blobs.slice(0, 10).map(async b => {
+                        const buf = await b.blob.arrayBuffer();
+                        return { hash: b.hash, data: btoa(String.fromCharCode(...new Uint8Array(buf))) };
+                    })),
                         userData: userData,
                         version: "OurBackyard Export v1"
                     };
@@ -2797,10 +2810,53 @@
                     URL.revokeObjectURL(url);
                     
                     notify("數據導出成功！", "success");
+                    
+                    // Also export identity key if available
+                    try {
+                        const privateKey = localStorage.getItem("did_privateKey");
+                        const publicKey = localStorage.getItem("did_publicKey");
+                        if (privateKey || publicKey) {
+                            const identityData = { privateKey, publicKey, exportedAt: Date.now() };
+                            const identityBlob = new Blob([JSON.stringify(identityData)], {type: "application/json"});
+                            const identityUrl = URL.createObjectURL(identityBlob);
+                            const a = document.createElement("a");
+                            a.href = identityUrl;
+                            a.download = "ourbackyard-identity-" + Date.now() + ".json";
+                            a.click();
+                            URL.revokeObjectURL(identityUrl);
+                        }
+                    } catch (err) {
+                        console.error("[Export] Identity error:", err);
+                    }
                 } catch (err) {
                     console.error("[Export] Error:", err);
                     notify("導出失敗: " + err.message, "error");
                 }
+            };
+
+            // ============ Identity Import ============
+            window.importIdentity = async function() {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = ".json";
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    try {
+                        const text = await file.text();
+                        const data = JSON.parse(text);
+                        if (data.privateKey) {
+                            localStorage.setItem("did_privateKey", data.privateKey);
+                        }
+                        if (data.publicKey) {
+                            localStorage.setItem("did_publicKey", data.publicKey);
+                        }
+                        notify("身份已恢復，請刷新頁面", "success");
+                    } catch (err) {
+                        notify("恢復失敗: " + err.message, "error");
+                    }
+                };
+                input.click();
             };
 
             // ============ Haptic Feedback ============
@@ -3064,6 +3120,7 @@
 
             // Initialize lazy loader
             ImageLazyLoader.init();
+            window.ImageLazyLoader = ImageLazyLoader;
 
             // ============ Adaptive Heartbeat (Battery Optimization) ============
             // Track user activity for dynamic heartbeat
@@ -3074,6 +3131,13 @@
                     lastActivityTime = Date.now();
                 }, { passive: true });
             });
+
+            function stopHeartbeat() {
+                if (heartbeatInterval) {
+                    clearInterval(heartbeatInterval);
+                    heartbeatInterval = null;
+                }
+            }
 
             function startHeartbeat(interval = HEARTBEAT_INTERVAL) {
                 if (heartbeatInterval) clearInterval(heartbeatInterval);
@@ -3565,6 +3629,7 @@
 
             // Initialize
             initLocation().then(() => {
+                connect(); // Connect after location is ready
                 loadItems();
                 renderCategories();
                 initReputation();
@@ -3951,7 +4016,7 @@
             }
             
             // Debounced loadItems to prevent高频调用
-            const debouncedLoadItems = debounce(loadItems, 300);
+            let debouncedLoadItems = debounce(loadItems, 300);
 
             // ============ Sort Items ============
             function sortItems(sortBy) {
@@ -4318,7 +4383,12 @@ window.showItemDetail = async function (id) {
                 .getElementById("item-photos")
                 .addEventListener("change", async (e) => {
                     // Limit to 4 photos
-                    const newFiles = Array.from(e.target.files).slice(0, 4 - selectedPhotos.length);
+                    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+                    const validFiles = Array.from(e.target.files).filter(f => f.size <= MAX_FILE_SIZE);
+                    const newFiles = validFiles.slice(0, 4 - selectedPhotos.length);
+                    if (validFiles.length !== e.target.files.length) {
+                        alert("每張圖片不能超過 5MB");
+                    }
                     selectedPhotos = [...selectedPhotos, ...newFiles];
                     
                     renderPhotoPreview();
@@ -4423,7 +4493,13 @@ window.showItemDetail = async function (id) {
                         .getElementById("item-desc")
                         .value.trim();
 
-                    if (!title || !category) {
+                    // Real-time validation
+                const title = document.getElementById("item-title").value.trim();
+                const category = document.getElementById("item-category").value;
+                if (!title || !category) {
+                    notify("請填寫標題和分類", "warning");
+                    return;
+                }
                         alert("Please fill in title and category");
                         return;
                     }
@@ -4467,7 +4543,7 @@ window.showItemDetail = async function (id) {
                             if (result.index === 0) {
                                 imageHash = hash;
                                 const objectUrl = ObjectUrlManager.getOrCreate(hash, result.blob);
-                                thumbnails.push(objectUrl);
+                                thumbnails.push(hash); // Store hash, not blob URL
                                 imageUrl = "p2p://p2p_" + Date.now();
                             }
                         }
@@ -4765,6 +4841,7 @@ window.showItemDetail = async function (id) {
             
             // Download queue management
             window.imageDownloadQueue = [];
+            const MAX_QUEUE_SIZE = 50; // Limit queue to prevent memory issues
             window.currentDownloadingCount = 0;
             const MAX_CONCURRENT_DOWNLOADS = 3;
             
@@ -4773,6 +4850,9 @@ window.showItemDetail = async function (id) {
                 if (!ws || ws.readyState !== WebSocket.OPEN) return;
                 
                 while (window.currentDownloadingCount < MAX_CONCURRENT_DOWNLOADS && window.imageDownloadQueue.length > 0) {
+                    if (window.imageDownloadQueue.length > MAX_QUEUE_SIZE) {
+                        window.imageDownloadQueue.shift(); // Drop oldest request
+                    }
                     const task = window.imageDownloadQueue.shift();
                     executeImageRequest(task.hash, task.sellerId);
                 }
@@ -4889,6 +4969,12 @@ window.showItemDetail = async function (id) {
                 ws.onclose = () => {
                     console.log("[WS] Connection closed, attempting reconnect...");
                     // Exponential backoff reconnect
+                    const MAX_RECONNECT_ATTEMPTS = 10;
+                    if ((window._wsReconnectAttempts || 0) >= MAX_RECONNECT_ATTEMPTS) {
+                        console.log("[WS] Max reconnect attempts reached");
+                        notify("連接失敗，請手動刷新頁面", "error");
+                        return;
+                    }
                     const delay = Math.min(1000 * Math.pow(2, window._wsReconnectAttempts || 0), 30000);
                     window._wsReconnectAttempts = (window._wsReconnectAttempts || 0) + 1;
                     setTimeout(() => {
@@ -4928,12 +5014,6 @@ window.showItemDetail = async function (id) {
                 }, HEARTBEAT_INTERVAL);
             }
 
-            function stopHeartbeat() {
-                if (heartbeatInterval) {
-                    clearInterval(heartbeatInterval);
-                    heartbeatInterval = null;
-                }
-            }
 
             // P2P connection established - request items from peer
             function requestItemsFromPeer(peerId) {
@@ -5026,13 +5106,21 @@ window.showItemDetail = async function (id) {
                         }
                     }
                     if (shouldSkip) return;
-                    if (!window._seenMsgIds) window._seenMsgIds = new Set();
+                    if (!window._seenMsgIds) window._seenMsgIds = new Map(); // Use Map for timestamp
                     if (msgId) {
-                        window._seenMsgIds.add(msgId);
+                        window._seenMsgIds.set(msgId, Date.now()); // Store with timestamp
                     }
+                    // Clean up old messages (older than 5 minutes)
+                    const now = Date.now();
+                    for (const [msgId, timestamp] of window._seenMsgIds) {
+                        if (now - timestamp > 5 * 60 * 1000) {
+                            window._seenMsgIds.delete(msgId);
+                        }
+                    }
+                    // Also limit size
                     if (window._seenMsgIds.size > 500) {
-                        const first = window._seenMsgIds.values().next().value;
-                        window._seenMsgIds.delete(first);
+                        const oldest = window._seenMsgIds.keys().next().value;
+                        window._seenMsgIds.delete(oldest);
                     }
 
                     switch (msg.type) {
@@ -6081,7 +6169,13 @@ window.showItemDetail = async function (id) {
                 if (compressed) {
                     const preview = document.getElementById('edit-photo-preview');
                     const url = URL.createObjectURL(compressed);
-                    preview.innerHTML = `<img src="${url}" style="width:80px;height:80px;object-fit:cover;border-radius:8px">`;
+                    // Clean up old blob URLs
+                Array.from(preview.querySelectorAll('img')).forEach(img => {
+                    if (img.src && img.src.startsWith('blob:')) {
+                        URL.revokeObjectURL(img.src);
+                    }
+                });
+                preview.innerHTML = `<img src="${url}" style="width:80px;height:80px;object-fit:cover;border-radius:8px">`;
                 }
             });
 
