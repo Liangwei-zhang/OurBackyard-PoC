@@ -2971,7 +2971,7 @@
             // ============ Object URL Manager (Memory Leak Prevention) ============
             const ObjectUrlManager = {
                 urls: new Map(),
-                maxCacheSize: 50,
+                maxCacheSize: 200,
                 
                 getOrCreate(hash, blob) {
                     if (!hash || !blob) return null;
