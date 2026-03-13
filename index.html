@@ -1865,14 +1865,18 @@
                         itemHash: itemHash,
                         reason: reason,
                         reporterId: peerId,
-                        reporterRep: parseInt((async () => {
-                const repRecord = await db.userData.get("reputation");
-                return repRecord?.value || 50;
-            })()) || "50"),
+                        reporterRep: 50, // Default, will be updated async
                         timestamp: Date.now()
                     };
 
                     console.log("[Moderation] Report submitted for:", itemHash);
+                    
+                    // Update reputation async
+                    db.userData.get("reputation").then(r => {
+                        if (r?.value) {
+                            db.userData.put({ key: "reputation", value: r.value + 1 });
+                        }
+                    });
 
                     // Broadcast report to neighbors
                     P2PStreamer.broadcast({
