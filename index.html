@@ -2748,6 +2748,28 @@
                 document.getElementById("theme-toggle").textContent = "☀️";
             }
 
+            // Open full-screen gallery with scroll snap
+            window.openGallery = function(total) {
+                var scrollContainer = document.querySelector('.scroll-container');
+                if (!scrollContainer) return;
+                scrollContainer.style.position = 'fixed';
+                scrollContainer.style.top = '0';
+                scrollContainer.style.left = '0';
+                scrollContainer.style.width = '100%';
+                scrollContainer.style.height = '100%';
+                scrollContainer.style.zIndex = '9999';
+                scrollContainer.style.aspectRatio = '';
+                scrollContainer.onclick = function() {
+                    this.style.position = '';
+                    this.style.top = '';
+                    this.style.left = '';
+                    this.style.width = '';
+                    this.style.height = '';
+                    this.style.zIndex = '';
+                    this.style.aspectRatio = '4/3';
+                };
+            };
+
             // Image lightbox
             function viewImage(src) {
                 var overlay = document.createElement('div');
