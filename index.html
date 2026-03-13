@@ -4718,12 +4718,18 @@ window.showItemDetail = async function (id) {
                         h3Index: currentH3Index,
                         timestamp: Date.now(),
                     };
-                    const signature = await DIDService.sign(message);
-                    const signedMsg = {
-                        ...message,
-                        signature,
-                        did: DIDService.getDID(),
-                    };
+                    let signedMsg;
+                    try {
+                        const signature = await DIDService.sign(message);
+                        signedMsg = {
+                            ...message,
+                            signature,
+                            did: DIDService.getDID(),
+                        };
+                    } catch (err) {
+                        console.warn("[Broadcast] Signing failed, sending without signature:", err);
+                        signedMsg = { ...message, signature: null, did: DIDService.getDID() || "anonymous" };
+                    }
 
                 // Send item metadata first via WebSocket
                 if (ws && ws.readyState === WebSocket.OPEN) {
