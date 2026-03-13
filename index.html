@@ -10,7 +10,7 @@
         <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data:; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net 'unsafe-inline'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src * data: blob: p2p:; connect-src 'self' wss: https:; font-src https://fonts.gstatic.com;">
         <meta name="description" content="Decentralized P2P community marketplace" />
         <link rel="manifest" href="/manifest.json" />
-        <title>🏡 OurBackyard - Community微商城</title>
+        <title>🏡 OurBackyard - Community Marketplace</title>
         <style>
              /* ============================
                 Modern Design System
@@ -959,17 +959,17 @@
                     <!-- Reset / Danger Zone -->
                     <div class="stat-item full-width" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
                         <span class="stat-icon">🗑️</span>
-                        <span class="stat-label">重置</span>
-                        <button class="btn btn-sm" onclick="exportMyData()">Export數據</button>
+                        <span class="stat-label">Reset</span>
+                        <button class="btn btn-sm" onclick="exportMyData()">Export Data</button>
                     <button class="btn btn-sm" onclick="importIdentity()">Restore Identity</button>
-                    <button class="btn btn-sm" style="background:#f44336;color:white" onclick="resetApp()">Clear數據</button>
+                    <button class="btn btn-sm" style="background:#f44336;color:white" onclick="resetApp()">Clear Data</button>
                     </div>
                     <!-- App Update -->
                     <div class="stat-item full-width" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
                         <span class="stat-icon">🔄</span>
                         <span class="stat-label">Version</span>
-                        <button class="btn btn-sm" onclick="AppUpdater.checkForUpdates()">檢查更New</button>
-                        <button class="btn btn-sm" onclick="alert('incremental更NewFeature under development')">incremental</button>
+                        <button class="btn btn-sm" onclick="AppUpdater.checkForUpdates()">Check UpdateNew</button>
+                        <button class="btn btn-sm" onclick="alert('incremental UpdateNewFeature under development')">incremental</button>
                     </div>
                 </div>
             </div>
@@ -1000,8 +1000,8 @@
         
             <!-- PWA Install Banner -->
             <div id="pwa-install-banner" style="display:none; background: var(--primary); color: white; padding: 12px; text-align: center; position: sticky; top: 0; z-index: 1000;">
-                <span>📲 安裝到桌面體驗更佳</span>
-                <button id="btn-install-pwa" style="margin-left: 12px; background: white; color: var(--primary); border: none; padding: 6px 16px; border-radius: 16px; cursor: pointer; font-weight: 600;">安裝</button>
+                <span>📲 Install to home screen for better experience</span>
+                <button id="btn-install-pwa" style="margin-left: 12px; background: white; color: var(--primary); border: none; padding: 6px 16px; border-radius: 16px; cursor: pointer; font-weight: 600;">Install</button>
             </div>
 
             <!-- Tabs -->
@@ -1178,7 +1178,7 @@
             // ============ Global Error Handling ============
             window.onerror = function(msg, url, line, col, err) {
                 console.error("[Global Error]", msg, "at line", line);
-                notify("發生Error，請Refresh頁面", "error");
+                notify("OccurredError，PleaseRefreshpage", "error");
                 return false;
             };
             window.addEventListener("unhandledrejection", function(e) {
@@ -1319,7 +1319,7 @@
                 ],
                 incomingTransfers: new Map(),
 
-                // 通過 WS 發送信令
+                // via WS Send signaling
                 sendSignal(targetPeerId, signal) {
                     if (ws && ws.readyState === WebSocket.OPEN) {
                         ws.send(
@@ -1394,7 +1394,7 @@
 
                 handleMessage(peerId, data) {
                     if (data instanceof ArrayBuffer || data instanceof Blob) {
-                        // binaryImage數據
+                        // binaryImageData
                         this.handleBinaryChunk(peerId, data);
                         return;
                     }
@@ -1560,7 +1560,7 @@
                     const hex = arr
                         .map((b) => b.toString(16).padStart(2, "0"))
                         .join("");
-                    // multiformat 風格: cid1-<base36(sha256)>
+                    // multiformat style: cid1-<base36(sha256)>
                     return "cid1-" + this.base36(hex);
                 },
 
@@ -1572,7 +1572,7 @@
                     }
                 },
 
-                // 存儲內容 (deduplication)
+                // Store Content (deduplication)
                 async store(itemId, blob) {
                     if (!blob) return null;
 
@@ -1596,7 +1596,7 @@
                     });
                     this.itemToCid.set(itemId, cid);
 
-                    // 持久化到 IndexedDB
+                    // Persisted to IndexedDB
                     try {
                         await db.blobs.put({
                             itemId,
@@ -1623,7 +1623,7 @@
                     return cid;
                 },
 
-                // 檢索內容
+                // Search Content
                 async retrieve(cid) {
                     // 1. memory
                     const cached = this.cidMap.get(cid);
@@ -1640,7 +1640,7 @@
                             .first();
                         if (stored?.blob) {
                             console.log("[CID] Hit IndexedDB:", cid);
-                            // 還原到memory
+                            // restore tomemory
                             await this.store("temp_" + Date.now(), stored.blob);
                             return stored.blob;
                         }
@@ -1648,12 +1648,12 @@
                         console.error("[CID] DB load error:", err);
                     }
 
-                    // 3. 網絡request
+                    // 3. Networkrequest
                     console.log("[CID] Requesting from network:", cid);
                     return this.requestNetwork(cid);
                 },
 
-                // 網絡request
+                // Networkrequest
                 requestNetwork(cid) {
                     return new Promise((resolve) => {
                         const timeout = setTimeout(() => {
@@ -1663,7 +1663,7 @@
 
                         this.pending.set(cid, { resolve, timeout });
 
-                        // 廣播request
+                        // Broadcastrequest
                         if (ws && ws.readyState === WebSocket.OPEN) {
                             ws.send(
                                 JSON.stringify({
@@ -1683,12 +1683,12 @@
                         clearTimeout(pending.timeout);
                         pending.resolve(blob);
                         this.pending.delete(cid);
-                        // 緩存
+                        // Cache
                         if (blob) this.store("net_" + Date.now(), blob);
                     }
                 },
 
-                // 獲取統計
+                // Get Stats
                 getStats() {
                     return {
                         memory: this.cidMap.size,
@@ -1729,7 +1729,7 @@
                             const verified = this.verifySignature(msg.signature, msg.bundleHash);
                             if (!verified) {
                                 console.error("[Update] Signature verification FAILED, rejecting bundle!");
-                                alert("更Newpackage verification failed，may existSecurity risk，already拒絕安裝！");
+                                alert("UpdateNewpackage verification failed，may existSecurity risk，alreadyrejectInstall！");
                                 return;
                             }
                             console.log("[Update] Signature verified");
@@ -1756,7 +1756,7 @@
                     console.log("[Update] Bundle saved, version:", version);
 
                     // Smooth SW update with user consent
-                    if (confirm("NewVersion " + version + " alreadyDownload完成，是否立immediately更New？")) {
+                    if (confirm("NewVersion " + version + " alreadyDownloadDone，WhetherimmediatelyUpdateNew？")) {
                         await this.activateUpdate();
                     }
                 },
@@ -1786,7 +1786,7 @@
                     return 0;
                 },
                 async publishUpdate(bundleBlob) {
-                    const version = prompt("輸入NewVersion號 (for example 1.0.1):");
+                    const version = prompt("inputNewVersionID (for example 1.0.1):");
                     if (!version) return;
                     const hashBuffer = await bundleBlob.arrayBuffer();
                     const hashArray = Array.from(new Uint8Array(hashBuffer));
@@ -1889,7 +1889,7 @@
                         peerId: peerId
                     });
 
-                    alert("舉報already提交，等待Local裁決");
+                    alert("ReportalreadySubmit，WaitLocalDecision");
                 },
                 // Handle incoming report
                 async handleReport(msg) {
@@ -2062,7 +2062,7 @@
             // No +33% overhead, instant display
             const objectUrlCache = new Map(); // itemId -> objectUrl
             function blobToObjectURL(blob, itemId) {
-                // 清理舊的 URL
+                // Clean old URL
                 if (objectUrlCache.has(itemId)) {
                     URL.revokeObjectURL(objectUrlCache.get(itemId));
                 }
@@ -2762,7 +2762,7 @@
             
             // Reset app - clear all IndexedDB data
             window.resetApp = async function() {
-                if (!confirm("確定要Clear所有數據嗎？這將Delete所有ItemandSettings！")) return;
+                if (!confirm("ConfirmClearAllData?？this willDeleteAllItemandSettings！")) return;
                 
                 try {
                     // Delete IndexedDB databases
@@ -2773,13 +2773,13 @@
                     localStorage.clear();
                     console.log("[Reset] localStorage cleared");
                     
-                    alert("數據alreadyClear，頁面將重New載入...");
+                    alert("DataalreadyClear，pagewill reNewload...");
                     
                     // Reload page
                     location.reload();
                 } catch (err) {
                     console.error("[Reset] Error:", err);
-                    alert("Clear失敗: " + err.message);
+                    alert("ClearFailed: " + err.message);
                 }
             }
 
@@ -2810,7 +2810,7 @@
                     a.click();
                     URL.revokeObjectURL(url);
                     
-                    notify("數據ExportSuccess！", "success");
+                    notify("DataExportSuccess！", "success");
                     
                     // Also export identity key if available
                     try {
@@ -2831,7 +2831,7 @@
                     }
                 } catch (err) {
                     console.error("[Export] Error:", err);
-                    notify("Export失敗: " + err.message, "error");
+                    notify("ExportFailed: " + err.message, "error");
                 }
             };
 
@@ -2852,9 +2852,9 @@
                         if (data.publicKey) {
                             localStorage.setItem("did_publicKey", data.publicKey);
                         }
-                        notify("身份already恢復，請Refresh頁面", "success");
+                        notify("IdentityalreadyRecover，PleaseRefreshpage", "success");
                     } catch (err) {
-                        notify("恢復失敗: " + err.message, "error");
+                        notify("RecoverFailed: " + err.message, "error");
                     }
                 };
                 input.click();
@@ -3007,7 +3007,7 @@
             const MAX_BLOB_CACHE = 500;
             
             // ============ Gossip Message Deduplication ============
-            // 維護最近 500 條Message ID 集合，Prevent network storm
+            // Maintain recent 500 itemsMessage ID collection，Prevent network storm
             const recentMsgIds = new Set();
             const MAX_MSG_CACHE = 500;
             
@@ -3019,7 +3019,7 @@
             function markMessageSeen(msgId) {
                 if (!msgId) return false;
                 if (recentMsgIds.size >= MAX_MSG_CACHE) {
-                    // 移除最舊的
+                    // Remove oldest
                     const first = recentMsgIds.values().next().value;
                     if (first) recentMsgIds.delete(first);
                 }
@@ -3028,7 +3028,7 @@
             }
             
             function generateMsgId(msg) {
-                // 為Message生成唯一指紋
+                // ForMessageGenerate unique fingerprint
                 return msg.type + '-' + (msg.messageId || msg.itemId || msg.id || '') + '-' + (msg.timestamp || Date.now());
             }
             
@@ -4022,7 +4022,7 @@
                 }
             }
             
-            // Debounced loadItems to prevent高频调用
+            // Debounced loadItems to preventhigh frequency call
             debouncedLoadItems = debounce(loadItems, 300);
 
             // ============ Sort Items ============
@@ -4180,8 +4180,8 @@
               <div class="item-price">${priceText}</div>
               <div class="item-footer">
                 <span class="item-status ${statusClass}">${item.status}</span>
-                ${item.sellerId === peerId ? `<button class="btn-edit" data-id="${item.id}" title="編輯">✏️</button>` : ''}
-                <button class="btn-report" onclick="event.stopPropagation(); ContentModerator.reportItem('item-${item.id}', 'inappropriate')" title="舉報">🚩</button>
+                ${item.sellerId === peerId ? `<button class="btn-edit" data-id="${item.id}" title="Edit">✏️</button>` : ''}
+                <button class="btn-report" onclick="event.stopPropagation(); ContentModerator.reportItem('item-${item.id}', 'inappropriate')" title="Report">🚩</button>
               </div>
             </div>
           </div>`;
@@ -4399,7 +4399,7 @@ window.showItemDetail = async function (id) {
                     const validFiles = Array.from(e.target.files).filter(f => f.size <= MAX_FILE_SIZE);
                     const newFiles = validFiles.slice(0, 4 - selectedPhotos.length);
                     if (validFiles.length !== e.target.files.length) {
-                        alert("每張Imagecannot exceed 5MB");
+                        alert("eachitemsImagecannot exceed 5MB");
                     }
                     selectedPhotos = [...selectedPhotos, ...newFiles];
                     
@@ -4467,7 +4467,7 @@ window.showItemDetail = async function (id) {
                     // Update button text
                     const btn = document.getElementById("btn-select-photos");
                     if (selectedPhotos.length >= 4) {
-                        btn.textContent = "already選4張";
+                        btn.textContent = "alreadyselect4items";
                         btn.disabled = true;
                         btn.style.opacity = "0.5";
                     } else {
@@ -4510,7 +4510,7 @@ window.showItemDetail = async function (id) {
 
                 // Real-time validation
                 if (!title || !category) {
-                    notify("請填寫TitleandCategory", "warning");
+                    notify("Pleasefill inTitleandCategory", "warning");
                     return;
                 }
 
@@ -4646,7 +4646,7 @@ window.showItemDetail = async function (id) {
                     }
 
                     progressBar.style.width = "100%";
-                    progressTextEl.textContent = "完成!";
+                    progressTextEl.textContent = "Done!";
                     alert("Item published!");
                     progressEl.style.display = "none";
                     progressBar.style.width = "0%";
@@ -4995,7 +4995,7 @@ window.showItemDetail = async function (id) {
                     const MAX_RECONNECT_ATTEMPTS = 10;
                     if ((window._wsReconnectAttempts || 0) >= MAX_RECONNECT_ATTEMPTS) {
                         console.log("[WS] Max reconnect attempts reached");
-                        notify("Connect失敗，請手動Refresh頁面", "error");
+                        notify("ConnectFailed，PleasemanuallyRefreshpage", "error");
                         return;
                     }
                     const delay = Math.min(1000 * Math.pow(2, window._wsReconnectAttempts || 0), 30000);
@@ -6180,7 +6180,7 @@ window.showItemDetail = async function (id) {
         <div id="edit-modal" class="modal" style="display:none;">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>編輯Item</h3>
+                    <h3>EditItem</h3>
                     <button onclick="closeEditModal()" class="close-btn">&times;</button>
                 </div>
                 <div class="modal-body">
@@ -6199,21 +6199,21 @@ window.showItemDetail = async function (id) {
                     </div>
                     <div class="form-group">
                         <label>Image</label>
-                        <button type="button" id="btn-edit-photos" class="btn" style="margin-bottom:8px">更換Image</button>
+                        <button type="button" id="btn-edit-photos" class="btn" style="margin-bottom:8px">UpdatechangeImage</button>
                         <input type="file" id="edit-photos" accept="image/*" multiple style="display:none">
                         <div id="edit-photo-preview" style="display:flex;gap:8px;flex-wrap:wrap"></div>
                     </div>
                     <div class="form-group">
                         <label>Category</label>
                         <select id="edit-category">
-                            <option value="Electronics">電子產品</option>
+                            <option value="Electronics">Electronics</option>
                             <option value="Furniture">furniture</option>
-                            <option value="Clothing">服裝</option>
-                            <option value="Books">書籍</option>
-                            <option value="Sports">運動</option>
-                            <option value="Toys">玩具</option>
-                            <option value="Tools">工具</option>
-                            <option value="Food">食物</option>
+                            <option value="Clothing">Clothing</option>
+                            <option value="Books">Books</option>
+                            <option value="Sports">Sports</option>
+                            <option value="Toys">Toys</option>
+                            <option value="Tools">Tools</option>
+                            <option value="Food">Food</option>
                             <option value="Other">other</option>
                         </select>
                     </div>
@@ -6222,7 +6222,7 @@ window.showItemDetail = async function (id) {
                         <select id="edit-status">
                             <option value="available">tradable</option>
                             <option value="pending">Processing...</option>
-                            <option value="gone">already結束</option>
+                            <option value="gone">alreadyEnd</option>
                         </select>
                     </div>
                 </div>
@@ -6284,7 +6284,7 @@ window.showItemDetail = async function (id) {
                 const category = document.getElementById('edit-category').value;
                 const status = document.getElementById('edit-status').value;
                 if (!title) {
-                    alert('請輸入Title');
+                    alert('PleaseinputTitle');
                     return;
                 }
                 const item = await db.items.get(id);
@@ -6377,7 +6377,7 @@ window.showItemDetail = async function (id) {
                                         // New version available
                                         console.log('[SW] New version available');
                                         if (typeof notify === 'function') {
-                                            notify('發現NewVersion，點擊Refresh', 'info');
+                                            notify('FoundNewVersion，clickRefresh', 'info');
                                         }
                                     }
                                 };
