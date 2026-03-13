@@ -4356,6 +4356,8 @@ window.showItemDetail = async function (id) {
                         price: item.price,
                         description: item.description,
                         category: item.category,
+                        imageHash: item.imageHash || null,
+                        imageHashes: item.imageHashes || [],
                         signature,
                         did: DIDService.getDID(),
                     };
