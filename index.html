@@ -5153,13 +5153,18 @@ window.showItemDetail = async function (id) {
                             }
                             break;
                         case "peers":
-                            // Update peer list from server
+                            // Update peer list from server and connect to them
                             if (msg.peers && Array.isArray(msg.peers)) {
-                                msg.peers.forEach((p) => trackPeer(p));
+                                msg.peers.forEach((p) => {
+                                    trackPeer(p);
+                                    // Try to connect to each peer
+                                    setTimeout(() => connectToPeer(p), 500);
+                                });
                                 updatePeerCount(msg.peers.length);
                             }
                             break;
                         case "peer-joined":
+                            setTimeout(() => connectToPeer(msg.peerId), 500);
                             trackPeer(msg.peerId);
                             if (msg.peerCount) updatePeerCount(msg.peerCount);
                             else updatePeerCount(connectedPeers + 1);
