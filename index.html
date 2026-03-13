@@ -524,7 +524,7 @@
              .status-available { background: var(--accent-green); color: #000; }
              .status-pending { background: var(--accent-orange); color: #000; }
              .status-gone { background: var(--text-muted); color: #fff; }
-             
+
              /* Online Status Indicator */
              .online-dot {
                  display: inline-block;
@@ -797,7 +797,6 @@
              .modal-content {
                width: 100%;
                max-height: 85vh;
-               border-radius: var(--radius-xl) var(--radius-xl) 0 0;
                padding: 24px;
                overflow-y: auto;
              }
@@ -1025,7 +1024,7 @@
 
         <!-- Main App -->
         <div id="app">
-        
+
             <!-- PWA Install Banner -->
             <div id="pwa-install-banner" style="display:none; background: var(--primary); color: white; padding: 12px; text-align: center; position: sticky; top: 0; z-index: 1000;">
                 <span>📲 Install to home screen for better experience</span>
@@ -1544,7 +1543,7 @@
                     // Only broadcast NEW_ITEM with hash, peers will request if needed
                     // This is the Gossip Protocol approach - don't flood all connections!
                     const imageHash = await ImageRegistry.computeHash(blob);
-                    
+
                     // Broadcast only the metadata with hash (peers will request if needed)
                     this.broadcast({
                         type: "IMG_HEADER",
@@ -1552,7 +1551,7 @@
                         size: blob.size,
                         imageHash: imageHash,
                     });
-                    
+
                     console.log("[P2P] Broadcast image header (Gossip mode):", imageHash);
                 },
 
@@ -1898,7 +1897,7 @@
                     };
 
                     console.log("[Moderation] Report submitted for:", itemHash);
-                    
+
                     // Update reputation async
                     db.userData.get("reputation").then(r => {
                         if (r?.value) {
@@ -2237,7 +2236,7 @@
                         console.error("[DID] Database not available!");
                         return;
                     }
-                    
+
                     // Try to load existing keys
                     const savedPrivateKey =
                         localStorage.getItem("did_privateKey");
@@ -2261,7 +2260,7 @@
                             }
                         }
                     }
-                    
+
                     // Fallback to unencrypted localStorage
                     if (savedPrivateKey && savedPublicKey) {
                         this.publicKey = savedPublicKey;
@@ -2423,50 +2422,50 @@
                         console.error('[SecureMessenger] DID not initialized');
                         return;
                     }
-                    
+
                     const message = {
                         type,
                         ...payload,
                         timestamp: Date.now(),
                         did: DIDService.getDID(),
                     };
-                    
+
                     try {
                         const signature = await DIDService.sign(message);
                         const signedMessage = {
                             ...message,
                             signature,
                         };
-                        
+
                         // Send via P2P DataChannels
                         for (const [_, dc] of Object.entries(dataChannels)) {
                             if (dc.readyState === 'open') {
                                 dc.send(JSON.stringify(signedMessage));
                             }
                         }
-                        
+
                         // Send via WebSocket
                         if (ws && ws.readyState === WebSocket.OPEN) {
                             ws.send(JSON.stringify(signedMessage));
                         }
-                        
+
                         console.log('[SecureMessenger] Sent:', type);
                     } catch (err) {
                         console.error('[SecureMessenger] Send failed:', err);
                     }
                 },
-                
+
                 // Verify incoming message
                 async verify(msg) {
                     if (!msg.signature || !msg.did) return false;
-                    
+
                     const dataToVerify = {
                         type: msg.type,
                         itemId: msg.itemId,
                         status: msg.status,
                         timestamp: msg.timestamp,
                     };
-                    
+
                     return await DIDService.verify(dataToVerify, msg.signature, msg.did);
                 }
             };
@@ -2494,7 +2493,7 @@
             // Initialize after Dexie is ready
             function initApp() {
                 // db and DIDService already initialized by bootstrap()
-                
+
                 // Initialize other modules that need db
                 AppUpdater.db = db;
                 AppUpdater.init();
@@ -2518,18 +2517,18 @@
             async function bootstrap() {
                 try {
                     console.log('Starting OurBackyard...');
-                    
+
                     // 1. Initialize database FIRST (required by other services)
                     await initDB();
-                    
+
                     // 2. Initialize DID service (depends on db)
                     if (typeof DIDService !== 'undefined' && DIDService.init) {
                         await DIDService.init();
                     }
-                    
+
                     // 3. Initialize app (connects P2P network)
                     await initApp();
-                    
+
                     console.log('OurBackyard started successfully');
                 } catch (err) {
                     console.error('Startup failed:', err);
@@ -2780,7 +2779,7 @@
             window.openGallery = function(total) {
                 var scrollContainer = document.querySelector('.scroll-container');
                 if (!scrollContainer) return;
-                
+
                 // Add close button
                 var closeBtn = document.createElement('div');
                 closeBtn.innerHTML = '✕';
@@ -2796,7 +2795,7 @@
                     scrollContainer.style.aspectRatio = '4/3';
                     this.remove();
                 };
-                
+
                 scrollContainer.style.position = 'fixed';
                 scrollContainer.style.top = '0';
                 scrollContainer.style.left = '0';
@@ -2805,7 +2804,7 @@
                 scrollContainer.style.zIndex = '9999';
                 scrollContainer.style.aspectRatio = '';
                 document.body.appendChild(closeBtn);
-                
+
                 scrollContainer.onclick = function(e) {
                     if (e.target === closeBtn) return;
                     closeBtn.click();
@@ -2831,22 +2830,22 @@
                     ? "☀️"
                     : "🌙";
             }
-            
+
             // Reset app - clear all IndexedDB data
             window.resetApp = async function() {
                 if (!confirm("ConfirmClearAllData?？this willDeleteAllItemandSettings！")) return;
-                
+
                 try {
                     // Delete IndexedDB databases
                     await indexedDB.deleteDatabase("OurBackyardDB");
                     console.log("[Reset] IndexedDB deleted");
-                    
+
                     // Clear localStorage
                     localStorage.clear();
                     console.log("[Reset] localStorage cleared");
-                    
+
                     alert("DataalreadyClear，pagewill reNewload...");
-                    
+
                     // Reload page
                     location.reload();
                 } catch (err) {
@@ -2861,7 +2860,7 @@
                     const items = await db.items.toArray();
                     const blobs = await db.blobs.toArray();
                     const userData = await db.userData.toArray();
-                    
+
                     const exportData = {
                         exportDate: new Date().toISOString(),
                         items: items,
@@ -2873,7 +2872,7 @@
                         userData: userData,
                         version: "OurBackyard Export v1"
                     };
-                    
+
                     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
@@ -2881,9 +2880,9 @@
                     a.download = "ourbackyard-data-" + Date.now() + ".json";
                     a.click();
                     URL.revokeObjectURL(url);
-                    
+
                     notify("DataExportSuccess！", "success");
-                    
+
                     // Also export identity key if available
                     try {
                         const privateKey = localStorage.getItem("did_privateKey");
@@ -2992,7 +2991,7 @@
             const CHUNK_SIZE = 16384;
             const HEARTBEAT_INTERVAL = 15000; // 15 seconds (foreground)
             const HEARTBEAT_INTERVAL_BACKGROUND = 60000; // 60 seconds (background)
-            
+
             // ============ Debounce & Throttle Utilities ============
             function debounce(fn, delay) {
                 let timeout;
@@ -3001,7 +3000,7 @@
                     timeout = setTimeout(() => fn.apply(this, args), delay);
                 };
             }
-            
+
             function throttle(fn, limit) {
                 let inThrottle;
                 return function(...args) {
@@ -3036,18 +3035,18 @@
             const ObjectUrlManager = {
                 urls: new Map(),
                 maxCacheSize: 200,
-                
+
                 getOrCreate(hash, blob) {
                     if (!hash || !blob) return null;
-                    
+
                     if (this.urls.has(hash)) {
                         return this.urls.get(hash);
                     }
-                    
+
                     // Create new URL
                     const url = URL.createObjectURL(blob);
                     this.urls.set(hash, url);
-                    
+
                     // Simple cache management - if too many, clear oldest
                     if (this.urls.size > this.maxCacheSize) {
                         const firstKey = this.urls.keys().next().value;
@@ -3056,17 +3055,17 @@
                             this.urls.delete(firstKey);
                         }
                     }
-                    
+
                     return url;
                 },
-                
+
                 revoke(hash) {
                     if (this.urls.has(hash)) {
                         URL.revokeObjectURL(this.urls.get(hash));
                         this.urls.delete(hash);
                     }
                 },
-                
+
                 clear() {
                     for (const url of this.urls.values()) {
                         URL.revokeObjectURL(url);
@@ -3074,20 +3073,20 @@
                     this.urls.clear();
                 }
             };
-            
+
             // ============ Quota Management ============
             const MAX_BLOB_CACHE = 500;
-            
+
             // ============ Gossip Message Deduplication ============
             // Maintain recent 500 itemsMessage ID collection，Prevent network storm
             const recentMsgIds = new Set();
             const MAX_MSG_CACHE = 500;
-            
+
             function isMessageSeen(msgId) {
                 if (!msgId) return false;
                 return recentMsgIds.has(msgId);
             }
-            
+
             function markMessageSeen(msgId) {
                 if (!msgId) return false;
                 if (recentMsgIds.size >= MAX_MSG_CACHE) {
@@ -3098,12 +3097,12 @@
                 recentMsgIds.add(msgId);
                 return true;
             }
-            
+
             function generateMsgId(msg) {
                 // ForMessageGenerate unique fingerprint
                 return msg.type + '-' + (msg.messageId || msg.itemId || msg.id || '') + '-' + (msg.timestamp || Date.now());
             }
-            
+
             async function saveBlobWithQuotaCheck(hash, blobData) {
                 // Ensure hash is valid string
                 if (!hash || typeof hash !== 'string') {
@@ -3140,7 +3139,7 @@
             const ImageLazyLoader = {
                 observer: null,
                 activeRequests: new Set(),
-                
+
                 init() {
                     this.observer = new IntersectionObserver((entries) => {
                         entries.forEach(entry => {
@@ -3155,23 +3154,23 @@
                         });
                     }, { rootMargin: '200px' }); // Preload 200px before visible
                 },
-                
+
                 observe(el) {
                     if (this.observer) {
                         this.observer.observe(el);
                     }
                 },
-                
+
                 unobserve(el) {
                     if (this.observer) {
                         this.observer.unobserve(el);
                     }
                 },
-                
+
                 requestImage(hash) {
                     if (this.activeRequests.has(hash)) return;
                     this.activeRequests.add(hash);
-                    
+
                     // Check local DB first - if blob exists, update UI directly
                     db.blobs.where("hash").equals(hash).toArray().then(blobs => {
                         if (blobs.length > 0) {
@@ -3180,7 +3179,7 @@
                             this.activeRequests.delete(hash);
                             return;
                         }
-                        
+
                         // Local not found, send P2P request to neighbors
                         if (ws && ws.readyState === WebSocket.OPEN) {
                             ws.send(JSON.stringify({
@@ -3189,7 +3188,7 @@
                                 requesterId: peerId
                             }));
                         }
-                        
+
                         // Auto-release lock after 15 seconds
                         setTimeout(() => {
                             this.activeRequests.delete(hash);
@@ -3360,7 +3359,7 @@
 
             // Receive binary image chunks - keyed by hash (content-addressable)
             const incomingImages = {}; // imageHash -> { itemId, chunks:[], size:0, mimeType:'', lastUpdate:timestamp }
-            
+
             // GC: Clean up stale image transfers every 30 seconds
             setInterval(() => {
                 const now = Date.now();
@@ -3371,7 +3370,7 @@
                     }
                 }
             }, 30000);
-            
+
             // Timeout retry mechanism - re-request stalled images
             // Retry mechanism - re-request stalled images after 10 seconds
             setInterval(() => {
@@ -3508,16 +3507,16 @@
             // Broadcast to ALL connected peers, not just the original seller!
             function requestImageFromNeighbors(imageHash, sellerId) {
                 // Check if already in queue or downloading
-                if (window.imageDownloadQueue.some(item => item.hash === imageHash) || 
+                if (window.imageDownloadQueue.some(item => item.hash === imageHash) ||
                     incomingImages[imageHash]) {
                     console.log("[Queue] Already queued/downloading:", imageHash);
                     return;
                 }
-                
+
                 // Add to queue
                 window.imageDownloadQueue.push({ hash: imageHash, sellerId: sellerId });
                 console.log("[Queue] Added to queue:", imageHash, "Queue length:", window.imageDownloadQueue.length);
-                
+
                 // Process queue
                 processDownloadQueue();
 
@@ -3563,25 +3562,25 @@
             // Targeted image update - update only affected images
             window.updateImageInUI = async function(imageHash) {
                 console.log("[🎯] Targeted update for hash:", imageHash);
-                
+
                 // Directly find DOM elements that need this image - no DB query needed!
                 const imgs = document.querySelectorAll(`img[data-hash="${imageHash}"]:not([data-loaded="true"])`);
                 if (imgs.length === 0) {
                     console.log("[🎯] No DOM elements need this image:", imageHash);
                     return;
                 }
-                
+
                 // Only query DB when DOM actually needs the image
                 const blobs = await db.blobs.where("hash").equals(imageHash).toArray();
                 if (blobs.length === 0) {
                     console.log("[🎯] No blob found for hash:", imageHash);
                     return;
                 }
-                
+
                 // Use ObjectUrlManager to avoid memory leaks
                 const url = ObjectUrlManager.getOrCreate(imageHash, blobs[0].blob);
                 if (!url) return;
-                
+
                 // Update all matching image elements
                 let updatedCount = 0;
                 for (const img of imgs) {
@@ -3842,7 +3841,7 @@
                         );
                         const el = document.getElementById("storage");
                         el.innerHTML = `${used}MB`;
-                        
+
                         // Check quota and cleanup if needed (>80%)
                         const quotaPercent = (estimate.usage / estimate.quota) * 100;
                         if (quotaPercent > 80) {
@@ -3852,7 +3851,7 @@
                     });
                 }
             }
-            
+
             // LRU cleanup for storage quota
             async function cleanupOldBlobs() {
                 try {
@@ -4055,22 +4054,22 @@
                 // Prevent concurrent loads
                 if (window._loadingItems) return;
                 window._loadingItems = true;
-                
+
                 // Clear existing items in DOM before loading
                 const container = document.getElementById("market-grid");
                 // Don't clear - we want incremental updates!
-                
+
                 try {
                     let items = await db.items
                         .where("status")
                         .notEqual("gone")
                         .toArray();
-                    
+
                     // Filter out blocked items using ContentModerator
                     if (typeof ContentModerator !== 'undefined' && ContentModerator.filterItems) {
                         items = await ContentModerator.filterItems(items);
                     }
-                    
+
                     if (selectedCategory !== "All") {
                         items = items.filter(
                             (i) => i.category === selectedCategory,
@@ -4081,9 +4080,9 @@
                     // Apply current sort
                     items = sortItemsData(items, selectedSort);
                     renderMarketGrid(items, document.getElementById("market-grid"));
-                    
+
                     // Images are loaded lazily via IntersectionObserver
-                    
+
                     // Load AI recommendations
                     loadAIRecommendations();
                 } catch (err) {
@@ -4093,7 +4092,7 @@
                     window._loadingItems = false;
                 }
             }
-            
+
             // Debounced loadItems to preventhigh frequency call
             debouncedLoadItems = debounce(loadItems, 300);
 
@@ -4104,17 +4103,17 @@
                 document.querySelectorAll(".sort-btn").forEach((btn) => {
                     btn.classList.toggle("active", btn.dataset.sort === sortBy);
                 });
-                
+
                 // If no items loaded yet, load them first
                 if (!currentItems || currentItems.length === 0) {
                     loadItems();
                     return;
                 }
-                
+
                 // Clear container to force re-render with new order
                 const container = document.getElementById("market-grid");
                 if (container) container.innerHTML = '';
-                
+
                 // Re-render with sorted items
                 const sorted = sortItemsData(currentItems, sortBy);
                 renderMarketGrid(sorted, container);
@@ -4123,7 +4122,7 @@
             function sortItemsData(items, sortBy) {
                 if (!items || items.length === 0) return [];
                 const sorted = [...items];
-                
+
                 // Helper to normalize price for sorting
                 const normalizePrice = (p) => {
                     if (p === "swap") return -1;  // Swap at end
@@ -4131,7 +4130,7 @@
                     const num = parseFloat(p);
                     return isNaN(num) ? Infinity : num;
                 };
-                
+
                 if (sortBy === "time") {
                     sorted.sort((a, b) => {
                         const ta = a.timestamp || a.updatedAt || 0;
@@ -4193,24 +4192,24 @@
                 if (window.ImageLazyLoader && window.ImageLazyLoader.observer) {
                     window.ImageLazyLoader.observer.disconnect();
                 }
-                
+
                 // ===== Incremental DOM Update Strategy =====
                 // Get existing cards in DOM
                 const existingCards = new Map();
                 container.querySelectorAll('[data-item-id]').forEach(el => {
                     existingCards.set(parseInt(el.dataset.itemId), el);
                 });
-                
+
                 // Get new item IDs
                 const newItemIds = new Set(items.map(i => i.id));
-                
+
                 // Remove cards that are no longer in the list
                 existingCards.forEach((card, id) => {
                     if (!newItemIds.has(id)) {
                         card.remove();
                     }
                 });
-                
+
                 // Deduplicate incoming items
                 const seenIds = new Set();
                 items = items.filter(item => {
@@ -4240,7 +4239,7 @@
                 // ===== Incremental render: update existing + add new =====
                 items.forEach(item => {
                     const existingCard = existingCards.get(item.id);
-                    
+
                     if (existingCard) {
                         // Only update if timestamp changed (avoid full redraw)
                         if (parseInt(existingCard.dataset.updatedAt || 0) < (item.updatedAt || 0)) {
@@ -4257,7 +4256,7 @@
                         const priceText = item.price === 0 ? "🎁 Free" : item.price === "swap" ? "☕ Swap" : `$${item.price}`;
                         const sellerOnline = typeof onlineNeighbors !== 'undefined' && onlineNeighbors.has(item.sellerId);
                         const onlineBadge = sellerOnline ? '<span class="online-dot"></span>' : '';
-                        
+
                         const cardHTML = `
           <div class="item-card ${item.status}" onclick="showItemDetail(${item.id})" data-item-id="${item.id}" data-updated-at="${item.updatedAt || 0}">
             <img class="item-image lazy"
@@ -4321,10 +4320,10 @@ window.showItemDetail = async function (id) {
 
                 let imagesHtml = "";
                 const defaultImg = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 x=%2250%22 y=%2255%22 text-anchor=%22middle%22>📷</text></svg>";
-                
+
                 // Support multiple images
                 const imageHashes = item.imageHashes || (item.imageHash ? [item.imageHash] : []);
-                
+
                 // Use Promise.all for parallel loading
                 const results = await Promise.all(
                     imageHashes.map(async (hash) => {
@@ -4344,9 +4343,9 @@ window.showItemDetail = async function (id) {
                         }
                     })
                 );
-                
+
                 let allImages = results.map(r => r.url);
-                
+
                 // CSS Grid Gallery - show all images in grid, click to enlarge
                 if (imageHashes.length > 1) {
                     let gridHtml = '';
@@ -4443,7 +4442,7 @@ window.showItemDetail = async function (id) {
                     status = statusOrNull;
                 }
                 if (!item) return;
-                
+
                 // Sign the message with DID
                 const message = {
                     type: "ITEM_UPDATE",
@@ -4495,31 +4494,31 @@ window.showItemDetail = async function (id) {
                         alert("eachitemsImagecannot exceed 5MB");
                     }
                     selectedPhotos = [...selectedPhotos, ...newFiles];
-                    
+
                     renderPhotoPreview();
-                    
+
                     // Clear input so same file can be selected again
                     e.target.value = "";
                 });
-                
+
                 // Render photo preview with delete buttons
                 window.renderPhotoPreview = function() {
                     const preview = document.getElementById("photo-preview");
-                    
+
                     // Revoke old URLs before clearing
                     Array.from(preview.querySelectorAll('img')).forEach(img => {
                         if (img.src && img.src.startsWith('blob:')) {
                             URL.revokeObjectURL(img.src);
                         }
                     });
-                    
+
                     preview.innerHTML = "";
                     selectedPhotos.forEach((file, index) => {
                         const wrapper = document.createElement("div");
                         wrapper.style.position = "relative";
                         wrapper.style.display = "inline-block";
                         wrapper.style.marginRight = "8px";
-                        
+
                         const img = document.createElement("img");
                         const objectUrl = URL.createObjectURL(file);
                         img.src = objectUrl;
@@ -4530,7 +4529,7 @@ window.showItemDetail = async function (id) {
                         img.style.objectFit = "cover";
                         img.style.borderRadius = "8px";
                         if (index === 0) img.style.border = "2px solid var(--primary)";
-                        
+
                         // Delete button
                         const delBtn = document.createElement("button");
                         delBtn.innerHTML = "✕";
@@ -4551,12 +4550,12 @@ window.showItemDetail = async function (id) {
                             selectedPhotos.splice(index, 1);
                             renderPhotoPreview();
                         };
-                        
+
                         wrapper.appendChild(img);
                         wrapper.appendChild(delBtn);
                         preview.appendChild(wrapper);
                     });
-                    
+
                     // Update button text
                     const btn = document.getElementById("btn-select-photos");
                     if (selectedPhotos.length >= 4) {
@@ -4584,7 +4583,7 @@ window.showItemDetail = async function (id) {
                     progressEl.style.display = "block";
                     progressBar.style.width = "10%";
                     progressTextEl.textContent = "Processing......";
-                    
+
                     try {
                     const title = document
                         .getElementById("item-title")
@@ -4643,7 +4642,7 @@ window.showItemDetail = async function (id) {
                             const hash = await ImageRegistry.computeHash(result.blob);
                             await saveBlobWithQuotaCheck(hash, result.blob);
                             imageHashes.push(hash);
-                            
+
                             // First image is the main thumbnail
                             if (result.index === 0) {
                                 imageHash = hash;
@@ -4702,25 +4701,25 @@ window.showItemDetail = async function (id) {
                         console.error("[Publish] Item not found");
                         return;
                     }
-                    
+
                     // Ensure imageHashes is complete
                     fullItem.imageHashes = fullItem.imageHashes || [];
                     if (fullItem.imageHash && !fullItem.imageHashes.includes(fullItem.imageHash)) {
                         fullItem.imageHashes.unshift(fullItem.imageHash);
                     }
-                    
+
                     // Ensure broadcast has all image data
                     const broadcastData = {
                         ...fullItem,
                         imageHash: fullItem.imageHash || null,
                         imageHashes: fullItem.imageHashes || [],
                     };
-                    
+
                     // Try to broadcast immediately, queue if offline
                     const broadcastNow = () => {
                         broadcastNewItem(broadcastData);
                     };
-                    
+
                     if ('serviceWorker' in navigator && 'sync' in ServiceWorkerRegistration.prototype) {
                         // Register background sync for offline publishing
                         try {
@@ -4935,7 +4934,7 @@ window.showItemDetail = async function (id) {
                             "/",
                             totalSize,
                         );
-                        
+
                         // Rate limiting: yield to prevent buffer overflow
                         await new Promise(r => setTimeout(r, 2));
                     }
@@ -4954,17 +4953,17 @@ window.showItemDetail = async function (id) {
             // WebSocket message queue for offline/reconnecting
             let pendingWsMessages = [];
             let activeImageRequests = new Set();
-            
+
             // Download queue management
             window.imageDownloadQueue = [];
             const MAX_QUEUE_SIZE = 50; // Limit queue to prevent memory issues
             window.currentDownloadingCount = 0;
             const MAX_CONCURRENT_DOWNLOADS = 3;
-            
+
             function processDownloadQueue() {
                 // Pause queue processing if network is disconnected
                 if (!ws || ws.readyState !== WebSocket.OPEN) return;
-                
+
                 while (window.currentDownloadingCount < MAX_CONCURRENT_DOWNLOADS && window.imageDownloadQueue.length > 0) {
                     if (window.imageDownloadQueue.length > MAX_QUEUE_SIZE) {
                         window.imageDownloadQueue.shift(); // Drop oldest request
@@ -4973,7 +4972,7 @@ window.showItemDetail = async function (id) {
                     executeImageRequest(task.hash, task.sellerId);
                 }
             }
-            
+
             function executeImageRequest(imageHash, sellerId) {
                 if (!ws || ws.readyState !== WebSocket.OPEN) {
                     // Re-queue instead of dropping - will retry when network reconnects
@@ -4981,10 +4980,10 @@ window.showItemDetail = async function (id) {
                     window.imageDownloadQueue.push({ hash: imageHash, sellerId: sellerId });
                     return;
                 }
-                
+
                 window.currentDownloadingCount++;
                 console.log("[Image] Requesting from seller::", imageHash, "Active:", window.currentDownloadingCount);
-                
+
                 ws.send(JSON.stringify({
                     type: "REQ_IMAGE",
                     imageHash: imageHash,
@@ -4992,12 +4991,12 @@ window.showItemDetail = async function (id) {
                     sellerId: sellerId,
                 }));
             }
-            
+
             function onImageDownloadComplete() {
                 window.currentDownloadingCount = Math.max(0, window.currentDownloadingCount - 1);
                 processDownloadQueue();
             }
-            
+
             // Helper to send WS messages with queue support
             function sendWsMessage(msg) {
                 const data = JSON.stringify(msg);
@@ -5009,7 +5008,7 @@ window.showItemDetail = async function (id) {
                     pendingWsMessages.push(msg);
                 }
             }
-            
+
             // Flush pending messages when WS connects
             function flushWsQueue() {
                 while (pendingWsMessages.length > 0) {
@@ -5017,7 +5016,7 @@ window.showItemDetail = async function (id) {
                     sendWsMessage(msg);
                 }
             }
-            
+
             function connect() {
                 displayName =
                     document.getElementById("input-name").value || peerId;
@@ -5210,12 +5209,12 @@ window.showItemDetail = async function (id) {
                     if (msg.type !== "IMG_CHUNK" && msg.type !== "IMG_HEADER" && msg.type !== "IMG_END") {
                         // Use messageId if available, otherwise construct from type + content + sender's timestamp
                         msgId = msg.messageId || (msg.from && msg.timestamp ? `${msg.from}-${msg.timestamp}` : null);
-                        
+
                         // Fallback: use content hash if no sender timestamp
                         if (!msgId) {
                             msgId = msg.type + (msg.item?.id || msg.itemId || msg.hash || msg.imageHash || msg.item?.title || '') + (msg.timestamp || '');
                         }
-                        
+
                         if (window._seenMsgIds && window._seenMsgIds.has(msgId)) {
                             console.log('[Dedupe] Already processed:', msg.type);
                             shouldSkip = true;
@@ -5311,7 +5310,7 @@ window.showItemDetail = async function (id) {
                                     ? "has image"
                                     : "no image",
                             );
-                            
+
                             // Verify DID signature before accepting
                             if (msg.signature && msg.did) {
                                 const isValid = await DIDService.verify(
@@ -5324,7 +5323,7 @@ window.showItemDetail = async function (id) {
                                     break;
                                 }
                             }
-                            
+
                             // Use conflict resolution to prevent duplicates
                             if (msg.item && msg.item.id) {
                                 db.items.get(msg.item.id).then(localItem => {
@@ -5365,7 +5364,7 @@ window.showItemDetail = async function (id) {
                                     break;
                                 }
                             }
-                            
+
                             if (msg.itemId) {
                                 db.items.get(msg.itemId).then(localItem => {
                                     // Create incoming item from message
@@ -5520,7 +5519,7 @@ window.showItemDetail = async function (id) {
                                     if (imgData && imgData.received >= imgData.expectedSize && !imgData.isAssembling) {
                                         // Mark as assembling to prevent duplicate assembly
                                         imgData.isAssembling = true;
-                                        
+
                                         console.log(
                                             "[IMG_CHUNK] All chunks received, auto-assembling...",
                                         );
@@ -5537,17 +5536,17 @@ window.showItemDetail = async function (id) {
                                             try {
                                                 const blob = new Blob(imgData.chunks, { type: imgData.mimeType || "image/jpeg" });
                                                 const storeItemId = targetItemId || imgData.itemId || Date.now();
-                                                
+
                                                 // Use quota-managed save
                                                 await saveBlobWithQuotaCheck(imageHash, blob);
-                                                
+
                                                 // Update item if found
                                                 if (targetItemId) {
                                                     await db.items.update(targetItemId, { imageHash: imageHash });
                                                 }
-                                                
+
                                                 console.log("[IMG_CHUNK] 💾 Saved blob to DB, hash:", imageHash);
-                                                
+
                                                 // Release download slot and process next
                                                 if (window.currentDownloadingCount > 0) {
                                                     window.currentDownloadingCount--;
@@ -5772,7 +5771,7 @@ window.showItemDetail = async function (id) {
                         window._itemIdMapping = window._itemIdMapping || {};
                         window._itemIdMapping[item.id] = localId;
                     }
-                    
+
                     // Request ALL missing images from seller
                     const hashes = item.imageHashes || (item.imageHash ? [item.imageHash] : []);
                     for (const hash of hashes) {
@@ -5780,7 +5779,7 @@ window.showItemDetail = async function (id) {
                             executeImageRequest(hash, item.sellerId);
                         }
                     }
-                    
+
                     loadItems();
                 }
             }
@@ -5861,7 +5860,7 @@ window.showItemDetail = async function (id) {
 
                 const messages = chatMessages[activeChatPeer];
                 const existingCount = container.children.length;
-                
+
                 // Incremental update: only add new messages
                 if (messages.length > existingCount) {
                     const newMessages = messages.slice(existingCount);
@@ -5989,7 +5988,7 @@ window.showItemDetail = async function (id) {
                     console.log("[P2P] Already connected to", remotePeerId);
                     return;
                 }
-                
+
                 console.log("[P2P] Creating offer for", remotePeerId);
                 const pc = new RTCPeerConnection({
                     iceServers: [
@@ -5998,26 +5997,26 @@ window.showItemDetail = async function (id) {
                         { urls: "turn:68.147.37.150:3478", username: "ourbackyard", credential: "calgary2024" },
                     ],
                 });
-                
+
                 pc.onicecandidate = (e) => {
                     if (e.candidate) {
                         P2PStreamer.sendSignal(remotePeerId, { type: "ice-candidate", candidate: e.candidate });
                     }
                 };
-                
+
                 pc.ondatachannel = (e) => window.setupDataChannelGlobal(remotePeerId, e.channel);
                 pc.onconnectionstatechange = () => {
                     if (pc.connectionState === "connected") {
                         console.log("[P2P] Connected to", remotePeerId);
                     }
                 };
-                
+
                 const channel = pc.createDataChannel("data");
                 window.setupDataChannelGlobal(remotePeerId, channel);
-                
+
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
-                
+
                 P2PStreamer.sendSignal(remotePeerId, { type: "offer", sdp: offer });
                 peerConnections[remotePeerId] = pc;
             }
@@ -6086,7 +6085,7 @@ window.showItemDetail = async function (id) {
                 navigator.serviceWorker.register('./sw.js')
                     .then(reg => console.log('[SW] Registered:', reg.scope))
                     .catch(err => console.log('[SW] Registration failed:', err));
-                    
+
                 // PWA Install Prompt
                 let deferredPrompt;
                 window.addEventListener('beforeinstallprompt', (e) => {
@@ -6094,7 +6093,7 @@ window.showItemDetail = async function (id) {
                     deferredPrompt = e;
                     document.getElementById('pwa-install-banner').style.display = 'block';
                 });
-                
+
                 document.getElementById('btn-install-pwa')?.addEventListener('click', async () => {
                     if (deferredPrompt) {
                         deferredPrompt.prompt();
@@ -6347,7 +6346,7 @@ window.showItemDetail = async function (id) {
             document.getElementById('btn-edit-photos')?.addEventListener('click', () => {
                 document.getElementById('edit-photos').click();
             });
-            
+
             document.getElementById('edit-photos')?.addEventListener('change', async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -6389,22 +6388,22 @@ window.showItemDetail = async function (id) {
                 const photoInput = document.getElementById('edit-photos');
                 let newImageHash = item.imageHash;
                 let newImageHashes = item.imageHashes || [];
-                
+
                 if (photoInput && photoInput.files.length > 0) {
                     newImageHashes = []; // Clear array if new images
-                    
+
                     for (let i = 0; i < photoInput.files.length; i++) {
                         const file = photoInput.files[i];
                         const compressed = await compressImage(file, 800, 0.7);
                         if (compressed) {
                             const hash = await ImageRegistry.computeHash(compressed);
                             await saveBlobWithQuotaCheck(hash, compressed);
-                            
+
                             newImageHashes.push(hash);
                             if (i === 0) newImageHash = hash; // First as thumbnail
-                            
+
                             console.log('[Edit] New image processed, hash:', hash);
-                            
+
                             // Broadcast new image to neighbors!
                             if (P2PStreamer && P2PStreamer.getPeers().length > 0) {
                                 await P2PStreamer.sendImage(id, compressed);
@@ -6412,7 +6411,7 @@ window.showItemDetail = async function (id) {
                         }
                     }
                 }
-                
+
                 // Update locally
                 const updatedItem = {
                     ...item,
@@ -6439,7 +6438,7 @@ window.showItemDetail = async function (id) {
                     // Get pending items from sync table
                     const pendingItems = await db.sync.where("type").equals("pending-publish").toArray();
                     console.log("[Sync] Found pending items:", pendingItems.length);
-                    
+
                     for (const record of pendingItems) {
                         try {
                             await broadcastNewItem(record.data);
@@ -6461,7 +6460,7 @@ window.showItemDetail = async function (id) {
                     navigator.serviceWorker.register('./sw.js')
                         .then(reg => {
                             console.log('[SW] Registered:', reg.scope);
-                            
+
                             // Check for updates
                             reg.onupdatefound = () => {
                                 const installingWorker = reg.installing;
@@ -6478,7 +6477,7 @@ window.showItemDetail = async function (id) {
                         })
                         .catch(err => console.log('[SW] Failed:', err));
                 });
-                
+
                 // Listen for SW messages
                 navigator.serviceWorker.addEventListener('message', event => {
                     if (event.data.type === 'SYNC_REQUEST') {
