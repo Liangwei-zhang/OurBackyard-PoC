@@ -4566,7 +4566,8 @@ window.showItemDetail = async function (id) {
                             if (result.index === 0) {
                                 imageHash = hash;
                                 const objectUrl = ObjectUrlManager.getOrCreate(hash, result.blob);
-                                thumbnails.push(hash); // Store hash, not blob URL
+                                const thumbUrl = URL.createObjectURL(result.blob);
+                                thumbnails.push(thumbUrl); // Store blob URL for display
                                 imageUrl = "";
                             }
                         }
@@ -4587,7 +4588,7 @@ window.showItemDetail = async function (id) {
                             h3Index: currentH3Index,
                             timestamp: timestamp,
                             thumbnail: thumbnails[0] || "",
-                            microThumbnail: microThumbnail,
+                            microThumbnail: thumbnails[0] || "",
                             imageHash: imageHash,
                             imageHashes: imageHashes,
                             thumbnails: thumbnails,
