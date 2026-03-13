@@ -3987,7 +3987,7 @@
                 
                 // Clear existing items in DOM before loading
                 const container = document.getElementById("market-grid");
-                if (container) container.innerHTML = '';
+                // Don't clear - we want incremental updates!
                 
                 try {
                     let items = await db.items
