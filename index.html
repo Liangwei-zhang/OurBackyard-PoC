@@ -706,6 +706,67 @@
                cursor: pointer;
              }
 
+             /* Product Chat Modal */
+             .product-chat-container {
+               width: 100%;
+               height: 100%;
+               max-width: 500px;
+               margin: 0 auto;
+               background: #1a1a1a;
+               display: flex;
+               flex-direction: column;
+             }
+             .product-chat-header {
+               padding: 16px;
+               border-bottom: 1px solid rgba(255,255,255,0.1);
+               position: relative;
+             }
+             .product-chat-item {
+               display: flex;
+               align-items: center;
+               gap: 12px;
+             }
+             .product-chat-messages {
+               flex: 1;
+               overflow-y: auto;
+               padding: 16px;
+               display: flex;
+               flex-direction: column;
+               gap: 12px;
+             }
+             .product-chat-msg {
+               max-width: 75%;
+               padding: 10px 14px;
+               border-radius: 18px;
+               font-size: 14px;
+               line-height: 1.4;
+             }
+             .product-chat-msg.sent {
+               background: #0084FF;
+               color: #fff;
+               align-self: flex-end;
+               border-bottom-right-radius: 4px;
+             }
+             .product-chat-msg.received {
+               background: #3A3A3C;
+               color: #fff;
+               align-self: flex-start;
+               border-bottom-left-radius: 4px;
+             }
+             .product-chat-msg .sender-name {
+               font-size: 11px;
+               color: #8E8E93;
+               margin-bottom: 4px;
+             }
+             .product-chat-input {
+               padding: 12px 16px;
+               display: flex;
+               align-items: center;
+               gap: 8px;
+               border-top: 1px solid rgba(255,255,255,0.1);
+               background: #2C2C2E;
+             }
+
              /* Modal */
              /* Edit Modal */
             .modal {
@@ -1174,6 +1235,31 @@
                         placeholder="Type a message..."
                     />
                     <button onclick="sendChatMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Chat Modal -->
+        <div id="product-chat-modal" class="modal" style="background:rgba(0,0,0,0.85)">
+            <div class="product-chat-container">
+                <!-- Product Header -->
+                <div class="product-chat-header">
+                    <button class="modal-close" onclick="closeProductChat()" style="position:absolute;left:12px;top:12px;z-index:10">×</button>
+                    <div class="product-chat-item" id="product-chat-item">
+                        <img id="product-chat-img" src="" alt="" style="width:50px;height:50px;border-radius:8px;object-fit:cover">
+                        <div style="flex:1;min-width:0">
+                            <div id="product-chat-title" style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Loading...</div>
+                            <div id="product-chat-price" style="font-size:14px;color:var(--accent-green);font-weight:700"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Chat Messages -->
+                <div class="product-chat-messages" id="product-chat-messages"></div>
+                <!-- Input Area -->
+                <div class="product-chat-input">
+                    <button style="background:none;border:none;font-size:20px;cursor:pointer;padding:8px">📷</button>
+                    <input type="text" id="product-chat-input" placeholder="發送訊息..." style="flex:1;padding:12px 16px;border:none;border-radius:24px;background:rgba(255,255,255,0.1);color:#fff;font-size:14px;outline:none">
+                    <button onclick="sendProductChatMessage()" style="background:#4F46E5;border:none;border-radius:50%;width:40px;height:40px;color:#fff;font-size:16px;cursor:pointer">➤</button>
                 </div>
             </div>
         </div>
@@ -4381,7 +4467,8 @@ window.showItemDetail = async function (id) {
 
         ${
             item.sellerId !== peerId && item.status === "available"
-                ? `<button onclick="claimItem(${item.id})" class="btn btn-primary" style="margin-top:20px">✋ Claim This Item</button>`
+                ? `<button onclick="claimItem(${item.id})" class="btn btn-primary" style="margin-top:20px">✋ Claim This Item</button>
+                   <button onclick="openChatWithSeller(${item.id}, '${escapeHtml(item.sellerId)}')" class="btn" style="margin-top:10px;background:#4F46E5;color:#fff;padding:14px 24px;border-radius:24px;font-size:15px;font-weight:600">💬 联系卖家</button>`
                 : ""
         }
         ${
@@ -4421,6 +4508,17 @@ window.showItemDetail = async function (id) {
 
                 // Background sync
                 broadcastItemUpdate(id, "gone").catch(console.error);
+            };
+
+            // Open chat with seller from item detail
+            window.openChatWithSeller = async function (itemId, sellerId) {
+                if (!sellerId || sellerId === peerId) {
+                    notify("这是你自己的商品", "warning");
+                    return;
+                }
+                closeModal();
+                // Open product-specific chat modal
+                openProductChat(itemId, sellerId);
             };
 
             async function broadcastItemUpdate(itemOrId, statusOrNull) {
@@ -5809,6 +5907,130 @@ window.showItemDetail = async function (id) {
             function closeChatModal() {
                 document.getElementById("chat-modal").classList.remove("show");
             }
+
+            // Product Chat Modal Functions
+            let currentProductChat = { itemId: null, sellerId: null, messages: [] };
+            
+            window.closeProductChat = function() {
+                document.getElementById("product-chat-modal").classList.remove("show");
+            };
+
+            window.openProductChat = async function(itemId, sellerId) {
+                const item = await db.items.get(itemId);
+                if (!item) return;
+                
+                currentProductChat = { itemId, sellerId, messages: [] };
+                
+                // Load product image
+                const imgEl = document.getElementById("product-chat-img");
+                const defaultImg = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 x=%2250%22 y=%2255%22 text-anchor=%22middle%22>📷</text></svg>";
+                
+                if (item.imageHashes && item.imageHashes.length > 0) {
+                    const blob = await db.blobs.where("hash").equals(item.imageHashes[0]).first();
+                    if (blob && blob.blob) {
+                        imgEl.src = ObjectUrlManager.getOrCreate(item.imageHashes[0], blob.blob);
+                    } else {
+                        imgEl.src = defaultImg;
+                        executeImageRequest(item.imageHashes[0], sellerId);
+                    }
+                } else if (item.imageHash) {
+                    const blob = await db.blobs.where("hash").equals(item.imageHash).first();
+                    if (blob && blob.blob) {
+                        imgEl.src = ObjectUrlManager.getOrCreate(item.imageHash, blob.blob);
+                    } else {
+                        imgEl.src = defaultImg;
+                        executeImageRequest(item.imageHash, sellerId);
+                    }
+                } else {
+                    imgEl.src = defaultImg;
+                }
+                
+                // Set title and price
+                const priceText = item.price === 0 ? "Free" : (item.price === "swap" ? "Swap" : "$" + item.price);
+                document.getElementById("product-chat-title").textContent = item.title;
+                document.getElementById("product-chat-price").textContent = priceText;
+                
+                // Load existing messages from localStorage
+                const chatKey = "chat_" + itemId + "_" + sellerId;
+                const saved = localStorage.getItem(chatKey);
+                if (saved) {
+                    currentProductChat.messages = JSON.parse(saved);
+                }
+                
+                renderProductChatMessages();
+                document.getElementById("product-chat-modal").classList.add("show");
+                document.getElementById("product-chat-input").focus();
+            };
+
+            function renderProductChatMessages() {
+                const container = document.getElementById("product-chat-messages");
+                if (!container) return;
+                
+                if (currentProductChat.messages.length === 0) {
+                    container.innerHTML = '<div style="text-align:center;color:#666;padding:20px">开始对话吧！</div>';
+                    return;
+                }
+                
+                container.innerHTML = currentProductChat.messages.map(msg => {
+                    const isSent = msg.from === "me";
+                    return '<div class="product-chat-msg ' + (isSent ? 'sent' : 'received') + '">' + 
+                        (isSent ? '' : '<div class="seller-name">卖家</div>') +
+                        escapeHtml(msg.text) + 
+                        '</div>';
+                }).join('');
+                
+                container.scrollTop = container.scrollHeight;
+            }
+
+            window.sendProductChatMessage = function() {
+                const input = document.getElementById("product-chat-input");
+                const text = input.value.trim();
+                if (!text) return;
+                
+                // Add message
+                currentProductChat.messages.push({ from: "me", text, timestamp: Date.now() });
+                
+                // Save to localStorage
+                const chatKey = "chat_" + currentProductChat.itemId + "_" + currentProductChat.sellerId;
+                localStorage.setItem(chatKey, JSON.stringify(currentProductChat.messages));
+                
+                input.value = "";
+                renderProductChatMessages();
+                
+                // Send via P2P
+                const msg = {
+                    type: "CHAT_MESSAGE",
+                    fromPeerId: peerId,
+                    toPeerId: currentProductChat.sellerId,
+                    itemId: currentProductChat.itemId,
+                    message: text,
+                    timestamp: Date.now(),
+                };
+                
+                if (window.P2PStreamer?.broadcast) {
+                    window.P2PStreamer.broadcast(msg);
+                }
+                if (window.ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify(msg));
+                }
+                
+                // Simulate seller response after delay (for demo)
+                setTimeout(() => {
+                    currentProductChat.messages.push({ from: "seller", text: "谢谢你的询问！商品还在。", timestamp: Date.now() });
+                    localStorage.setItem(chatKey, JSON.stringify(currentProductChat.messages));
+                    renderProductChatMessages();
+                }, 2000);
+            };
+
+            // Handle Enter key in product chat
+            document.addEventListener("DOMContentLoaded", function() {
+                const input = document.getElementById("product-chat-input");
+                if (input) {
+                    input.addEventListener("keypress", function(e) {
+                        if (e.key === "Enter") sendProductChatMessage();
+                    });
+                }
+            });
 
             function updateChatPeerSelector() {
                 const container = document.getElementById("chat-peer-selector");
