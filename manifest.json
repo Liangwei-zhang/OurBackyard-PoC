@@ -1,0 +1,100 @@
+{
+    "name": "OurBackyard — Calgary Community",
+    "short_name": "OurBackyard",
+    "description": "Decentralized P2P neighborhood marketplace — trade, chat, connect with neighbors",
+    "start_url": "/",
+    "id": "/",
+    "display": "standalone",
+    "display_override": [
+        "window-controls-overlay",
+        "standalone",
+        "minimal-ui"
+    ],
+    "background_color": "#0f0f18",
+    "theme_color": "#6366f1",
+    "orientation": "portrait-primary",
+    "lang": "en",
+    "dir": "ltr",
+    "scope": "/",
+    "prefer_related_applications": false,
+    "categories": [
+        "shopping",
+        "social",
+        "utilities"
+    ],
+    "icons": [
+        {
+            "src": "/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Post an Item",
+            "short_name": "Post",
+            "description": "List a new item for your neighbors",
+            "url": "/?action=add",
+            "icons": [
+                {
+                    "src": "/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "Browse Nearby",
+            "short_name": "Browse",
+            "description": "See what neighbors are offering",
+            "url": "/?tab=browse",
+            "icons": [
+                {
+                    "src": "/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "Community Chat",
+            "short_name": "Community",
+            "description": "Chat with your neighborhood",
+            "url": "/?tab=community",
+            "icons": [
+                {
+                    "src": "/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ],
+    "share_target": {
+        "action": "/",
+        "method": "GET",
+        "params": {
+            "title": "title",
+            "text": "description",
+            "url": "url"
+        },
+        "enctype": "application/x-www-form-urlencoded"
+    }
+}
