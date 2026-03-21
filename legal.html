@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+  <meta name="theme-color" content="#6366f1"/>
+  <title>OurBackyard — Legal</title>
+  <style>
+    :root{--primary:#6366f1;--bg:#0f0f18;--card:#141420;--text:#f0f0f0;--muted:#888;--border:rgba(255,255,255,.08)}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:40px}
+    .header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:14px;z-index:10}
+    .back-btn{background:none;border:none;color:var(--text);font-size:22px;cursor:pointer;line-height:1;padding:4px}
+    .header-title{font-size:17px;font-weight:700}
+    .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--card)}
+    .tab-btn{flex:1;padding:13px;font-size:14px;font-weight:600;background:none;border:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+    .tab-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
+    .content{display:none;padding:24px 20px;max-width:680px;margin:0 auto;line-height:1.75;font-size:15px}
+    .content.active{display:block}
+    h2{font-size:20px;font-weight:700;margin:28px 0 10px;color:var(--text)}
+    h2:first-child{margin-top:0}
+    h3{font-size:15px;font-weight:600;margin:20px 0 8px;color:var(--text)}
+    p{color:#c8c8d8;margin-bottom:12px}
+    ul{color:#c8c8d8;padding-left:20px;margin-bottom:12px}
+    li{margin-bottom:6px}
+    .chip{display:inline-block;background:rgba(99,102,241,.15);color:var(--primary);border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600;margin-bottom:16px}
+    .divider{height:1px;background:var(--border);margin:24px 0}
+    a{color:var(--primary);text-decoration:none}
+    .footer{text-align:center;font-size:12px;color:var(--muted);padding:32px 20px 0}
+  </style>
+</head>
+<body>
+<div class="header">
+  <button class="back-btn" onclick="history.back()">←</button>
+  <span class="header-title">Legal</span>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('tos')">Terms of Service</button>
+  <button class="tab-btn" onclick="showTab('privacy')">Privacy Policy</button>
+</div>
+
+<!-- TERMS OF SERVICE -->
+<div id="tab-tos" class="content active">
+  <div class="chip">Effective: March 2026</div>
+
+  <h2>Terms of Service</h2>
+  <p>Welcome to <strong>OurBackyard</strong>, a decentralized peer-to-peer community marketplace for Calgary neighborhoods. By using this app, you agree to these terms.</p>
+
+  <h2>1. About OurBackyard</h2>
+  <p>OurBackyard is a peer-to-peer (P2P) app. There is no central server holding your data. All items, messages, and identity keys are stored on your device and shared directly with nearby peers over encrypted connections.</p>
+
+  <h2>2. Eligibility</h2>
+  <p>You must be 18 years or older to use OurBackyard. By using the app you confirm you meet this requirement.</p>
+
+  <h2>3. User Conduct</h2>
+  <p>You agree not to use OurBackyard to:</p>
+  <ul>
+    <li>List illegal items or services</li>
+    <li>Harass, threaten, or deceive other users</li>
+    <li>Impersonate another person or entity</li>
+    <li>Attempt to compromise the security or integrity of the network</li>
+    <li>Spam or flood the P2P network with artificial traffic</li>
+  </ul>
+
+  <h2>4. Listings and Transactions</h2>
+  <p>OurBackyard facilitates connections between buyers and sellers but is not a party to any transaction. All transactions are between users. We make no warranties about the accuracy of listings or the conduct of other users.</p>
+  <p>You are responsible for verifying item condition and completing transactions safely in public spaces.</p>
+
+  <h2>5. Your Identity Key</h2>
+  <p>OurBackyard uses a cryptographic identity key stored on your device. <strong>If you lose your PIN and have not backed up your key, your identity cannot be recovered.</strong> Keep your PIN safe.</p>
+
+  <h2>6. Decentralized Network</h2>
+  <p>Because OurBackyard is P2P, content you publish propagates to other devices in your neighborhood. You cannot fully retract published listings once peers have received them, though you can mark items as removed from your own device.</p>
+
+  <h2>7. Limitation of Liability</h2>
+  <p>OurBackyard is provided "as is" without warranty. We are not liable for any loss arising from use of the app, including failed transactions, data loss, or device issues.</p>
+
+  <h2>8. Changes to Terms</h2>
+  <p>We may update these terms. Continued use after changes constitutes acceptance.</p>
+
+  <div class="divider"></div>
+  <p>Questions? <a href="mailto:legal@ourbackyard.app">legal@ourbackyard.app</a></p>
+</div>
+
+<!-- PRIVACY POLICY -->
+<div id="tab-privacy" class="content">
+  <div class="chip">Effective: March 2026 · PIPEDA Compliant</div>
+
+  <h2>Privacy Policy</h2>
+  <p>OurBackyard is designed with privacy as a core principle. This policy explains what data we collect, where it lives, and how it is protected.</p>
+
+  <h2>1. Data We Collect</h2>
+  <h3>On your device only</h3>
+  <ul>
+    <li><strong>Identity key</strong> — a cryptographic key pair generated locally, encrypted with your PIN</li>
+    <li><strong>Item listings</strong> — title, description, photos, price, condition</li>
+    <li><strong>Chat messages</strong> — encrypted end-to-end, stored in your local IndexedDB</li>
+    <li><strong>Location</strong> — your approximate H3 geohash (≈5 km cell), used only for local discovery. Exact GPS coordinates are never stored or transmitted.</li>
+  </ul>
+
+  <h3>Shared with nearby peers (P2P)</h3>
+  <ul>
+    <li>Your peer ID (pseudonymous, derived from your public key)</li>
+    <li>Item listings you publish</li>
+    <li>Your H3 cell (neighborhood-level, not precise location)</li>
+    <li>Chat messages (encrypted so only the recipient can read them)</li>
+  </ul>
+
+  <h3>We do NOT collect</h3>
+  <ul>
+    <li>Your name, email, or phone number</li>
+    <li>Precise GPS location</li>
+    <li>Payment information</li>
+    <li>Browsing history or analytics</li>
+  </ul>
+
+  <h2>2. No Central Server</h2>
+  <p>OurBackyard has no central database. Your data is not sent to or stored on our servers. Data flows directly between peers over encrypted WebRTC DataChannels and Nostr relays.</p>
+
+  <h2>3. Location Data</h2>
+  <p>We ask for location permission to determine your neighborhood H3 cell (approximately 5 km radius). This coarse location is used to connect you with nearby peers. We do not store or transmit your precise GPS coordinates. You will be shown a clear consent prompt before any location is used.</p>
+
+  <h2>4. Encryption</h2>
+  <ul>
+    <li>All chat messages are encrypted end-to-end using ECDH + AES-GCM before leaving your device</li>
+    <li>Your private key is encrypted with AES-GCM derived from your PIN and never leaves your device in plain form</li>
+    <li>Connections use TLS/DTLS in transit</li>
+  </ul>
+
+  <h2>5. Third-Party Services</h2>
+  <p>OurBackyard uses public Nostr relays for peer discovery and message routing. These relays may log metadata (event timestamps, relay routing). We use STUN/TURN servers for NAT traversal; these see your IP address during connection setup but not your message content.</p>
+
+  <h2>6. Your Rights (PIPEDA)</h2>
+  <p>Under Canada's PIPEDA, you have the right to:</p>
+  <ul>
+    <li><strong>Access</strong> — all your data is on your device; you can export it at any time</li>
+    <li><strong>Correction</strong> — edit or delete your listings from within the app</li>
+    <li><strong>Withdrawal</strong> — clear app data from your browser/device settings to remove all local data</li>
+  </ul>
+  <p>Because we hold no central database, we cannot retrieve or delete data already propagated to other peers' devices.</p>
+
+  <h2>7. Data Retention</h2>
+  <p>Data lives on your device until you clear it. Published listings propagate to neighboring peers and may persist on their devices. Chat messages are stored locally on sender and recipient devices only.</p>
+
+  <h2>8. Children</h2>
+  <p>OurBackyard is not intended for users under 18. We do not knowingly collect data from minors.</p>
+
+  <h2>9. Contact</h2>
+  <p>Privacy questions: <a href="mailto:privacy@ourbackyard.app">privacy@ourbackyard.app</a></p>
+
+  <div class="divider"></div>
+  <p style="font-size:13px;color:var(--muted)">OurBackyard · Calgary, AB, Canada · Built with ❤️ for local communities</p>
+</div>
+
+<div class="footer">OurBackyard &copy; 2026 · <a href="#" onclick="showTab('tos');return false">Terms</a> · <a href="#" onclick="showTab('privacy');return false">Privacy</a></div>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['tos','privacy'][i] === id));
+  document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+  var el = document.getElementById('tab-' + id);
+  if (el) el.classList.add('active');
+}
+</script>
+</body>
+</html>

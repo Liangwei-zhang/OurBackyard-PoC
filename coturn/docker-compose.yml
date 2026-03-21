@@ -1,0 +1,36 @@
+# Coturn TURN Server for OurBackyard
+# 部署: docker-compose up -d
+
+version: '3.8'
+
+services:
+  coturn:
+    image: coturn/coturn:latest
+    container_name: ourbackyard-turn
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+      - ./turnuserdb.txt:/etc/coturn/turnuserdb.txt:ro
+    # ports:
+    #   - "3478:3478/udp"
+    #   - "3478:3478/tcp"
+    #   - "5349:5349/tcp"
+    #   - "49152-65535:49152-65535/udp"
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - TZ=America/Denver
+
+  # Redis 用於信令狀態（可選）
+  redis:
+    image: redis:7-alpine
+    container_name: ourbackyard-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:
