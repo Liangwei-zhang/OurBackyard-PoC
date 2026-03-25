@@ -34,6 +34,8 @@ export class BlobTransfer extends EventBus {
    */
   constructor({ router, peerId, chunkSize = CHUNK_SIZE, maxConcurrent = MAX_CONCURRENT, maxRetries = MAX_RETRIES }) {
     super();
+    if (!router) throw new TypeError('router is required');
+    if (!peerId) throw new TypeError('peerId is required');
     this._router = router;
     this._peerId = peerId;
     this._chunkSize = chunkSize;
@@ -124,6 +126,9 @@ export class BlobTransfer extends EventBus {
         this.emit('transfer:progress', { transferId, toPeerId, progress });
       }
 
+      // Register outbound state before sending END so the ACK handler can find it
+      this._outbound.set(transferId, { ...entry, status: 'sent' });
+
       // Send END message
       await this._send(toPeerId, {
         type: 'BLOB_END',
@@ -131,8 +136,6 @@ export class BlobTransfer extends EventBus {
         transferId,
         hash,
       });
-
-      this._outbound.set(transferId, { ...entry, status: 'sent' });
     } catch (err) {
       if (attempt < this._maxRetries - 1) {
         const delay = RETRY_BASE_MS * Math.pow(2, attempt);
