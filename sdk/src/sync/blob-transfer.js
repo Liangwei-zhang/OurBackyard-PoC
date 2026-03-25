@@ -5,7 +5,7 @@
  */
 
 import { EventBus } from '../event-bus.js';
-import { uuid, ab2hex, sha256hex } from '../utils.js';
+import { uuid, ab2hex, hex2ab, sha256hex } from '../utils.js';
 import { Logger } from '../logger.js';
 
 const log = new Logger('BlobTransfer');
@@ -89,9 +89,7 @@ export class BlobTransfer extends EventBus {
     } else if (msg.type === 'blob:chunk') {
       const transfer = this._incoming.get(msg.transferId);
       if (!transfer) return;
-      transfer.chunks[msg.index] = new Uint8Array(
-        msg.data.match(/.{1,2}/g).map(b => parseInt(b, 16)),
-      );
+      transfer.chunks[msg.index] = new Uint8Array(hex2ab(msg.data));
 
       const received = transfer.chunks.filter(Boolean).length;
       this.emit('progress', {

@@ -24,6 +24,8 @@ export class HealthMonitor extends EventBus {
     /** @type {Map<string, PeerHealth>} */
     this._health = new Map();
     this._pingTimer = null;
+    /** @type {Set<ReturnType<typeof setTimeout>>} active ping timeout handles */
+    this._pingTimeouts = new Set();
   }
 
   /**
@@ -41,6 +43,8 @@ export class HealthMonitor extends EventBus {
   stop() {
     clearInterval(this._pingTimer);
     this._pingTimer = null;
+    for (const t of this._pingTimeouts) clearTimeout(t);
+    this._pingTimeouts.clear();
   }
 
   /**
@@ -140,8 +144,9 @@ export class HealthMonitor extends EventBus {
         continue;
       }
       h.lastPing = ts;
-      // Timeout check
-      setTimeout(() => {
+      // Timeout check — store handle to allow cleanup on stop()/removePeer()
+      const t = setTimeout(() => {
+        this._pingTimeouts.delete(t);
         if (h.lastPing === ts) {
           // No pong received
           h.misses++;
@@ -152,6 +157,7 @@ export class HealthMonitor extends EventBus {
           }
         }
       }, timeout);
+      this._pingTimeouts.add(t);
     }
   }
 }
