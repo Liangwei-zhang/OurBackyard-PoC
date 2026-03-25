@@ -228,13 +228,10 @@ The SDK uses only browser-native APIs:
 - `RTCPeerConnection` / `RTCDataChannel` — WebRTC
 - `crypto.subtle` — ECDH key exchange, AES-GCM encryption, SHA-256 hashing
 - `WebSocket` — signaling channels
-- `BroadcastChannel` — optional LAN discovery (used by NostrSignaling internally via P2PNode)
 
 Optional injected dependencies:
 - `secp256k1` — for real Schnorr signatures in NostrSignaling (relay may reject events without it)
-- Any IStorage implementation (Dexie, localStorage, etc.)
-
----
+- Any IStorage implementation (Dexie, localStorage, etc.)---
 
 ## License
 

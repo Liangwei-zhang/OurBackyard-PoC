@@ -65,8 +65,8 @@ export class BlobTransfer extends EventBus {
    * @param {object} [meta]   — optional { itemId, mime }
    */
   async sendBlob(peerId, hash, blob, meta = {}) {
-    const dc = this._router._transport._dataChannels.get(peerId);
-    if (!dc || dc.readyState !== 'open') return;
+    const dc = this._router._transport.getDataChannel(peerId);
+    if (!dc) return;
 
     try {
       const ab    = await blob.arrayBuffer();

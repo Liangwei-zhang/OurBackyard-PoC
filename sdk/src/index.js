@@ -76,7 +76,7 @@ export class P2PNode extends EventBus {
 
     // --- Sync modules (injected into router) ---
     this._gossip = storage
-      ? new GossipSync({ router: this._router, storage })
+      ? new GossipSync({ router: this._router, storage, peerId })
       : null;
 
     this._blobs = storage
@@ -194,7 +194,7 @@ export class P2PNode extends EventBus {
         this._crypto.deriveSharedKey(peerId, meta.ecdhPub).catch(() => {});
       }
       this._transport.trackPeer(peerId, meta);
-      if (this.peerId < peerId && !this._transport._peerConns.has(peerId)) {
+      if (this.peerId < peerId && !this._transport.hasPeerConnection(peerId)) {
         this._transport.createOffer(peerId).catch(() => {});
       }
     });

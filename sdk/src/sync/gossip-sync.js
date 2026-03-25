@@ -28,13 +28,15 @@ export class GossipSync extends EventBus {
    * @param {object} opts
    * @param {import('../sync/message-router.js').MessageRouter} opts.router
    * @param {import('../storage/storage-interface.js').IStorage} opts.storage
+   * @param {string}  opts.peerId       — Local peer identifier (needed for sync requests)
    * @param {number} [opts.maxTTL=4]
    * @param {number} [opts.syncWindow=604800000]  — ms to look back during sync (default 7 days)
    */
-  constructor({ router, storage, maxTTL = 4, syncWindow = 7 * 24 * 3600 * 1000 }) {
+  constructor({ router, storage, peerId, maxTTL = 4, syncWindow = 7 * 24 * 3600 * 1000 }) {
     super();
     this._router     = router;
     this._storage    = storage;
+    this._peerId     = peerId;
     this._maxTTL     = maxTTL;
     this._syncWindow = syncWindow;
 
@@ -75,7 +77,7 @@ export class GossipSync extends EventBus {
     const since = Date.now() - this._syncWindow;
     const items = await this._storage.getItems(since, 100).catch(() => []);
     const ids   = items.map(i => `${i.sellerId || ''}:${i.timestamp || 0}`);
-    this._router.send(peerId, 'SYNC_REQ', { ids, since, peerId: this._router._transport.peerId });
+    this._router.send(peerId, 'SYNC_REQ', { ids, since, peerId: this._peerId });
   }
 
   // ─────────────────────────── Internal handlers ───────────────────────────
@@ -99,7 +101,7 @@ export class GossipSync extends EventBus {
     // Gossip forwarding with TTL decrement
     const nextTTL = (ttl ?? this._maxTTL) - 1;
     if (nextTTL > 0) {
-      this._router._transport.broadcast(
+      this._router.broadcastRaw(
         JSON.stringify({ type: 'ITEM', item: { ...item, _ttl: nextTTL }, ttl: nextTTL }),
         fromPeerId
       );

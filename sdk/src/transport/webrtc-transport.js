@@ -141,6 +141,23 @@ export class WebRTCTransport extends EventBus {
   /** @returns {number} */
   get peerCount() { return this._dataChannels.size; }
 
+  /**
+   * Check whether an active RTCPeerConnection exists for the given peer.
+   * @param {string} peerId
+   * @returns {boolean}
+   */
+  hasPeerConnection(peerId) { return this._peerConns.has(peerId); }
+
+  /**
+   * Retrieve the open DataChannel for a peer, or null if not connected.
+   * @param {string} peerId
+   * @returns {RTCDataChannel|null}
+   */
+  getDataChannel(peerId) {
+    const dc = this._dataChannels.get(peerId);
+    return (dc?.readyState === 'open') ? dc : null;
+  }
+
   // ─────────────────────────── Internal — signal handlers ───────────────────────────
 
   async _handleOffer(peerId, signal) {

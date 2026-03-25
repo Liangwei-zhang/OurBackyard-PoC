@@ -67,6 +67,16 @@ export class MessageRouter extends EventBus {
     this._transport.broadcast(JSON.stringify({ type, ...payload }), excludePeerId);
   }
 
+  /**
+   * Broadcast a pre-serialised string or ArrayBuffer to all connected peers.
+   * Used by modules that need fine-grained control over the raw payload.
+   * @param {string|ArrayBuffer} data
+   * @param {string} [excludePeerId]
+   */
+  broadcastRaw(data, excludePeerId) {
+    this._transport.broadcast(data, excludePeerId);
+  }
+
   // ─────────────────────────── Internal ───────────────────────────
 
   _onData(fromPeerId, data) {

@@ -17,6 +17,9 @@
 
 import { ISignaling } from './signaling-interface.js';
 
+/** Peer ID must be alphanumeric + underscore/dash, 1-50 chars */
+const PEER_ID_PATTERN = /^[a-zA-Z0-9_-]{1,50}$/;
+
 const DEFAULT_RELAYS = [
   'wss://relay.damus.io',
   'wss://nostr.wine',
@@ -224,7 +227,7 @@ export class NostrSignaling extends ISignaling {
     const targetPeerId = this._getTag(event, 'target');
 
     // Validate peerId to prevent injection via crafted Nostr events
-    if (!senderPeerId || !/^[a-zA-Z0-9_-]{1,50}$/.test(senderPeerId)) return;
+    if (!senderPeerId || !PEER_ID_PATTERN.test(senderPeerId)) return;
 
     if (event.kind === KIND_ANNOUNCE) {
       try {
