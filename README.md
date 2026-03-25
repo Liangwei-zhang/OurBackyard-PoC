@@ -1,7 +1,7 @@
 # OurBackyard
 
 A P2P decentralised community marketplace for Calgary neighbourhoods.  
-No central server for data ¡ª end-to-end encrypted, works offline, data stays with users.
+No central server for data ï¿½ï¿½ end-to-end encrypted, works offline, data stays with users.
 
 > npm package: [`@ourbackyard/p2p-sdk`](https://www.npmjs.com/package/@ourbackyard/p2p-sdk)
 
@@ -13,8 +13,8 @@ No central server for data ¡ª end-to-end encrypted, works offline, data stays wi
 
 ```bash
 pip install fastapi uvicorn websockets
-python server.py
-# or: bash start-server.sh
+uvicorn server.server:app --reload --port 8000
+# or: bash server/start-server.sh   (simple http.server for testing)
 ```
 
 ### 2. Open the app
@@ -31,38 +31,38 @@ Open a second tab (or another device on the same network) and click **Join Netwo
 
 ```
 OurBackyard-PoC/
-©À©¤©¤ index.html              # PWA entry point (single-file app, 8 k lines)
-©À©¤©¤ index-v2.html           # Vite modular build target
-©À©¤©¤ ob-utils.js             # Shared UI utilities (escape, notify, compress)
-©À©¤©¤ p1p2-features.js        # Core UI feature logic
-©À©¤©¤ manifest.json / sw.js   # PWA manifest + service worker
-©À©¤©¤ server.py               # FastAPI WebSocket signaling server
-©À©¤©¤ vite.config.js          # Vite build config for index-v2
-©À©¤©¤ vite.sdk.config.js      # Vite build config for the SDK bundle
-©À©¤©¤ package.json
-©¦
-©À©¤©¤ js/                     # Standalone JS vendored libraries
-©¦   ©À©¤©¤ ob-sdk.js           # Pre-built SDK IIFE bundle (window.OurBackyardMesh)
-©¦   ©À©¤©¤ db.js               # IndexedDB (Dexie wrapper)
-©¦   ©À©¤©¤ utils.js            # Helper utilities
-©¦   ©À©¤©¤ dexie.js            # Dexie library
-©¦   ©À©¤©¤ h3-js.js            # H3 geospatial library
-©¦   ©¸©¤©¤ secp256k1.js        # secp256k1 cryptography
-©¦
-©À©¤©¤ native/                 # Native UI + helper modules loaded by index.html
-©¦   ©À©¤©¤ ui/                 # Chat UI, P2P image components
-©¦   ©À©¤©¤ ai/                 # Local AI assistant
-©¦   ©À©¤©¤ governance/         # Web-of-Trust
-©¦   ©¸©¤©¤ security/           # KeyVault, GeoConsent
-©¦
-©À©¤©¤ sdk/                    # @ourbackyard/p2p-sdk ¡ª 6-layer P2P SDK
-©¦   ©À©¤©¤ src/                # Source (ES Modules, zero external deps)
-©¦   ©À©¤©¤ tests/              # 325 unit tests
-©¦   ©¸©¤©¤ *.d.ts              # TypeScript declarations
-©¦
-©À©¤©¤ scripts/                # Build helpers (bundle-app, delta-bundle)
-©À©¤©¤ coturn/                 # Self-hosted TURN server config
-©¸©¤©¤ uploads/                # User-uploaded image assets
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ index.html              # PWA entry point (single-file app, 8 k lines)
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ index-v2.html           # Vite modular build target
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ob-utils.js             # Shared UI utilities (escape, notify, compress)
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ p1p2-features.js        # Core UI feature logic
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ manifest.json / sw.js   # PWA manifest + service worker
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ server.py               # FastAPI WebSocket signaling server
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ vite.config.js          # Vite build config for index-v2
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ vite.sdk.config.js      # Vite build config for the SDK bundle
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ package.json
+ï¿½ï¿½
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ js/                     # Standalone JS vendored libraries
+ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ob-sdk.js           # Pre-built SDK IIFE bundle (window.OurBackyardMesh)
+ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ db.js               # IndexedDB (Dexie wrapper)
+ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ utils.js            # Helper utilities
+ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ dexie.js            # Dexie library
+ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ h3-js.js            # H3 geospatial library
+ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ secp256k1.js        # secp256k1 cryptography
+ï¿½ï¿½
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ native/                 # Native UI + helper modules loaded by index.html
+ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ui/                 # Chat UI, P2P image components
+ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ai/                 # Local AI assistant
+ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ governance/         # Web-of-Trust
+ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ security/           # KeyVault, GeoConsent
+ï¿½ï¿½
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ sdk/                    # @ourbackyard/p2p-sdk ï¿½ï¿½ 6-layer P2P SDK
+ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ src/                # Source (ES Modules, zero external deps)
+ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ tests/              # 325 unit tests
+ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ *.d.ts              # TypeScript declarations
+ï¿½ï¿½
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ scripts/                # Build helpers (bundle-app, delta-bundle)
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ coturn/                 # Self-hosted TURN server config
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ uploads/                # User-uploaded image assets
 ```
 
 ---
@@ -118,31 +118,31 @@ npm run build:sdk   # outputs js/ob-sdk.js
 
 | Location | Lat, Lon | H3 L9 |
 |---|---|---|
-| Downtown | 51.0447, -114.0719 | 8fb29a¡­ |
-| NW Edgemont | 51.1285, -114.2103 | 8fb2c8¡­ |
-| NW Dalhousie | 51.1138, -114.1946 | 8fb2b1¡­ |
+| Downtown | 51.0447, -114.0719 | 8fb29aï¿½ï¿½ |
+| NW Edgemont | 51.1285, -114.2103 | 8fb2c8ï¿½ï¿½ |
+| NW Dalhousie | 51.1138, -114.1946 | 8fb2b1ï¿½ï¿½ |
 
 ---
 
 ## P2P Architecture
 
 ```
-©°©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©´
-©¦            OurBackyard PWA           ©¦
-©¦  index.html ¡¤ chat-ui ¡¤ p1p2-feats   ©¦
-©¸©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©Ð©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¼
-                 ©¦ uses
-©°©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤¨‹©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©´
-©¦          @ourbackyard/p2p-sdk        ©¦
-©¦  WebRTC ?©¤? Nostr signaling (7)      ©¦
-©¦  GossipSub ¡¤ ECDH E2E ¡¤ Dead Drop    ©¦
-©¦  MultiSignaling failover             ©¦
-©¸©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©Ð©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¼
-                 ©¦
-©°©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤¨‹©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©´
-©¦  IndexedDB ¡¤ CRDT ¡¤ Blob streaming   ©¦
-©¦  KeyVault ¡¤ CSP ¡¤ Rate limiting      ©¦
-©¸©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¼
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ï¿½ï¿½            OurBackyard PWA           ï¿½ï¿½
+ï¿½ï¿½  index.html ï¿½ï¿½ chat-ui ï¿½ï¿½ p1p2-feats   ï¿½ï¿½
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                 ï¿½ï¿½ uses
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ï¿½ï¿½          @ourbackyard/p2p-sdk        ï¿½ï¿½
+ï¿½ï¿½  WebRTC ?ï¿½ï¿½? Nostr signaling (7)      ï¿½ï¿½
+ï¿½ï¿½  GossipSub ï¿½ï¿½ ECDH E2E ï¿½ï¿½ Dead Drop    ï¿½ï¿½
+ï¿½ï¿½  MultiSignaling failover             ï¿½ï¿½
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                 ï¿½ï¿½
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ï¿½ï¿½  IndexedDB ï¿½ï¿½ CRDT ï¿½ï¿½ Blob streaming   ï¿½ï¿½
+ï¿½ï¿½  KeyVault ï¿½ï¿½ CSP ï¿½ï¿½ Rate limiting      ï¿½ï¿½
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 ```
 
 ---

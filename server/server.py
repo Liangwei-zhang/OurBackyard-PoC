@@ -1,7 +1,7 @@
 # OurBackyard PoC - Phase 1: P2P WebRTC Signaling Server
-# 運行方式:
+# 運行方式 (从项目根目录运行):
 #   pip install fastapi uvicorn websockets
-#   uvicorn server:app --reload --port 8000
+#   uvicorn server.server:app --reload --port 8000
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,7 +23,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 项目根目录 (server.py 位于 server/ 子目录中)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # ============ TURN 配置 ============
 TURN_CONFIG = {
@@ -320,12 +321,6 @@ async def serve_static(filename: str):
     return HTTPException(status_code=404, detail="File not found")
 
 
-@app.get("/v2")
-async def root_v2():
-    """V2 新版頁面 - 開發測試版本"""
-    return FileResponse(os.path.join(BASE_DIR, "index-v2.html"))
-
-
 @app.get("/api/config")
 async def get_config():
     """返回 TURN 服務器配置"""
@@ -374,7 +369,7 @@ import uuid
 import hashlib
 import os
 
-BUCKET_PATH = os.path.join(os.path.dirname(__file__), "uploads")
+BUCKET_PATH = os.path.join(BASE_DIR, "uploads")
 os.makedirs(BUCKET_PATH, exist_ok=True)
 
 @app.post("/api/upload/image")

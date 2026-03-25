@@ -2,7 +2,7 @@
 # OurBackyard Local Server
 # Run this to start a local server for OurBackyard P2P app
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."  # move to project root
 
 echo "Starting OurBackyard server on http://localhost:8080"
 echo "Press Ctrl+C to stop"

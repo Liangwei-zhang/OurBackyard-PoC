@@ -24,7 +24,7 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
         <script>
-    // Global image placeholders — MUST be first script in page
+    // Global image placeholders �?MUST be first script in page
     // so renderMarketGrid always has these in scope even with SW cache
     (function(){
       var b64s = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCI+PHJlY3QgZmlsbD0iIzMzMyIgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIi8+PC9zdmc+";
@@ -34,7 +34,7 @@
     })();
   </script>
   <script src="js/secp256k1.js"></script>
-  <script src="ob-utils.js"></script>  <!-- Shared utilities: escape, notify, compressImage, relTime -->
+  <script src="app/ob-utils.js"></script>  <!-- Shared utilities: escape, notify, compressImage, relTime -->
   <!-- SDK-based P2P layer: replaces native/communication/nostr-signaling.js + p2p-mesh.js -->
   <script src="js/ob-sdk.js"></script>
 	<script src="native/ui/chat-ui.js"></script>
@@ -1217,7 +1217,7 @@
         <!-- Unified Header -->
         <header class="header" role="banner">
             <div class="header-left">
-                <button class="header-menu-btn" id="statsDrawerBtn" aria-label="Open menu">☰</button>
+                <button class="header-menu-btn" id="statsDrawerBtn" aria-label="Open menu">�?/button>
                 <div class="logo" role="img" aria-label="OurBackyard">
                     OurBackyard
                 </div>
@@ -1229,7 +1229,7 @@
                     <span id="status-text">Disconnected</span>
                     <span id="peer-count-badge" class="peer-count-badge">0</span>
                 </div>
-                <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">☀️</button>
+                <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">☀�?/button>
             </div>
         </header>
             <div class="stats-drawer" id="statsDrawer">
@@ -1288,12 +1288,12 @@
                         <span class="stat-value" id="sync-status">--</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-icon">⭐</span>
+                        <span class="stat-icon">�?/span>
                         <span class="stat-label">Reputation</span>
                         <span class="stat-value" id="reputation">100</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-icon">⏰</span>
+                        <span class="stat-icon">�?/span>
                         <span class="stat-label">Timebank</span>
                         <span class="stat-value" id="timebank">1h</span>
                     </div>
@@ -1328,7 +1328,7 @@
                         <span class="stat-value" id="location">--</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-icon">🗳️</span>
+                        <span class="stat-icon">🗳�?/span>
                         <span class="stat-label">Votes</span>
                         <span class="stat-value" id="vote-count">0</span>
                     </div>
@@ -1354,7 +1354,7 @@
                     </div>
                     <!-- Reset / Danger Zone -->
                     <div class="stat-item full-width stat-item-divider">
-                        <span class="stat-icon">🗑️</span>
+                        <span class="stat-icon">🗑�?/span>
                         <span class="stat-label">Data</span>
                         <button class="btn-sm" onclick="exportMyData()">Export</button>
                         <button class="btn-sm" onclick="importIdentity()">Restore ID</button>
@@ -1367,7 +1367,7 @@
                         <button class="btn-sm" onclick="AppUpdater.checkForUpdates()">Check for Update</button>
                         <button class="btn-sm" onclick="notify('Incremental update is under development.', 'info')">Incremental</button>
                     </div>
-                    <!-- Install App — only shown when browser supports PWA install -->
+                    <!-- Install App �?only shown when browser supports PWA install -->
                     <div class="stat-item full-width stat-item-divider" id="pwa-install-row" style="display:none">
                         <span class="stat-icon">📲</span>
                         <span class="stat-label">Install</span>
@@ -1403,7 +1403,7 @@
     <div id="app">
 
 
-            <!-- Tab panels — Browse is always shown; others toggled by FAB menu -->
+            <!-- Tab panels �?Browse is always shown; others toggled by FAB menu -->
 
             <!-- Browse -->
             <div id="tab-browse" style="min-height:0">
@@ -1423,7 +1423,7 @@
                       class="search-input"
                       id="search-input"
                       type="search"
-                      placeholder="Search items, categories…"
+                      placeholder="Search items, categories�?
                       autocomplete="off"
                       autocorrect="off"
                       spellcheck="false"
@@ -1436,7 +1436,7 @@
                       onclick="clearSearch()"
                       aria-label="Clear search"
                       title="Clear"
-                    >✕</button>
+                    >�?/button>
                   </div>
                   <div class="search-count" id="search-count"></div>
                 </div>
@@ -1505,7 +1505,7 @@
                         <label class="form-label">Price</label>
                         <select id="item-price">
                             <option value="0">🎁 Free (Curb Alert)</option>
-                            <option value="swap">☕ Swap for Coffee</option>
+                            <option value="swap">�?Swap for Coffee</option>
                             <option value="5">$5</option>
                             <option value="10">$10</option>
                             <option value="20">$20</option>
@@ -1515,7 +1515,7 @@
                     <div class="form-group">
                         <label class="form-label">Condition</label>
                         <select id="item-condition">
-                            <option value="New">✨ Like New</option>
+                            <option value="New">�?Like New</option>
                             <option value="Good">👍 Good</option>
                             <option value="Fair">👌 Fair</option>
                         </select>
@@ -1559,7 +1559,7 @@
         </div>
 
         <!-- P2P Chat Modal -->
-        <!-- chat-modal and product-chat-modal removed — ChatUI (ob-chat-modal) is the single entry point -->
+        <!-- chat-modal and product-chat-modal removed �?ChatUI (ob-chat-modal) is the single entry point -->
 
         <!-- Modal -->
         <div id="item-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="item-modal-title">
@@ -1594,7 +1594,7 @@
             // Compress image to max 800px for storage
             // ── Image Compression via OffscreenCanvas Worker ───────────────────
             // Runs image decode + resize + toBlob entirely in a Web Worker.
-            // The Worker has its own memory space — if a 50MP photo decode causes OOM,
+            // The Worker has its own memory space �?if a 50MP photo decode causes OOM,
             // only the Worker dies; the main tab remains alive and we get a clean error.
             //
             // Falls back to main-thread compression on browsers without Worker/OffscreenCanvas.
@@ -1603,7 +1603,7 @@
 self.onmessage = async function(e) {
     const { id, blob, maxWidth, quality } = e.data;
     const sizes = [maxWidth, 1024, 800, 640];
-    const MAX_PX = 3840 * 2880; // ~11M pixels — safe iOS/Android canvas limit
+    const MAX_PX = 3840 * 2880; // ~11M pixels �?safe iOS/Android canvas limit
 
     async function tryEncode(source, srcW, srcH, targetW, q) {
         let w = Math.min(targetW, srcW);
@@ -1627,7 +1627,7 @@ self.onmessage = async function(e) {
                 bm.close();
                 if (r) { result = r; break; }
             } catch (_) {
-                // resize options unsupported — fall through
+                // resize options unsupported �?fall through
                 break;
             }
         }
@@ -1856,7 +1856,7 @@ self.onmessage = async function(e) {
                     if (ws && ws.readyState === WebSocket.OPEN) {
                         ws.send(wsMsg);
                     } else if (window.mesh?.signaling?.isOnline) {
-                        // WS relay unavailable — route signal through Nostr relays
+                        // WS relay unavailable �?route signal through Nostr relays
                         window.mesh.signaling.sendSignal(targetPeerId, signal)
                             .catch(e => log("[P2P] Nostr signal failed:", e));
                     } else if (window.mesh?.lanChannel) {
@@ -2260,7 +2260,7 @@ self.onmessage = async function(e) {
                     if (msg.type === "APP_BUNDLE") {
                         log("[Update] Received app bundle:", msg.bundleHash);
 
-                        // Signature is mandatory — reject bundles without one
+                        // Signature is mandatory �?reject bundles without one
                         if (!msg.signature) {
                             console.error("[Update] Bundle has no signature, rejecting!");
                             return;
@@ -2268,7 +2268,7 @@ self.onmessage = async function(e) {
                         const verified = await this.verifySignature(msg.signature, msg.bundleHash);
                         if (!verified) {
                             console.error("[Update] Signature verification FAILED, rejecting bundle!");
-                            notify("Update package signature verification failed — rejected for security.", "error");
+                            notify("Update package signature verification failed �?rejected for security.", "error");
                             return;
                         }
                         log("[Update] Signature verified");
@@ -2279,7 +2279,7 @@ self.onmessage = async function(e) {
                 // Verify bundle signature using ECDSA P-256 via WebCrypto
                 async verifySignature(signature, bundleHash) {
                     if (!this.trustedPublicKey || !signature) {
-                        log("[Update] No trusted public key configured — rejecting bundle");
+                        log("[Update] No trusted public key configured �?rejecting bundle");
                         return false;
                     }
                     try {
@@ -2717,7 +2717,7 @@ self.onmessage = async function(e) {
                 keyPair: null,
                 publicKey: null,
 
-                // Prompt user for password (disabled — device-bound key used instead)
+                // Prompt user for password (disabled �?device-bound key used instead)
                 async promptPassword() {
                     return Promise.resolve("");
                 },
@@ -3071,11 +3071,11 @@ self.onmessage = async function(e) {
                     // 3. Initialize app modules (auto-login, AppUpdater etc.)
                     await initApp();
 
-                    // 4. Get location THEN connect — both db and displayName are ready at this point
+                    // 4. Get location THEN connect �?both db and displayName are ready at this point
                     await initLocation();
                     connect();
 
-                    // 5. Bootstrap UI — db is guaranteed open here
+                    // 5. Bootstrap UI �?db is guaranteed open here
                     loadItems();
                     renderCategories();
                     // Pre-warm: after items load, queue all missing images for download
@@ -3088,7 +3088,7 @@ self.onmessage = async function(e) {
                                 for (const h of hashes) allHashes.push({ hash: h, sellerId: item.sellerId });
                             }
                             // Filter to only hashes not already in local blob store
-                            // .toCollection().keys() returns ++id, not hash — must use pluck or toArray
+                            // .toCollection().keys() returns ++id, not hash �?must use pluck or toArray
                             const localBlobRows = await db.blobs.toArray();
                             const localHashes = new Set(localBlobRows.map(b => b.hash).filter(Boolean));
                             for (const { hash, sellerId } of allHashes) {
@@ -3099,7 +3099,7 @@ self.onmessage = async function(e) {
                             processDownloadQueue();
                             log("[Bootstrap] Pre-queued", window.imageDownloadQueue.length, "missing images");
                         } catch (_) {}
-                    }, 2000); // 2s delay — let WS connect first
+                    }, 2000); // 2s delay �?let WS connect first
                     initReputation();
                     updateSyncStatus();
                     updateNetworkStatus();
@@ -3279,7 +3279,7 @@ self.onmessage = async function(e) {
                     updateSyncStatus();
                 },
 
-                // Check if item already synced — primary: itemId index (O(1)); fallback: title+sellerId
+                // Check if item already synced �?primary: itemId index (O(1)); fallback: title+sellerId
                 async isItemSynced(item) {
                     // Fast path: look up by original item ID (indexed in v6)
                     if (item.id) {
@@ -3295,7 +3295,7 @@ self.onmessage = async function(e) {
                     return byTitle ? byTitle.id : false;
                 },
 
-                // Sync new item — idempotent: same original ID is never inserted twice
+                // Sync new item �?idempotent: same original ID is never inserted twice
                 async syncItem(item) {
                     const existingLocalId = await this.isItemSynced(item);
                     if (existingLocalId) {
@@ -3303,18 +3303,18 @@ self.onmessage = async function(e) {
                         return existingLocalId; // Return existing local id so image fetch still works
                     }
 
-                    // Build record — do NOT carry the sender's auto-increment id as our PK;
+                    // Build record �?do NOT carry the sender's auto-increment id as our PK;
                     // store it in itemId so we can index/dedup on it.
                     const itemData = {
                         ...item,
-                        itemId: item.id,        // indexed — the canonical dedup key
+                        itemId: item.id,        // indexed �?the canonical dedup key
                         originalId: item.id,    // kept for backwards compat
                         syncedAt: Date.now(),
                         updatedAt: item.updatedAt || Date.now(),
                     };
                     delete itemData.id; // Let ++id auto-increment generate a fresh local PK
 
-                    const newId = await db.items.add(itemData); // add() not put() — prevents silent overwrites
+                    const newId = await db.items.add(itemData); // add() not put() �?prevents silent overwrites
 
                     // Keep legacy id-map for any code still calling getLocalId()
                     if (item.id && item.id !== newId) {
@@ -3359,7 +3359,7 @@ self.onmessage = async function(e) {
                 document.getElementById("theme-toggle").textContent = "🌙";
             } else {
                 document.body.classList.add("day-mode");
-                document.getElementById("theme-toggle").textContent = "☀️";
+                document.getElementById("theme-toggle").textContent = "☀�?;
             }
 
             // Open full-screen gallery with scroll snap
@@ -3369,7 +3369,7 @@ self.onmessage = async function(e) {
 
                 // Add close button
                 var closeBtn = document.createElement('div');
-                closeBtn.innerHTML = '✕';
+                closeBtn.innerHTML = '�?;
                 closeBtn.style.cssText = 'position:fixed;top:20px;right:20px;width:40px;height:40px;background:rgba(0,0,0,0.7);color:#fff;border-radius:50%;font-size:20px;display:flex;align-items:center;justify-content:center;z-index:10000;cursor:pointer';
                 closeBtn.onclick = function(e) {
                     e.stopPropagation();
@@ -3399,7 +3399,7 @@ self.onmessage = async function(e) {
             };
 
             // ── Swipeable Full-screen Gallery ──────────────────────────
-            // Uses a horizontal sliding strip (like iOS Photos) — no opacity flash,
+            // Uses a horizontal sliding strip (like iOS Photos) �?no opacity flash,
             // real-time finger tracking with spring settle animation.
             let _galleryOverlay = null;
 
@@ -3427,7 +3427,7 @@ self.onmessage = async function(e) {
                 ].join(';');
                 _galleryOverlay = ov;
 
-                // ── Sliding strip — one img per slide ──
+                // ── Sliding strip �?one img per slide ──
                 const strip = document.createElement('div');
                 strip.style.cssText = [
                     `display:flex;width:${total * 100}%;height:100%`,
@@ -3539,7 +3539,7 @@ self.onmessage = async function(e) {
                 ov.addEventListener('touchend', (e) => {
                     const dy = e.changedTouches[0].clientY - ty0;
                     if (!dragging) {
-                        // Pure tap — close
+                        // Pure tap �?close
                         if (Math.abs(dragX) < 8 && Math.abs(dy) < 8) closeGallery();
                         return;
                     }
@@ -3579,7 +3579,7 @@ self.onmessage = async function(e) {
                 const isDay = document.body.classList.toggle("day-mode");
                 localStorage.setItem("ourbackyard_darkmode", !isDay);
                 document.getElementById("theme-toggle").textContent = isDay
-                    ? "☀️"
+                    ? "☀�?
                     : "🌙";
             }
 
@@ -3821,7 +3821,7 @@ self.onmessage = async function(e) {
             let peerConnections = {}; // peerId -> RTCPeerConnection
 
             let ws = null;
-            // Share with OurBackyardMesh bridge — mesh writes to window.dataChannels on DC open
+            // Share with OurBackyardMesh bridge �?mesh writes to window.dataChannels on DC open
             window.dataChannels = window.dataChannels || {};
             let dataChannels = window.dataChannels;
             let heartbeatInterval = null;
@@ -3839,7 +3839,7 @@ self.onmessage = async function(e) {
                     if (this.urls.has(hash)) {
                         const existingUrl = this.urls.get(hash);
                         if (existingUrl && existingUrl.startsWith('blob:')) {
-                            return existingUrl; // reuse — don't create a new URL
+                            return existingUrl; // reuse �?don't create a new URL
                         }
                         // Invalid/stale URL, clean up before creating fresh one
                         try { URL.revokeObjectURL(existingUrl); } catch (_) {}
@@ -3982,14 +3982,14 @@ self.onmessage = async function(e) {
                     if (this.activeRequests.has(hash)) return;
                     this.activeRequests.add(hash);
 
-                    // Use first() not toArray() — stops at first match, much faster
+                    // Use first() not toArray() �?stops at first match, much faster
                     db.blobs.where("hash").equals(hash).first().then(blob => {
                         if (blob) {
                             window.updateImageInUI(hash);
                             this.activeRequests.delete(hash);
                             return;
                         }
-                        // Not local — find which item owns this hash and request it
+                        // Not local �?find which item owns this hash and request it
                         db.items.filter(i =>
                             i.imageHash === hash ||
                             (Array.isArray(i.imageHashes) && i.imageHashes.includes(hash))
@@ -4193,7 +4193,7 @@ self.onmessage = async function(e) {
                 }
                 processDownloadQueue();
 
-                // 2. Re-check all unloaded card images (batch DB query — no N+1)
+                // 2. Re-check all unloaded card images (batch DB query �?no N+1)
                 const unloadedImgs = Array.from(
                     document.querySelectorAll('img[data-hash]:not([data-loaded="true"])')
                 );
@@ -4206,7 +4206,7 @@ self.onmessage = async function(e) {
                             const hash = img.dataset.hash;
                             if (!hash) continue;
                             if (foundSet.has(hash)) {
-                                window.updateImageInUI(hash); // blob arrived — update immediately
+                                window.updateImageInUI(hash); // blob arrived �?update immediately
                             } else if (!window.ImageLazyLoader?.activeRequests?.has(hash)) {
                                 window.ImageLazyLoader?.observe(img); // re-trigger lazy loader
                             }
@@ -4392,7 +4392,7 @@ self.onmessage = async function(e) {
             window.updateImageInUI = async function(imageHash) {
                 log("[🎯] Targeted update for hash:", imageHash);
 
-                // Never process empty hash — would match ALL data-hash="" cards
+                // Never process empty hash �?would match ALL data-hash="" cards
                 if (!imageHash) return;
 
                 // Directly find DOM elements that need this image - no DB query needed!
@@ -4543,7 +4543,7 @@ self.onmessage = async function(e) {
             // ============ UI Helpers ============
             function formatPrice(price) {
                 if (price === 0 || price === "0" || price === 0.0) return "🎁 Free";
-                if (price === "swap") return "☕ Swap";
+                if (price === "swap") return "�?Swap";
                 if (!price) return "";
                 const n = parseFloat(price);
                 if (isNaN(n) || n < 0) return "";  // guard negative / NaN
@@ -4722,7 +4722,7 @@ self.onmessage = async function(e) {
 
             // Update unread messages count
             function updateUnreadCount() {
-                // chatMessages is a Dexie table (async) — read asynchronously
+                // chatMessages is a Dexie table (async) �?read asynchronously
                 if (!db || !db.chatMessages) return;
                 db.chatMessages
                     .where('to').equals(peerId)
@@ -4885,7 +4885,7 @@ self.onmessage = async function(e) {
                             `<span class="category-tag ${cat === selectedCategory ? "active" : ""}" data-cat="${escapeHtml(cat)}">${escapeHtml(cat)}</span>`,
                     ).join("");
             }
-            // Event delegation — safe, no inline onclick string interpolation
+            // Event delegation �?safe, no inline onclick string interpolation
             document.getElementById("category-bar").addEventListener("click", function(e) {
                 const tag = e.target.closest(".category-tag");
                 if (tag && tag.dataset.cat) filterCategory(tag.dataset.cat);
@@ -4940,7 +4940,7 @@ self.onmessage = async function(e) {
 
                     // Images are loaded lazily via IntersectionObserver
 
-                    // Load AI recommendations — throttle: run at most once per 30s
+                    // Load AI recommendations �?throttle: run at most once per 30s
                     const _now = Date.now();
                     if (!window._lastAILoad || _now - window._lastAILoad > 30000) {
                         window._lastAILoad = _now;
@@ -5010,7 +5010,7 @@ self.onmessage = async function(e) {
                 renderMarketGrid(sortedKeyword, container);
                 if (countEl) {
                     if (keywordFiltered.length === 0) {
-                        countEl.textContent = '🔍 Searching…';
+                        countEl.textContent = '🔍 Searching�?;
                     } else {
                         countEl.textContent = keywordFiltered.length + ' of ' + base.length + ' items';
                     }
@@ -5053,8 +5053,8 @@ self.onmessage = async function(e) {
                             countEl.textContent = 'No results for "' + searchQuery + '"';
                         }
                     }).catch(() => {
-                        // Semantic search failed — keyword results already rendered, just clear hint
-                        if (countEl && countEl.textContent === '🔍 Searching…') {
+                        // Semantic search failed �?keyword results already rendered, just clear hint
+                        if (countEl && countEl.textContent === '🔍 Searching�?) {
                             countEl.textContent = 'No results for "' + searchQuery + '"';
                         }
                     });
@@ -5197,12 +5197,12 @@ self.onmessage = async function(e) {
                         if (s) rep = JSON.parse(s).points || 50;
                     }
                 } catch {}
-                const stars = Math.round(rep / 20 * 2) / 2; // 0-100 → 0-5 half-star
+                const stars = Math.round(rep / 20 * 2) / 2; // 0-100 �?0-5 half-star
                 const full = Math.floor(stars), half = stars % 1 >= 0.5 ? 1 : 0, empty = 5 - full - half;
                 const starsHTML = '<span class="item-stars" aria-label="' + stars + ' stars">'
-                    + '★'.repeat(full)
-                    + (half ? '<span style="opacity:.55">★</span>' : '')
-                    + '<span style="opacity:.25">★</span>'.repeat(empty)
+                    + '�?.repeat(full)
+                    + (half ? '<span style="opacity:.55">�?/span>' : '')
+                    + '<span style="opacity:.25">�?/span>'.repeat(empty)
                     + '</span>';
 
                 // WoT trust badge
@@ -5210,8 +5210,8 @@ self.onmessage = async function(e) {
                 try {
                     if (window.WebOfTrust) {
                         const trust = window.WebOfTrust.getTrustScore(sellerId);
-                        if (trust >= 0.8)       wotHTML = '<span class="wot-badge verified">✓ Verified</span>';
-                        else if (trust >= 0.5)  wotHTML = '<span class="wot-badge trusted">✓ Trusted</span>';
+                        if (trust >= 0.8)       wotHTML = '<span class="wot-badge verified">�?Verified</span>';
+                        else if (trust >= 0.5)  wotHTML = '<span class="wot-badge trusted">�?Trusted</span>';
                         else if (sellerId !== peerId) wotHTML = '<span class="wot-badge new-user">New</span>';
                     }
                 } catch {}
@@ -5266,11 +5266,11 @@ self.onmessage = async function(e) {
                 if (items.length === 0) {
                     const wsState = ws ? ws.readyState : -1;
                     if (wsState === WebSocket.CONNECTING || wsState === -1) {
-                        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📡</div><div class="empty-text">Connecting to neighborhood…</div></div>';
+                        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📡</div><div class="empty-text">Connecting to neighborhood�?/div></div>';
                     } else if (wsState === WebSocket.OPEN && (window.imageDownloadQueue?.length > 0 || window.currentDownloadingCount > 0)) {
-                        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔄</div><div class="empty-text">Fetching items from neighbors…</div></div>';
+                        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔄</div><div class="empty-text">Fetching items from neighbors�?/div></div>';
                     } else if (wsState === WebSocket.CLOSED) {
-                        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📡</div><div class="empty-text">Disconnected — tap to reconnect</div></div>';
+                        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📡</div><div class="empty-text">Disconnected �?tap to reconnect</div></div>';
                     } else {
                         container.innerHTML = '<div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-text">No items nearby yet<br><span style="font-size:13px;color:var(--text-muted)">Be the first to post something!</span></div></div>';
                     }
@@ -5280,7 +5280,7 @@ self.onmessage = async function(e) {
                 // Remove any stale empty-state div before inserting real cards
                 container.querySelectorAll('.empty-state').forEach(el => el.remove());
 
-                // Micro-thumbnail placeholder — use global constant (survives SW cache hits)
+                // Micro-thumbnail placeholder �?use global constant (survives SW cache hits)
                 const microPlaceholder = window._MICRO_PH || "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCI+PHJlY3QgZmlsbD0iIzMzMyIgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIi8+PC9zdmc+";
 
                 // ===== Incremental render: update existing + add new =====
@@ -5448,8 +5448,8 @@ window.showItemDetail = async function (id) {
                 if (item.sellerId !== peerId && window.WebOfTrust) {
                     try {
                         const _score = WebOfTrust.getTrustScore(item.sellerId);
-                        if (_score >= 0.8)      _wotBadgeHtml = '<div style="margin-bottom:12px"><span class="wot-badge verified" style="font-size:12px;padding:3px 9px">✓ Verified Neighbor</span></div>';
-                        else if (_score >= 0.5) _wotBadgeHtml = '<div style="margin-bottom:12px"><span class="wot-badge trusted" style="font-size:12px;padding:3px 9px">✓ Trusted Neighbor</span></div>';
+                        if (_score >= 0.8)      _wotBadgeHtml = '<div style="margin-bottom:12px"><span class="wot-badge verified" style="font-size:12px;padding:3px 9px">�?Verified Neighbor</span></div>';
+                        else if (_score >= 0.5) _wotBadgeHtml = '<div style="margin-bottom:12px"><span class="wot-badge trusted" style="font-size:12px;padding:3px 9px">�?Trusted Neighbor</span></div>';
                         else                   _wotBadgeHtml = '<div style="margin-bottom:12px"><span class="wot-badge new-user" style="font-size:12px;padding:3px 9px">New Member</span></div>';
                     } catch {}
                 }
@@ -5457,7 +5457,7 @@ window.showItemDetail = async function (id) {
                 // Trust/Block row (only for other sellers)
                 const _trustRowHtml = item.sellerId !== peerId ? `
                 <div style="display:flex;gap:8px;margin-top:16px">
-                  <button onclick="window.trustPeer&&trustPeer('${escapeHtml(item.sellerId)}','TRUSTED');this.textContent='✓ Trusted';this.style.borderColor='var(--accent-green)';this.disabled=true;" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--accent-green);cursor:pointer;font-size:13px">👍 Trust Seller</button>
+                  <button onclick="window.trustPeer&&trustPeer('${escapeHtml(item.sellerId)}','TRUSTED');this.textContent='�?Trusted';this.style.borderColor='var(--accent-green)';this.disabled=true;" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--accent-green);cursor:pointer;font-size:13px">👍 Trust Seller</button>
                   <button onclick="window.blockPeer&&blockPeer('${escapeHtml(item.sellerId)}');this.textContent='Blocked';this.disabled=true;window.debouncedLoadItems&&debouncedLoadItems();closeModal();" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-size:13px">🚫 Block</button>
                 </div>` : '';
 
@@ -5473,16 +5473,16 @@ window.showItemDetail = async function (id) {
         ${_wotBadgeHtml}
         ${
             item.sellerId !== peerId && item.status === "available"
-                ? `<button onclick="claimItem(${item.id})" class="btn btn-primary" style="margin-top:8px;width:100%">✋ I Want This!</button>
+                ? `<button onclick="claimItem(${item.id})" class="btn btn-primary" style="margin-top:8px;width:100%">�?I Want This!</button>
                    <button onclick="openChatWithSeller(${item.id}, '${escapeHtml(item.sellerId)}', '', window._currentDetailItem)" class="btn" style="margin-top:8px;width:100%;background:var(--surface);color:var(--text)">💬 Ask Seller</button>`
                 : item.sellerId !== peerId && item.status === "pending"
-                ? `<button onclick="claimItem(${item.id})" class="btn btn-primary" style="margin-top:8px;width:100%;background:var(--accent-green);color:#000">✅ Mark as Received</button>
+                ? `<button onclick="claimItem(${item.id})" class="btn btn-primary" style="margin-top:8px;width:100%;background:var(--accent-green);color:#000">�?Mark as Received</button>
                    <button onclick="openChatWithSeller(${item.id}, '${escapeHtml(item.sellerId)}', '', window._currentDetailItem)" class="btn" style="margin-top:8px;width:100%;background:var(--surface);color:var(--text)">💬 Message Seller</button>`
                 : ""
         }
         ${
             item.sellerId === peerId
-                ? `<button onclick="markAsGone(${item.id})" class="btn btn-danger" style="margin-top:10px">✓ Mark as Given Away</button>`
+                ? `<button onclick="markAsGone(${item.id})" class="btn btn-danger" style="margin-top:10px">�?Mark as Given Away</button>`
                 : ""
         }
         ${_trustRowHtml}
@@ -5519,7 +5519,7 @@ window.showItemDetail = async function (id) {
                   <div style="background:var(--bg-card);border-radius:24px 24px 0 0;padding:28px 24px 40px;width:100%;max-width:480px;box-shadow:0 -8px 40px rgba(0,0,0,.5)">
                     <div style="width:40px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 24px"></div>
                     <div style="text-align:center;margin-bottom:24px">
-                      <div style="font-size:52px;margin-bottom:12px">${isBuyer ? '🤝' : '✅'}</div>
+                      <div style="font-size:52px;margin-bottom:12px">${isBuyer ? '🤝' : '�?}</div>
                       <div style="font-size:19px;font-weight:700">${isBuyer ? 'Confirm Pick-up' : 'Confirm Hand-off'}</div>
                       <div style="font-size:14px;color:var(--text-muted);margin-top:8px;line-height:1.6">
                         ${isBuyer
@@ -5529,7 +5529,7 @@ window.showItemDetail = async function (id) {
                     </div>
                     <div style="display:flex;flex-direction:column;gap:10px">
                       <button id="ob-hc-confirm" style="padding:16px;border-radius:14px;border:none;background:var(--accent-green,#22c55e);color:#000;font-size:16px;font-weight:700;cursor:pointer">
-                        ${isBuyer ? '✓ Yes, I got it!' : "✓ Yes, it's gone!"}
+                        ${isBuyer ? '�?Yes, I got it!' : "�?Yes, it's gone!"}
                       </button>
                       <button id="ob-hc-cancel" style="padding:14px;border-radius:14px;border:1.5px solid var(--border);background:transparent;color:var(--text-muted);font-size:15px;cursor:pointer">
                         Not yet
@@ -5550,13 +5550,13 @@ window.showItemDetail = async function (id) {
                 await db.items.update(itemId, { status: 'gone', handoffAt: Date.now() });
                 loadItems();
                 triggerHaptic('success');
-                notify(role === 'buyer' ? '🎉 Enjoy your new item!' : '✅ Item successfully given away!', 'success', 4000);
+                notify(role === 'buyer' ? '🎉 Enjoy your new item!' : '�?Item successfully given away!', 'success', 4000);
                 broadcastItemUpdate(itemId, 'gone').catch(console.error);
                 const otherPeerId = role === 'buyer' ? item.sellerId : null;
                 if (otherPeerId && otherPeerId !== peerId && window.mesh) {
                     const chatMsg = role === 'buyer'
-                        ? '✅ I picked up "' + item.title + '". Thank you!'
-                        : '✅ "' + item.title + '" has been marked as given away. Thanks!';
+                        ? '�?I picked up "' + item.title + '". Thank you!'
+                        : '�?"' + item.title + '" has been marked as given away. Thanks!';
                     window.mesh.sendChat(otherPeerId, chatMsg, itemId).catch(() => {});
                 }
                 const rateTarget = role === 'buyer' ? item.sellerId : null;
@@ -5677,7 +5677,7 @@ window.showItemDetail = async function (id) {
 
                         // Delete button
                         const delBtn = document.createElement("button");
-                        delBtn.innerHTML = "✕";
+                        delBtn.innerHTML = "�?;
                         delBtn.style.position = "absolute";
                         delBtn.style.top = "-8px";
                         delBtn.style.right = "-8px";
@@ -5738,7 +5738,7 @@ window.showItemDetail = async function (id) {
                     const price = document.getElementById("item-price").value;
                     const priceNum = price === "" ? 0 : Number(price);
                     if (price !== "" && price !== "swap" && (isNaN(priceNum) || priceNum < 0 || priceNum > 100000)) {
-                        notify("Please enter a valid price (0–$100,000)", "warning");
+                        notify("Please enter a valid price (0�?100,000)", "warning");
                         return;
                     }
                     const condition =
@@ -5767,7 +5767,7 @@ window.showItemDetail = async function (id) {
                     let thumbnails = [];
 
                     if (selectedPhotos.length > 0) {
-                        // Serial compression — one image at a time, no concurrent memory spikes
+                        // Serial compression �?one image at a time, no concurrent memory spikes
                         progressTextEl.textContent = `Compressing images... (0/${selectedPhotos.length})`;
                         const compressedResults = [];
                         for (let i = 0; i < selectedPhotos.length; i++) {
@@ -5780,7 +5780,7 @@ window.showItemDetail = async function (id) {
                             }
                             progressTextEl.textContent = `Compressing images... (${i + 1}/${selectedPhotos.length})`;
                             // Yield to the event loop between images so GC can reclaim canvas/bitmap memory.
-                            // iOS Safari needs more time — use 300ms on mobile, 50ms on desktop.
+                            // iOS Safari needs more time �?use 300ms on mobile, 50ms on desktop.
                             const gcDelay = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 300 : 50;
                             await new Promise(r => setTimeout(r, gcDelay));
                         }
@@ -5832,7 +5832,7 @@ window.showItemDetail = async function (id) {
 
                         progressTextEl.textContent = `Uploading...`;
 
-                        // Store item — thumbnail fields intentionally empty; images resolved via imageHash at render time
+                        // Store item �?thumbnail fields intentionally empty; images resolved via imageHash at render time
                         const itemId = await db.items.add({
                             type: "marketplace",
                             status: "available",
@@ -5924,7 +5924,7 @@ window.showItemDetail = async function (id) {
                     document.getElementById("photo-preview").innerHTML = "";
                     renderPhotoPreview();
 
-                    // Load items FIRST, then switch tab — user arrives to a fully populated list
+                    // Load items FIRST, then switch tab �?user arrives to a fully populated list
                     await loadItems(true);
                     // Index published item in LocalAI for immediate searchability
                     if (window.LocalAI && fullItem) {
@@ -6055,7 +6055,7 @@ window.showItemDetail = async function (id) {
                     }
                 }
 
-                // P2P Mesh broadcast (GossipSub — works without server.py)
+                // P2P Mesh broadcast (GossipSub �?works without server.py)
                 if (window.broadcastItemViaP2P) {
                     window.broadcastItemViaP2P(itemForBroadcast);
                     log("[P2P] Item broadcast via mesh:", item.title);
@@ -6100,7 +6100,7 @@ window.showItemDetail = async function (id) {
 
                     // Send binary chunks as BASE64 (Cloudflare Tunnel strips binary!)
                     // 64KB chunks = fewer round-trips; only yield when buffer is actually full
-                    const SEND_CHUNK = 65536; // 64KB per chunk (4× previous) — reduces chunk count
+                    const SEND_CHUNK = 65536; // 64KB per chunk (4× previous) �?reduces chunk count
                     while (offset < totalSize) {
                         // Back-pressure: pause only when WS send buffer is full
                         while (ws.bufferedAmount > 512 * 1024) {
@@ -6140,12 +6140,12 @@ window.showItemDetail = async function (id) {
             const MAX_QUEUE_SIZE = 50;
             window.currentDownloadingCount = 0;
             const MAX_CONCURRENT_DOWNLOADS = 6;
-            const _activeDownloads = new Set(); // track hash → prevents double-decrement
+            const _activeDownloads = new Set(); // track hash �?prevents double-decrement
 
             function processDownloadQueue() {
                 if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-                // Deduplicate queue — same hash may be added by IO observer + periodic retry + modal
+                // Deduplicate queue �?same hash may be added by IO observer + periodic retry + modal
                 const seen = new Set();
                 window.imageDownloadQueue = window.imageDownloadQueue.filter(t => {
                     if (seen.has(t.hash)) return false;
@@ -6179,7 +6179,7 @@ window.showItemDetail = async function (id) {
                     sellerId: sellerId,
                 }));
 
-                // 20s hard timeout — release slot if seller never responds
+                // 20s hard timeout �?release slot if seller never responds
                 setTimeout(() => {
                     if (_activeDownloads.has(imageHash)) {
                         _activeDownloads.delete(imageHash);
@@ -6242,14 +6242,14 @@ window.showItemDetail = async function (id) {
 
                 updateStatus("connecting", "Connecting...");
 
-                // Legacy WebSocket signaling — skip if running on hosted deployment (no server.py)
+                // Legacy WebSocket signaling �?skip if running on hosted deployment (no server.py)
                 // Nostr P2P is the primary signaling path; WS is only for local dev with server.py
                 const _isHostedDeploy = location.hostname.includes('.ngrok') ||
                     location.hostname.includes('.app') ||
                     location.hostname.includes('.io') ||
                     (location.protocol === 'https:' && !['localhost','127.0.0.1'].includes(location.hostname));
                 if (_isHostedDeploy) {
-                    log('[WS] Hosted deployment detected — skipping legacy WS, using Nostr P2P only');
+                    log('[WS] Hosted deployment detected �?skipping legacy WS, using Nostr P2P only');
                     updateStatus('', 'P2P Mode');
                     // Fake ws object so existing code doesn't crash on ws.send()
                     ws = { readyState: 3, send: () => {}, close: () => {} };
@@ -6298,7 +6298,7 @@ window.showItemDetail = async function (id) {
                     // Start heartbeat
                     startHeartbeat();
 
-                    // Refresh peer count periodically — guard against re-registering on reconnect
+                    // Refresh peer count periodically �?guard against re-registering on reconnect
                     if (!window._peerCountPollerStarted) {
                         window._peerCountPollerStarted = true;
                         setInterval(() => {
@@ -6320,7 +6320,7 @@ window.showItemDetail = async function (id) {
                     log("[WS] Server unavailable, running P2P-only mode");
                     // Only notify if Nostr is also not connected (avoid false alarms)
                     if (!window.mesh || !window.mesh.signaling?.isOnline) {
-                        notify("📡 P2P mode — syncing via neighbor mesh", "info");
+                        notify("📡 P2P mode �?syncing via neighbor mesh", "info");
                     }
                     // Trigger Merkle sync over any already-open DataChannels
                     // so neighbors can exchange items without the relay server
@@ -6339,9 +6339,9 @@ window.showItemDetail = async function (id) {
                     log("[WS] Connection closed, code:", evt.code);
                     stopHeartbeat();
                     // 404 = server not running; 1006 = connection refused
-                    // In both cases, P2P mesh is already running — no WS needed
+                    // In both cases, P2P mesh is already running �?no WS needed
                     if (evt.code === 1006 || evt.code === 4004) {
-                        log("[WS] Server not available — staying in P2P-only mode");
+                        log("[WS] Server not available �?staying in P2P-only mode");
                         updateStatus("", "P2P Mode");
                         // Kick off Merkle sync over DataChannels if any are open
                         MerkleSync.createSyncRequest().then(syncMsg => {
@@ -6351,7 +6351,7 @@ window.showItemDetail = async function (id) {
                         }).catch(() => {});
                         return;
                     }
-                    // Server was running but dropped — retry with backoff
+                    // Server was running but dropped �?retry with backoff
                     const MAX_RECONNECT_ATTEMPTS = 5;
                     if ((window._wsReconnectAttempts || 0) >= MAX_RECONNECT_ATTEMPTS) {
                         log("[WS] Max reconnect attempts reached, staying P2P-only");
@@ -6808,7 +6808,7 @@ window.showItemDetail = async function (id) {
                             })();
                             break;
                         case "IMG_CHUNK":
-                            // msg already parsed above — use directly, no second JSON.parse
+                            // msg already parsed above �?use directly, no second JSON.parse
                             try {
                                 const chunkData = msg.data;
                                 const imageHash = msg.imageHash;
@@ -7206,7 +7206,7 @@ window.showItemDetail = async function (id) {
                 }
             });
 
-            // ── Unified chat — all routes go through ChatUI ────────────────────────
+            // ── Unified chat �?all routes go through ChatUI ────────────────────────
             // Legacy function stubs keep backwards-compatibility with any remaining callers
             window.openProductChat = function(itemId, sellerId, sellerName, itemData) {
                 if (window.ChatUI) ChatUI.openWithSeller(itemId, sellerId, sellerName, itemData);
@@ -7218,7 +7218,7 @@ window.showItemDetail = async function (id) {
                 if (window.ChatUI) ChatUI.openWithSeller(itemId, sellerId, name, itemData);
             };
 
-            // Peer count update — update badge only, no old chat-modal logic
+            // Peer count update �?update badge only, no old chat-modal logic
             window.updatePeerCount = function(count) {
                 const badge = document.getElementById('peer-count-badge');
                 if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'inline-flex' : 'none'; }
@@ -7267,7 +7267,7 @@ window.showItemDetail = async function (id) {
                 // Also skip if the SDK mesh already has an active DataChannel to this peer.
                 // Avoids duplicate RTCPeerConnections and ICE race conditions.
                 if (window.dataChannels?.[remotePeerId]?.readyState === "open") {
-                    log("[P2P] Mesh already has open DC to", remotePeerId, "— skipping inline connectToPeer");
+                    log("[P2P] Mesh already has open DC to", remotePeerId, "�?skipping inline connectToPeer");
                     return;
                 }
 
@@ -7340,7 +7340,7 @@ window.showItemDetail = async function (id) {
                     })
                     .catch(err => log('[SW] Registration failed:', err));
 
-                // PWA Install — deferred prompt pattern
+                // PWA Install �?deferred prompt pattern
                 // Never auto-show a banner; only reveal the install option in the drawer when available.
                 let deferredPrompt;
                 window.addEventListener('beforeinstallprompt', (e) => {
@@ -7361,7 +7361,7 @@ window.showItemDetail = async function (id) {
                     deferredPrompt = null;
                     const row = document.getElementById('pwa-install-row');
                     if (row) row.style.display = 'none';
-                    if (outcome === 'accepted') notify('✅ App installed! Launch it from your desktop.', 'success');
+                    if (outcome === 'accepted') notify('�?App installed! Launch it from your desktop.', 'success');
                 };
 
                 window.addEventListener('appinstalled', () => {
@@ -7670,7 +7670,7 @@ window.showItemDetail = async function (id) {
                 if (price !== '' && price !== 'swap') {
                     const pn = Number(price);
                     if (isNaN(pn) || pn < 0 || pn > 100000) {
-                        notify('Please enter a valid price (0–$100,000)', 'warning');
+                        notify('Please enter a valid price (0�?100,000)', 'warning');
                         return;
                     }
                 }
@@ -7768,7 +7768,7 @@ window.showItemDetail = async function (id) {
                                         // New version available
                                         log('[SW] New version available');
                                         if (typeof notify === 'function') {
-                                            notify('New version available — click to refresh.', 'info');
+                                            notify('New version available �?click to refresh.', 'info');
                                         }
                                     }
                                 };
@@ -7799,20 +7799,20 @@ window.showItemDetail = async function (id) {
 
   // ── 等待 DOM + Dexie db 就绪 ────────────────────────────────────────────
   await new Promise(r => document.readyState !== 'loading' ? r() : document.addEventListener('DOMContentLoaded', r));
-  await new Promise(r => setTimeout(r, 300)); // 等原有脚本先跑
+  await new Promise(r => setTimeout(r, 300)); // 等原有脚本先�?
 
   // ── 1. 私钥加密存储接管 (P0) ────────────────────────────────────────────
   let unlockedPrivKey = null;
 
   if (!KeyVault.isUnlocked()) {
-    // 先静默尝试 session 恢复（同一标签页刷新免输PIN）
+    // 先静默尝�?session 恢复（同一标签页刷新免输PIN�?
     const fromSession = await KeyVault.tryRestoreSession();
 
     if (!fromSession) {
       const hasVault = await KeyVault.isSetup();
 
       if (!hasVault) {
-        // 新用户 or 迁移旧明文密钥
+        // 新用�?or 迁移旧明文密�?
         let rawKey = null;
 
         // 尝试从旧存储迁移
@@ -7827,7 +7827,7 @@ window.showItemDetail = async function (id) {
         }
 
         if (!rawKey) {
-          // 生成新密钥（Ed25519，降级到 P-256）
+          // 生成新密钥（Ed25519，降级到 P-256�?
           try {
             const kp = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign','verify']);
             rawKey = new Uint8Array(await crypto.subtle.exportKey('raw', kp.privateKey));
@@ -7862,7 +7862,7 @@ window.showItemDetail = async function (id) {
 
   unlockedPrivKey = KeyVault.getKey();
 
-  // 挂到全局供 DIDService 使用
+  // 挂到全局�?DIDService 使用
   if (window.DIDService && typeof window.DIDService.importKey === 'function') {
     await window.DIDService.importKey(unlockedPrivKey).catch(console.warn);
   }
@@ -7886,8 +7886,8 @@ window.showItemDetail = async function (id) {
     };
   }
 
-  // ── 3. 网络层 (去中心化 + 聊天) ────────────────────────────────────────
-  // 等待 peerId 和 db 就绪
+  // ── 3. 网络�?(去中心化 + 聊天) ────────────────────────────────────────
+  // 等待 peerId �?db 就绪
   const waitFor = (fn, ms=8000) => new Promise((res,rej) => {
     const t = Date.now();
     const check = () => { if(fn()) res(); else if(Date.now()-t>ms) rej(new Error('timeout')); else setTimeout(check,100); };
@@ -7903,7 +7903,7 @@ window.showItemDetail = async function (id) {
 
   // Wait for GPS / H3 cell to be resolved before creating mesh.
   // If initLocation hasn't finished yet, mesh would use h3Cell='default'
-  // and subscribe to the wrong Nostr channel — peers would never find each other.
+  // and subscribe to the wrong Nostr channel �?peers would never find each other.
   try {
     await waitFor(() => window.currentH3, 5000);
     console.log('[Boot] H3 cell ready:', window.currentH3);
@@ -7913,22 +7913,22 @@ window.showItemDetail = async function (id) {
     // default that all offline-first peers will share.
     if (!window.currentH3) {
       window.currentH3 = 'default';
-      console.warn('[Boot] GPS not ready after 5s — using h3Cell="default" as fallback');
+      console.warn('[Boot] GPS not ready after 5s �?using h3Cell="default" as fallback');
     }
   }
 
   // chatMessages 已在 DB schema v5 中声明，直接使用 window.db
-  // 检测表是否存在（兼容旧版 DB）
+  // 检测表是否存在（兼容旧�?DB�?
   if (window.db && !window.db.tables.find(t => t.name === 'chatMessages')) {
-    console.warn('[Boot] chatMessages table missing — DB may be old version, refreshing...');
-    // 触发 Dexie 版本升级（已在 initDB v5 中定义）
+    console.warn('[Boot] chatMessages table missing �?DB may be old version, refreshing...');
+    // 触发 Dexie 版本升级（已�?initDB v5 中定义）
     try {
       window.db.close();
       await window.db.open();
     } catch(e) { console.warn('[Boot] DB reopen failed:', e); }
   }
 
-  // 初始化 P2P 网格
+  // 初始�?P2P 网格
   const mesh = new OurBackyardMesh({
     peerId:   window.peerId,
     h3Cell:   window.currentH3 || 'default',
@@ -7941,7 +7941,7 @@ window.showItemDetail = async function (id) {
 
     onChat: (msg) => {
       // ChatUI.init() overwrites mesh.onChat with _onIncomingMsg.
-      // This fallback fires only if ChatUI hasn't init'd yet — queue the msg.
+      // This fallback fires only if ChatUI hasn't init'd yet �?queue the msg.
       if (window._chatMsgQueue) window._chatMsgQueue.push(msg);
     },
 
@@ -7957,7 +7957,7 @@ window.showItemDetail = async function (id) {
     },
 
     onStatus: (mode) => {
-      const map = { nostr:'🌐 P2P', lan:'📡 LAN', p2p:'✅ P2P', offline:'⚠️ Offline' };
+      const map = { nostr:'🌐 P2P', lan:'📡 LAN', p2p:'�?P2P', offline:'⚠️ Offline' };
       const el = document.querySelector('#network-mode,[data-network-mode]');
       if (el) el.textContent = map[mode]||mode;
     },
@@ -7966,7 +7966,7 @@ window.showItemDetail = async function (id) {
   await mesh.init();
   window.mesh = mesh;
 
-  // 初始化聊天 UI
+  // 初始化聊�?UI
   window._chatMsgQueue = window._chatMsgQueue || [];
   ChatUI.init(mesh, window.db, window.peerId);
   // Drain any messages that arrived before ChatUI was ready
@@ -7987,7 +7987,7 @@ window.showItemDetail = async function (id) {
     console.log('[Boot] WebOfTrust ready');
   }
 
-  // ── 5. Local AI — semantic search index ───────────────────────────────
+  // ── 5. Local AI �?semantic search index ───────────────────────────────
   if (window.LocalAI) {
     LocalAI.init().then(async () => {
       // Index all existing items in background (non-blocking)
@@ -8009,7 +8009,7 @@ window.showItemDetail = async function (id) {
     };
   }
 
-  // ── 6. Desktop Full Node — TURN community relay ───────────────────────
+  // ── 6. Desktop Full Node �?TURN community relay ───────────────────────
   if (window.DesktopFullNode) {
     DesktopFullNode.start(window.peerId, window.currentH3 || 'default', {
       enableDataProxy:    true,
@@ -8021,7 +8021,7 @@ window.showItemDetail = async function (id) {
         console.log('[Boot] DesktopFullNode running services:', result.services);
         // Update status bar if available
         if (window._statusBarUpdate) window._statusBarUpdate('p2p');
-        // Hook data proxy into mesh — share cached items with mobile peers
+        // Hook data proxy into mesh �?share cached items with mobile peers
         if (result.services.includes('data-proxy') && window.mesh) {
           window.mesh.onPeers = ((origFn) => (count) => {
             if (count > 0 && DesktopFullNode.dataProxy) {
@@ -8052,14 +8052,14 @@ window.showItemDetail = async function (id) {
     },
   };
 
-  console.log('[OurBackyard] ✅ All modules connected — serverless P2P');
+  console.log('[OurBackyard] �?All modules connected �?serverless P2P');
 
 })();
 
 
-            // ═══════════════════════════════════════════════════════════════
+            // ══════════════════════════════════════════════════════════════�?
             // Bottom Tab Bar Navigation  (replaces FAB menu)
-            // ═══════════════════════════════════════════════════════════════
+            // ══════════════════════════════════════════════════════════════�?
             (function _initBottomTabs() {
               const style = document.createElement('style');
               style.textContent = `
@@ -8194,24 +8194,24 @@ window.showItemDetail = async function (id) {
                 if (!badge) return;
                 badge.textContent = count > 99 ? '99+' : String(count || 0);
                 badge.style.display = count > 0 ? 'flex' : 'none';
-                // (legacy badge spans removed — ob-tab-msg-badge is the single source of truth)
+                // (legacy badge spans removed �?ob-tab-msg-badge is the single source of truth)
               };
 
               console.log('[BottomTabs] Navigation ready');
             })();
 
     </script>
-    <script src="p1p2-features.js"></script>
+    <script src="app/p1p2-features.js"></script>
 
   <!-- ── ⚠️ Offline status bar ──────────────────────────────────── -->
   <div id="offline-bar" style="display:none;position:fixed;top:0;left:0;right:0;
     background:#ef4444;color:#fff;padding:8px 16px;z-index:9998;text-align:center;
     font-size:13px;font-weight:500;">
-    📵 Offline — browsing cached items · P2P features need network
+    📵 Offline �?browsing cached items · P2P features need network
   </div>
 
   <script>
-        // ⚠️ Offline检测
+        // ⚠️ Offline检�?
     function updateOnlineStatus() {
       const bar = document.getElementById('offline-bar');
       if (!bar) return;

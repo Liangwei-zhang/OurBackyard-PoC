@@ -14,7 +14,7 @@ export default defineConfig({
     outDir: 'js',
     emptyOutDir: false,  // don't wipe js/ — it has other files
     lib: {
-      entry:    resolve(__dirname, 'src/p2p-adapter.js'),
+      entry:    resolve(__dirname, 'app/p2p-adapter.js'),
       name:     'OBP2P',           // global exposed only as window.OurBackyardMesh (set inside adapter)
       fileName: 'ob-sdk',
       formats:  ['iife'],

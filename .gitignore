@@ -4,3 +4,11 @@ www/
 .DS_Store
 *.log
 *.zip
+
+# test output redirects
+test-out.txt
+test-err.txt
+sdk/tests/test-out.txt
+sdk/tests/test-err.txt
+sdk/tests/test-results.txt
+sdk/tests/build-out.txt
