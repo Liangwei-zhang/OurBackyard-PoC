@@ -156,8 +156,6 @@ describe('MerkleSync', () => {
     const r = new MessageRouter();
     const s = new MemoryStorage();
     const sync = new MerkleSync({ router: r, storage: s, peerId: 'p1' });
-    // Set very short timeout for test
-    const originalTimeout = 30000;
     // Send to a peer that doesn't exist (no send fn wired)
     // syncWithPeer will timeout after 30s, so we just verify it rejects
     // Instead of waiting 30s, we'll patch the session's timeout after creation

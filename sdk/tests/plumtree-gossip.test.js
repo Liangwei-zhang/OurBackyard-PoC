@@ -104,7 +104,7 @@ describe('PlumtreeGossip', () => {
     // Simulate duplicate delivery
     await router2.route('peer1', {
       type: 'GOSSIP_MSG',
-      id: 'dup',
+      id: 'duplicate-envelope',
       msgId,
       topic: 'topic',
       payload: 'data',
