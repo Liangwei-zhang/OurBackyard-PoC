@@ -5,6 +5,19 @@
   "type": "module",
   "main": "src/index.js",
   "types": "index.d.ts",
+  "author": "OurBackyard Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Liangwei-zhang/OurBackyard-PoC.git",
+    "directory": "sdk"
+  },
+  "homepage": "https://github.com/Liangwei-zhang/OurBackyard-PoC/tree/master/sdk#readme",
+  "bugs": {
+    "url": "https://github.com/Liangwei-zhang/OurBackyard-PoC/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     ".": {
       "import": "./src/index.js",
