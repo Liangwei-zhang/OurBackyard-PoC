@@ -1,7 +1,7 @@
 # OurBackyard PoC - Phase 1: P2P WebRTC Signaling Server
 # 運行方式 (从项目根目录运行):
 #   pip install fastapi uvicorn websockets
-#   uvicorn server.server:app --reload --port 8000
+#   uvicorn server.server:app --reload --port 7070
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -429,4 +429,4 @@ async def get_uploaded_image(filename: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    uvicorn.run(app, host="0.0.0.0", port=7070)

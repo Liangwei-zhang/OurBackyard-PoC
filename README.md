@@ -13,14 +13,14 @@ No central server for data �� end-to-end encrypted, works offline, data stay
 
 ```bash
 pip install fastapi uvicorn websockets
-uvicorn server.server:app --reload --port 8000
+uvicorn server.server:app --reload --port 7070
 # or: bash server/start-server.sh   (simple http.server for testing)
 ```
 
 ### 2. Open the app
 
 ```
-http://localhost:8000
+http://localhost:7070
 ```
 
 Open a second tab (or another device on the same network) and click **Join Network**.
