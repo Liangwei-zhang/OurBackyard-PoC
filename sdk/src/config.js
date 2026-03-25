@@ -49,7 +49,7 @@ const DEFAULTS = {
 const VALIDATORS = new Map([
   ['transport.maxBufferBytes', v => typeof v === 'number' && v > 0],
   ['transport.reconnectMaxAttempts', v => Number.isInteger(v) && v >= 0],
-  ['router.dedupCapacity', v => Number.isInteger(v) && v >= 100],
+  ['router.dedupCapacity', v => Number.isInteger(v) && v >= 3],
   ['router.maxMessageBytes', v => typeof v === 'number' && v > 0],
   ['rateLimiter.defaultCapacity', v => typeof v === 'number' && v > 0],
   ['rateLimiter.defaultRefillRate', v => typeof v === 'number' && v > 0],

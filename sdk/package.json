@@ -1,0 +1,55 @@
+{
+  "name": "@ourbackyard/p2p-sdk",
+  "version": "0.1.0",
+  "description": "Production-grade modular P2P SDK for OurBackyard — WebRTC + Signaling + Crypto + Resilience",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./event-bus": "./src/event-bus.js",
+    "./utils": "./src/utils.js",
+    "./logger": "./src/logger.js",
+    "./config": "./src/config.js",
+    "./identity": "./src/identity.js",
+    "./crypto/e2e-crypto": "./src/crypto/e2e-crypto.js",
+    "./crypto/signature": "./src/crypto/signature.js",
+    "./crypto/key-vault": "./src/crypto/key-vault.js",
+    "./transport/webrtc": "./src/transport/webrtc-transport.js",
+    "./transport/websocket": "./src/transport/websocket-transport.js",
+    "./transport/interface": "./src/transport/transport-interface.js",
+    "./signaling/nostr": "./src/signaling/nostr-signaling.js",
+    "./signaling/websocket": "./src/signaling/websocket-signaling.js",
+    "./signaling/multi": "./src/signaling/multi-signaling.js",
+    "./signaling/lan": "./src/signaling/lan-signaling.js",
+    "./signaling/interface": "./src/signaling/signaling-interface.js",
+    "./sync/router": "./src/sync/message-router.js",
+    "./sync/gossip": "./src/sync/gossip-sync.js",
+    "./sync/blob": "./src/sync/blob-transfer.js",
+    "./storage/interface": "./src/storage/storage-interface.js",
+    "./storage/memory": "./src/storage/memory-storage.js",
+    "./resilience/reconnect": "./src/resilience/reconnect-manager.js",
+    "./resilience/health": "./src/resilience/health-monitor.js",
+    "./resilience/circuit-breaker": "./src/resilience/circuit-breaker.js",
+    "./resilience/rate-limiter": "./src/resilience/rate-limiter.js"
+  },
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/",
+    "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch --testPathPattern=tests/"
+  },
+  "keywords": [
+    "p2p",
+    "webrtc",
+    "nostr",
+    "gossip",
+    "e2e-crypto",
+    "sdk"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {}
+  }
+}
