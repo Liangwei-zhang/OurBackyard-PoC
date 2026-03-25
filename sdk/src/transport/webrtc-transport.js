@@ -87,6 +87,7 @@ export class WebRTCTransport extends EventBus {
   send(peerId, data) {
     const dc = this._dataChannels.get(peerId);
     if (dc?.readyState === 'open') {
+      if (dc.bufferedAmount >= this.maxBuffer) return false;
       try { dc.send(data); return true; } catch {}
     }
     return false;
@@ -100,6 +101,7 @@ export class WebRTCTransport extends EventBus {
   broadcast(data, excludePeerId) {
     for (const [peerId, dc] of this._dataChannels) {
       if (peerId !== excludePeerId && dc.readyState === 'open') {
+        if (dc.bufferedAmount >= this.maxBuffer) continue;
         try { dc.send(data); } catch {}
       }
     }

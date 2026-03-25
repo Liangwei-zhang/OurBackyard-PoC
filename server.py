@@ -82,6 +82,26 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
             "peers": list(room.clients.keys()),
             "turn": TURN_CONFIG
         })
+
+        # Send ice-config in SDK format
+        def _turn_entry(url):
+            entry = {"urls": url}
+            if TURN_CONFIG.get("username"):
+                entry["username"] = TURN_CONFIG["username"]
+            if TURN_CONFIG.get("credential"):
+                entry["credential"] = TURN_CONFIG["credential"]
+            return entry
+
+        ice_servers = [{"urls": url} for url in TURN_CONFIG.get("stun", [])]
+        ice_servers += [_turn_entry(url) for url in TURN_CONFIG.get("turn", [])]
+        ice_servers += [_turn_entry(url) for url in TURN_CONFIG.get("turns", [])]
+        await websocket.send_json({
+            "type": "ice-config",
+            "config": {
+                "iceServers": ice_servers,
+                "ttl": 3600
+            }
+        })
         
         # 廣播新用戶加入
         await broadcast_to_room(room_id, {
@@ -106,7 +126,28 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
             # 處理各類訊息
             msg_type = message.get("type")
             
-            if msg_type == "offer":
+            if msg_type == "signal":
+                # SDK protocol: relay wrapped signal to target peer
+                target = message.get("target")
+                if target and target in room.clients:
+                    await room.clients[target].send_json({
+                        "type": "signal",
+                        "from": peer_id,
+                        "signal": message.get("signal")
+                    })
+
+            elif msg_type == "announce":
+                # SDK protocol: broadcast announce to all other peers in room
+                announce_room_id = message.get("roomId", room_id)
+                target_room_id = announce_room_id if announce_room_id != room_id and announce_room_id in rooms else room_id
+                meta = message.get("meta", {})
+                await broadcast_to_room(target_room_id, {
+                    "type": "announce",
+                    "peerId": peer_id,
+                    "meta": meta
+                }, exclude_peer=peer_id)
+
+            elif msg_type == "offer":
                 # WebRTC offer - 轉發給目標peer
                 target = message.get("target")
                 if target and target in room.clients:
@@ -215,7 +256,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
             
             elif msg_type == "CHAT":
                 # Chat message - route to specific peer or broadcast
-                target = msg_data.get('to')
+                target = message.get('to')
                 if target:
                     # Direct message to specific peer
                     if target in room.clients:
