@@ -4,3 +4,4 @@ www/
 .DS_Store
 *.log
 *.zip
+__pycache__/
