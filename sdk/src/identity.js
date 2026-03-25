@@ -41,7 +41,7 @@ export class Identity extends EventBus {
             this.emit('identity:loaded', this._identity);
             return this._identity;
           }
-        } catch { /* invalid JSON, regenerate */ }
+        } catch { console.warn('[Identity] Stored identity data is corrupted; regenerating.'); }
       }
     }
     return this._generate();
@@ -58,6 +58,9 @@ export class Identity extends EventBus {
     );
     this._ecdhPrivate = ecdhPair.privateKey;
     this._ecdsaPrivate = ecdsaPair.privateKey;
+    // Note: private keys are ephemeral (in-memory only) and lost on page reload.
+    // After reload, init() restores the public identity from localStorage, but
+    // peers must re-exchange keys to establish new shared secrets.
 
     const ecdhPubJWK = await crypto.subtle.exportKey('jwk', ecdhPair.publicKey);
     const ecdsaPubJWK = await crypto.subtle.exportKey('jwk', ecdsaPair.publicKey);
