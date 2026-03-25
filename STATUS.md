@@ -29,4 +29,4 @@ sdk/src/
 - [x] 集成测试（22 项端到端测试，`sdk/tests/integration.test.js`）
 - [x] 用 SDK 重构 index.html — P2P 层（`src/p2p-adapter.js` → `js/ob-sdk.js` IIFE 包，替换 native/communication/* 脚本）
 - [x] IndexedDB 持久化存储实现（`sdk/src/storage/indexeddb-storage.js`，21 单元测试，p2p-adapter.js 已接入）
-- [ ] TypeScript 类型声明
+- [x] TypeScript 类型声明（36 个 `.d.ts` 模块 + `sdk/index.d.ts` barrel，`package.json` 已添加 `types` 字段）

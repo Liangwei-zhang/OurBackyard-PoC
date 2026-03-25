@@ -4,15 +4,34 @@
   "description": "Modular P2P SDK — WebRTC mesh networking with pluggable signaling",
   "type": "module",
   "main": "src/index.js",
+  "types": "index.d.ts",
   "exports": {
-    ".": "./src/index.js",
-    "./transport": "./src/transport/index.js",
-    "./signaling": "./src/signaling/index.js",
-    "./sync": "./src/sync/index.js",
-    "./crypto": "./src/crypto/index.js",
-    "./storage": "./src/storage/index.js"
+    ".": {
+      "import": "./src/index.js",
+      "types": "./index.d.ts"
+    },
+    "./transport": {
+      "import": "./src/transport/index.js",
+      "types": "./src/transport/transport-interface.d.ts"
+    },
+    "./signaling": {
+      "import": "./src/signaling/index.js",
+      "types": "./src/signaling/signaling-interface.d.ts"
+    },
+    "./sync": {
+      "import": "./src/sync/index.js",
+      "types": "./src/sync/message-router.d.ts"
+    },
+    "./crypto": {
+      "import": "./src/crypto/index.js",
+      "types": "./src/crypto/e2e-crypto.d.ts"
+    },
+    "./storage": {
+      "import": "./src/storage/index.js",
+      "types": "./src/storage/index.d.ts"
+    }
   },
-  "files": ["src/", "README.md"],
+  "files": ["src/", "index.d.ts", "README.md"],
   "dependencies": {},
   "devDependencies": {},
   "keywords": ["p2p", "webrtc", "mesh", "decentralized", "sdk"],
