@@ -1,111 +1,51 @@
-/**
- * MemoryStorage — In-memory IStorage implementation for testing and quick prototyping.
- *
- * Uses plain Maps — no external dependencies, no persistence across page reloads.
- * Drop-in replacement for the Dexie adapter during development and unit tests.
- */
-
 import { IStorage } from './storage-interface.js';
-import { uuid } from '../utils.js';
 
+/**
+ * In-memory storage implementation of IStorage.
+ * Suitable for testing and ephemeral sessions.
+ */
 export class MemoryStorage extends IStorage {
   constructor() {
     super();
-    /** @type {Map<string, object>}  composite key "sellerId:timestamp" → item */
-    this._items        = new Map();
-    /** @type {Map<string, object>}  hash → { hash, blob, itemId, timestamp } */
-    this._blobs        = new Map();
-    /** @type {Map<string, object>}  id → msg */
-    this._chatMessages = new Map();
-    /** @type {Map<string, object>}  id → record */
-    this._deadDrops    = new Map();
+    /** @type {Map<string, {value:*, updatedAt:number}>} */
+    this._store = new Map();
   }
 
-  // ─────────────────────────── Items ───────────────────────────
-
-  async getItems(since, limit = 100) {
-    return [...this._items.values()]
-      .filter(i => (i.timestamp || 0) >= since)
-      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-      .slice(0, limit);
+  /** @override */
+  async put(key, value) {
+    if (key == null) throw new TypeError('key must not be null/undefined');
+    this._store.set(String(key), { value, updatedAt: Date.now() });
   }
 
-  async addItem(item) {
-    const key = `${item.sellerId || ''}:${item.timestamp || 0}`;
-    // Assign a local id if the item doesn't have one
-    const stored = { ...item, _localId: item._localId || uuid() };
-    this._items.set(key, stored);
+  /** @override */
+  async get(key) {
+    const entry = this._store.get(String(key));
+    return entry ? entry.value : null;
   }
 
-  async hasItem(sellerId, timestamp) {
-    return this._items.has(`${sellerId || ''}:${timestamp || 0}`);
+  /** @override */
+  async delete(key) {
+    this._store.delete(String(key));
   }
 
-  async hasItemByTitle(sellerId, title) {
-    for (const item of this._items.values()) {
-      if (item.sellerId === sellerId && item.title === title) return true;
-    }
-    return false;
-  }
-
-  async updateItemStatus(itemId, status) {
-    for (const [key, item] of this._items) {
-      if (item._localId === itemId || item.itemId === itemId) {
-        this._items.set(key, { ...item, status });
-        return;
+  /** @override */
+  async getAll({ since = 0 } = {}) {
+    const results = [];
+    for (const [key, entry] of this._store) {
+      if (entry.updatedAt >= since) {
+        results.push({ key, value: entry.value, updatedAt: entry.updatedAt });
       }
     }
+    return results;
   }
 
-  // ─────────────────────────── Blobs ───────────────────────────
-
-  async getBlob(hash) {
-    return this._blobs.get(hash) ?? null;
+  /** @override */
+  async count() {
+    return this._store.size;
   }
 
-  async addBlob(hash, blob, meta = {}) {
-    if (!this._blobs.has(hash)) {
-      this._blobs.set(hash, { hash, blob, ...meta, timestamp: Date.now() });
-    }
-  }
-
-  async hasBlob(hash) {
-    return this._blobs.has(hash);
-  }
-
-  async getMissingBlobHashes(hashes) {
-    return hashes.filter(h => !this._blobs.has(h));
-  }
-
-  // ─────────────────────────── Chat messages ───────────────────────────
-
-  async addChatMessage(msg) {
-    this._chatMessages.set(msg.id, { ...msg });
-  }
-
-  async getChatMessage(id) {
-    return this._chatMessages.get(id) ?? null;
-  }
-
-  async markRead(msgId, readAt) {
-    const msg = this._chatMessages.get(msgId);
-    if (msg) this._chatMessages.set(msgId, { ...msg, read: true, readAt });
-  }
-
-  // ─────────────────────────── Dead Drop ───────────────────────────
-
-  async addDeadDrop(toPeerId, msg) {
-    const id = uuid();
-    this._deadDrops.set(id, { id, toPeerId, msg, createdAt: Date.now(), delivered: false });
-    return id;
-  }
-
-  async getPendingDeadDrop(toPeerId) {
-    return [...this._deadDrops.values()].filter(r => r.toPeerId === toPeerId && !r.delivered);
-  }
-
-  async markDelivered(id) {
-    const record = this._deadDrops.get(id);
-    if (record) this._deadDrops.set(id, { ...record, delivered: true, deliveredAt: Date.now() });
+  /** @override */
+  async clear() {
+    this._store.clear();
   }
 }

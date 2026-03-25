@@ -1,174 +1,239 @@
-/**
- * BlobTransfer — Chunked binary blob streaming over WebRTC DataChannels.
- *
- * Extracted from p2p-mesh.js: _handleBlobReq, _handleBlobStreamStart,
- * _routeBinaryChunk, _handleBlobStreamEnd.
- *
- * Protocol framing:
- *   BLOB_STREAM_START (JSON) → binary chunks → BLOB_STREAM_END (JSON)
- *
- * Events emitted:
- *   'blob:received' (hash, blob)
- *   'blob:progress' (hash, received, total)
- */
-
 import { EventBus } from '../event-bus.js';
+import { uuid, sha256hex } from '../utils.js';
 
-const BLOB_BATCH_LIMIT = 30;
+/**
+ * Transfer priority constants.
+ */
+export const BlobPriority = Object.freeze({ PROFILE: 0, LISTING: 1, OTHER: 2 });
 
+const CHUNK_SIZE = 16 * 1024; // 16 KB
+const MAX_CONCURRENT = 3;
+const MAX_RETRIES = 3;
+const RETRY_BASE_MS = 1000;
+
+/**
+ * BlobTransfer — chunked binary blob streaming over P2P DataChannels.
+ *
+ * Features:
+ *  - Chunked transfer (16 KB per chunk)
+ *  - Transfer queue with priority (PROFILE > LISTING > OTHER)
+ *  - Retry logic (3 attempts with exponential backoff)
+ *  - Progress tracking per transfer
+ *  - Integrity verification (SHA-256 after assembly)
+ *  - Concurrent transfer limit (max 3 simultaneous)
+ *  - Events: 'transfer:start', 'transfer:progress', 'transfer:complete', 'transfer:error'
+ */
 export class BlobTransfer extends EventBus {
   /**
    * @param {object} opts
    * @param {import('../sync/message-router.js').MessageRouter} opts.router
-   * @param {import('../storage/storage-interface.js').IStorage} opts.storage
-   * @param {number} [opts.chunkSize=65536]
-   * @param {number} [opts.maxBuffer=4194304]
+   * @param {string} opts.peerId - Local peer ID
+   * @param {number} [opts.chunkSize=16384]
+   * @param {number} [opts.maxConcurrent=3]
+   * @param {number} [opts.maxRetries=3]
    */
-  constructor({ router, storage, chunkSize = 65536, maxBuffer = 4194304 }) {
+  constructor({ router, peerId, chunkSize = CHUNK_SIZE, maxConcurrent = MAX_CONCURRENT, maxRetries = MAX_RETRIES }) {
     super();
-    this._router    = router;
-    this._storage   = storage;
+    if (!router) throw new TypeError('router is required');
+    if (!peerId) throw new TypeError('peerId is required');
+    this._router = router;
+    this._peerId = peerId;
     this._chunkSize = chunkSize;
-    this._maxBuffer = maxBuffer;
+    this._maxConcurrent = maxConcurrent;
+    this._maxRetries = maxRetries;
 
-    /** @type {Map<string, object>} key: "peerId:hash" → stream state */
-    this._streams = new Map();
+    /** @type {Map<string, object>} - transferId -> transfer state */
+    this._inbound = new Map();
+    /** @type {Map<string, object>} - transferId -> outbound state */
+    this._outbound = new Map();
+    /** @type {Array<object>} - queued outbound requests sorted by priority */
+    this._queue = [];
+    this._active = 0;
 
-    // Register message handlers
-    router.handle('BLOB_REQ',          (from, msg) => this._handleBlobReq(from, msg));
-    router.handle('BLOB_STREAM_START', (from, msg) => this._handleBlobStreamStart(from, msg));
-    router.handle('BLOB_STREAM_END',   (from, msg) => this._handleBlobStreamEnd(from, msg));
-    // Legacy base64 fallback
-    router.handle('BLOB_RESP',         (from, msg) => this._handleBlobResp(from, msg));
-    // Binary frames
-    router.handle('binary',            (from, ab)  => this._routeBinaryChunk(from, ab));
-  }
-
-  // ─────────────────────────── Public API ───────────────────────────
-
-  /**
-   * Request specific blobs from a peer by hash list.
-   * @param {string}   peerId
-   * @param {string[]} hashes
-   */
-  requestBlobs(peerId, hashes) {
-    if (!hashes?.length) return;
-    const batch = hashes.slice(0, BLOB_BATCH_LIMIT);
-    this._router.send(peerId, 'BLOB_REQ', { hashes: batch });
+    router.handle('BLOB_START', (from, msg) => this._onBlobStart(from, msg));
+    router.handle('BLOB_CHUNK', (from, msg) => this._onBlobChunk(from, msg));
+    router.handle('BLOB_END', (from, msg) => this._onBlobEnd(from, msg));
+    router.handle('BLOB_ACK', (from, msg) => this._onBlobAck(from, msg));
+    router.handle('BLOB_ERROR', (from, msg) => this._onBlobError(from, msg));
   }
 
   /**
-   * Send a blob to a peer using chunked binary streaming.
-   * @param {string} peerId
-   * @param {string} hash
-   * @param {Blob}   blob
-   * @param {object} [meta]   — optional { itemId, mime }
+   * Queue a blob for transfer to a peer.
+   * @param {string} toPeerId
+   * @param {ArrayBuffer|Uint8Array} data
+   * @param {object} [meta={}] - Arbitrary metadata (filename, mimeType, etc.)
+   * @param {number} [priority=BlobPriority.OTHER]
+   * @returns {Promise<string>} Transfer ID
    */
-  async sendBlob(peerId, hash, blob, meta = {}) {
-    const dc = this._router._transport.getDataChannel(peerId);
-    if (!dc) return;
+  async send(toPeerId, data, meta = {}, priority = BlobPriority.OTHER) {
+    if (!toPeerId) throw new TypeError('toPeerId is required');
+    if (!data) throw new TypeError('data is required');
 
+    const buf = data instanceof Uint8Array ? data.buffer : data;
+    const hash = await sha256hex(new Uint8Array(buf));
+    const transferId = uuid();
+    const totalChunks = Math.ceil(buf.byteLength / this._chunkSize);
+
+    const entry = { transferId, toPeerId, buf, meta, priority, hash, totalChunks, attempt: 0 };
+    this._queue.push(entry);
+    this._queue.sort((a, b) => a.priority - b.priority);
+    this._drainQueue();
+    return transferId;
+  }
+
+  /** @private */
+  _drainQueue() {
+    while (this._active < this._maxConcurrent && this._queue.length > 0) {
+      const entry = this._queue.shift();
+      this._active++;
+      this._doSend(entry).finally(() => {
+        this._active--;
+        this._drainQueue();
+      });
+    }
+  }
+
+  /** @private */
+  async _doSend(entry, attempt = 0) {
+    const { transferId, toPeerId, buf, meta, hash, totalChunks } = entry;
     try {
-      const ab    = await blob.arrayBuffer();
-      const mime  = blob.type || meta.mime || 'application/octet-stream';
-      const total = Math.ceil(ab.byteLength / this._chunkSize);
+      this.emit('transfer:start', { transferId, toPeerId, totalBytes: buf.byteLength, meta });
 
-      dc.send(JSON.stringify({
-        type: 'BLOB_STREAM_START',
-        hash, mime, total,
-        size:   ab.byteLength,
-        itemId: meta.itemId,
-      }));
+      // Send START message
+      await this._send(toPeerId, {
+        type: 'BLOB_START',
+        id: uuid(),
+        transferId,
+        totalChunks,
+        totalBytes: buf.byteLength,
+        hash,
+        meta,
+      });
 
-      for (let i = 0; i < total; i++) {
-        // Backpressure control
-        while (dc.bufferedAmount > this._maxBuffer) {
-          await new Promise(r => {
-            dc.onbufferedamountlow = r;
-            setTimeout(r, 100);
-          });
-        }
-        if (dc.readyState !== 'open') break;
-        dc.send(ab.slice(i * this._chunkSize, (i + 1) * this._chunkSize));
+      // Send chunks
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * this._chunkSize;
+        const chunk = buf.slice(start, start + this._chunkSize);
+        const chunkArr = Array.from(new Uint8Array(chunk));
+        await this._send(toPeerId, {
+          type: 'BLOB_CHUNK',
+          id: uuid(),
+          transferId,
+          index: i,
+          data: chunkArr,
+        });
+        const progress = (i + 1) / totalChunks;
+        this.emit('transfer:progress', { transferId, toPeerId, progress });
       }
 
-      dc.send(JSON.stringify({ type: 'BLOB_STREAM_END', hash }));
-    } catch (e) {
-      console.warn('[BlobTransfer] sendBlob error:', e.message);
+      // Register outbound state before sending END so the ACK handler can find it
+      this._outbound.set(transferId, { ...entry, status: 'sent' });
+
+      // Send END message
+      await this._send(toPeerId, {
+        type: 'BLOB_END',
+        id: uuid(),
+        transferId,
+        hash,
+      });
+    } catch (err) {
+      if (attempt < this._maxRetries - 1) {
+        const delay = RETRY_BASE_MS * Math.pow(2, attempt);
+        await new Promise(r => setTimeout(r, delay));
+        return this._doSend(entry, attempt + 1);
+      }
+      this.emit('transfer:error', { transferId, toPeerId, error: err, attempt });
+      throw err;
     }
   }
 
-  // ─────────────────────────── Internal handlers ───────────────────────────
-
-  async _handleBlobReq(fromPeerId, msg) {
-    if (!msg.hashes?.length) return;
-    const hashes = msg.hashes.slice(0, BLOB_BATCH_LIMIT);
-
-    for (const hash of hashes) {
-      const blobRecord = await this._storage.getBlob(hash).catch(() => null);
-      if (!blobRecord) continue;
-      await this.sendBlob(fromPeerId, hash, blobRecord.blob, { itemId: blobRecord.itemId });
-      // Small yield to avoid starving other messages
-      await new Promise(r => setTimeout(r, 5));
+  /**
+   * @private - route a message to a peer (delegates to router's send callback if set, or emits)
+   */
+  async _send(toPeerId, message) {
+    // The host P2PNode should set this._sendFn
+    if (typeof this._sendFn === 'function') {
+      return this._sendFn(toPeerId, message);
     }
+    // Fallback: emit for transport layer to pick up
+    this.emit('send', toPeerId, message);
   }
 
-  _handleBlobStreamStart(fromPeerId, msg) {
-    if (!msg.hash) return;
-    this._streams.set(`${fromPeerId}:${msg.hash}`, {
-      hash:     msg.hash,
-      mime:     msg.mime || 'application/octet-stream',
-      itemId:   msg.itemId,
-      total:    msg.total,
-      size:     msg.size,
-      chunks:   [],
+  /**
+   * Set the send function for outbound messages.
+   * @param {Function} fn - (toPeerId, message) => Promise<void>
+   */
+  setSendFn(fn) {
+    this._sendFn = fn;
+  }
+
+  /** @private */
+  _onBlobStart(from, msg) {
+    const { transferId, totalChunks, totalBytes, hash, meta } = msg;
+    this._inbound.set(transferId, {
+      from,
+      totalChunks,
+      totalBytes,
+      hash,
+      meta,
+      chunks: new Array(totalChunks),
       received: 0,
     });
   }
 
-  _routeBinaryChunk(fromPeerId, ab) {
-    for (const [key, state] of this._streams) {
-      if (key.startsWith(`${fromPeerId}:`) && state.received < state.total) {
-        state.chunks.push(ab);
-        state.received++;
-        this.emit('blob:progress', state.hash, state.received, state.total);
-        return;
-      }
-    }
-  }
-
-  async _handleBlobStreamEnd(fromPeerId, msg) {
-    const key   = `${fromPeerId}:${msg.hash}`;
-    const state = this._streams.get(key);
+  /** @private */
+  _onBlobChunk(from, msg) {
+    const { transferId, index, data } = msg;
+    const state = this._inbound.get(transferId);
     if (!state) return;
-    this._streams.delete(key);
+    state.chunks[index] = new Uint8Array(data);
+    state.received++;
+    const progress = state.received / state.totalChunks;
+    this.emit('transfer:progress', { transferId, from, progress });
+  }
 
-    try {
-      const blob = new Blob(state.chunks, { type: state.mime });
-      const exists = await this._storage.hasBlob(state.hash).catch(() => false);
-      if (!exists) {
-        await this._storage.addBlob(state.hash, blob, { itemId: state.itemId }).catch(() => {});
-      }
-      this.emit('blob:received', state.hash, blob);
-    } catch (e) {
-      console.warn('[BlobTransfer] stream assembly error:', e.message);
+  /** @private */
+  async _onBlobEnd(from, msg) {
+    const { transferId, hash } = msg;
+    const state = this._inbound.get(transferId);
+    if (!state) return;
+
+    // Assemble
+    const total = state.chunks.reduce((s, c) => s + c.length, 0);
+    const assembled = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of state.chunks) {
+      assembled.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    // Verify integrity
+    const actualHash = await sha256hex(assembled);
+    if (actualHash !== hash) {
+      this._inbound.delete(transferId);
+      await this._send(from, { type: 'BLOB_ERROR', id: uuid(), transferId, reason: 'hash_mismatch' });
+      this.emit('transfer:error', { transferId, from, error: new Error('Hash mismatch') });
+      return;
+    }
+
+    this._inbound.delete(transferId);
+    await this._send(from, { type: 'BLOB_ACK', id: uuid(), transferId });
+    this.emit('transfer:complete', { transferId, from, data: assembled.buffer, meta: state.meta });
+  }
+
+  /** @private */
+  _onBlobAck(from, msg) {
+    const { transferId } = msg;
+    const state = this._outbound.get(transferId);
+    if (state) {
+      this.emit('transfer:complete', { transferId, toPeerId: from, status: 'acked' });
+      this._outbound.delete(transferId);
     }
   }
 
-  /** Legacy base64 BLOB_RESP (backward compatibility with older nodes) */
-  async _handleBlobResp(fromPeerId, msg) {
-    if (!msg.hash || !msg.data) return;
-    try {
-      const b64 = msg.data.replace(/[^A-Za-z0-9+/=]/g, '');
-      const raw = Uint8Array.from(atob(b64), ch => ch.charCodeAt(0));
-      const blob = new Blob([raw], { type: msg.mime || 'image/jpeg' });
-      const exists = await this._storage.hasBlob(msg.hash).catch(() => false);
-      if (!exists) {
-        await this._storage.addBlob(msg.hash, blob, { itemId: msg.itemId }).catch(() => {});
-      }
-      this.emit('blob:received', msg.hash, blob);
-    } catch (e) {
-      console.warn('[BlobTransfer] legacy BLOB_RESP decode error:', e.message);
-    }
+  /** @private */
+  _onBlobError(from, msg) {
+    const { transferId, reason } = msg;
+    this.emit('transfer:error', { transferId, from, error: new Error(reason) });
   }
 }
