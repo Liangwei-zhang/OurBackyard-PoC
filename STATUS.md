@@ -27,6 +27,6 @@ sdk/src/
 ## 待办
 - [x] 添加 CI/CD（GitHub Actions `.github/workflows/ci.yml`）
 - [x] 集成测试（22 项端到端测试，`sdk/tests/integration.test.js`）
-- [ ] 用 SDK 重构 index.html（379KB）
+- [x] 用 SDK 重构 index.html — P2P 层（`src/p2p-adapter.js` → `js/ob-sdk.js` IIFE 包，替换 native/communication/* 脚本）
 - [ ] IndexedDB 持久化存储实现
 - [ ] TypeScript 类型声明

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:sdk": "vite build --config vite.sdk.config.js",
     "preview": "vite preview"
   },
   "dependencies": {

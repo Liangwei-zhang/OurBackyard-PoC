@@ -35,8 +35,8 @@
   </script>
   <script src="js/secp256k1.js"></script>
   <script src="ob-utils.js"></script>  <!-- Shared utilities: escape, notify, compressImage, relTime -->
-  <script src="native/communication/nostr-signaling.js"></script>
-	<script src="native/communication/p2p-mesh.js"></script>
+  <!-- SDK-based P2P layer: replaces native/communication/nostr-signaling.js + p2p-mesh.js -->
+  <script src="js/ob-sdk.js"></script>
 	<script src="native/ui/chat-ui.js"></script>
 	<script src="native/security/key-vault.js"></script>
 	<script src="native/security/geo-consent.js"></script>
@@ -7264,9 +7264,9 @@ window.showItemDetail = async function (id) {
                     return;
                 }
 
-                // Also skip if OurBackyardMesh already has an active DataChannel to this peer.
+                // Also skip if the SDK mesh already has an active DataChannel to this peer.
                 // Avoids duplicate RTCPeerConnections and ICE race conditions.
-                if (window.mesh?.dataChannels?.get(remotePeerId)?.readyState === "open") {
+                if (window.dataChannels?.[remotePeerId]?.readyState === "open") {
                     log("[P2P] Mesh already has open DC to", remotePeerId, "— skipping inline connectToPeer");
                     return;
                 }
