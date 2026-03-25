@@ -4,10 +4,8 @@
   "description": "P2P Marketplace Application",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
     "build:sdk": "vite build --config vite.sdk.config.js",
-    "preview": "vite preview"
+    "test": "node --test sdk/tests/*.test.js"
   },
   "dependencies": {
     "dexie": "^4.0.4",
