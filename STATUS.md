@@ -25,7 +25,7 @@ sdk/src/
 ```
 
 ## 待办
-- [ ] 添加 CI/CD（GitHub Actions）
+- [x] 添加 CI/CD（GitHub Actions `.github/workflows/ci.yml`）
 - [ ] 集成测试
 - [ ] 用 SDK 重构 index.html（379KB）
 - [ ] IndexedDB 持久化存储实现
