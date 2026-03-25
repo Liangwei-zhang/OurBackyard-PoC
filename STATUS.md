@@ -30,3 +30,5 @@ sdk/src/
 - [x] 用 SDK 重构 index.html — P2P 层（`src/p2p-adapter.js` → `js/ob-sdk.js` IIFE 包，替换 native/communication/* 脚本）
 - [x] IndexedDB 持久化存储实现（`sdk/src/storage/indexeddb-storage.js`，21 单元测试，p2p-adapter.js 已接入）
 - [x] TypeScript 类型声明（36 个 `.d.ts` 模块 + `sdk/index.d.ts` barrel，`package.json` 已添加 `types` 字段）
+- [x] npm 发布（`@ourbackyard/p2p-sdk@0.1.0` 已上线 https://www.npmjs.com/package/@ourbackyard/p2p-sdk）
+- [x] 清理废弃文件（删除 153 个文件 / 24k 行：src/ 失败模块化、native/communication|data|ai|governance|security 实验代码、android/ios/capacitor 移动端）
