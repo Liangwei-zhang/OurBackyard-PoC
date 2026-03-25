@@ -108,4 +108,20 @@ export class MemoryStorage extends IStorage {
     const record = this._deadDrops.get(id);
     if (record) this._deadDrops.set(id, { ...record, delivered: true, deliveredAt: Date.now() });
   }
+
+  // ─────────────────────────── CRDT ───────────────────────────
+
+  async getCRDTState(docId) {
+    return this._crdt?.get(docId) ?? null;
+  }
+
+  async setCRDTState(docId, type, state) {
+    if (!this._crdt) this._crdt = new Map();
+    this._crdt.set(docId, { docId, type, state, updatedAt: Date.now() });
+  }
+
+  async getAllCRDTDocs() {
+    if (!this._crdt) return [];
+    return [...this._crdt.values()];
+  }
 }

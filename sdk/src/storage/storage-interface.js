@@ -127,4 +127,28 @@ export class IStorage {
    * @returns {Promise<void>}
    */
   async markDelivered(id) { throw new Error('IStorage.markDelivered() not implemented'); }
+
+  // ─────────────────────────── CRDT ───────────────────────────
+
+  /**
+   * Retrieve serialized CRDT state for a document.
+   * @param {string} docId
+   * @returns {Promise<{ type: string, state: object }|null>}
+   */
+  async getCRDTState(docId) { throw new Error('IStorage.getCRDTState() not implemented'); }
+
+  /**
+   * Persist serialized CRDT state for a document.
+   * @param {string} docId
+   * @param {string} type   — CRDT type identifier ('lww-register', 'g-counter', 'or-set')
+   * @param {object} state  — Serialized state from crdt.toJSON()
+   * @returns {Promise<void>}
+   */
+  async setCRDTState(docId, type, state) { throw new Error('IStorage.setCRDTState() not implemented'); }
+
+  /**
+   * Return all stored CRDT documents.
+   * @returns {Promise<Array<{ docId: string, type: string, state: object }>>}
+   */
+  async getAllCRDTDocs() { throw new Error('IStorage.getAllCRDTDocs() not implemented'); }
 }

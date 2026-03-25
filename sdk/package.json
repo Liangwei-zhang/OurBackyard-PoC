@@ -1,6 +1,6 @@
 {
   "name": "@ourbackyard/p2p-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Modular P2P SDK — WebRTC mesh networking with pluggable signaling",
   "type": "module",
   "main": "src/index.js",
@@ -9,12 +9,31 @@
     "./transport": "./src/transport/index.js",
     "./signaling": "./src/signaling/index.js",
     "./sync": "./src/sync/index.js",
+    "./gossip": "./src/gossip/index.js",
+    "./crdt": "./src/crdt/index.js",
     "./crypto": "./src/crypto/index.js",
     "./storage": "./src/storage/index.js"
   },
-  "files": ["src/", "README.md"],
-  "dependencies": {},
-  "devDependencies": {},
-  "keywords": ["p2p", "webrtc", "mesh", "decentralized", "sdk"],
+  "files": [
+    "src/",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=sdk/tests"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {}
+  },
+  "keywords": [
+    "p2p",
+    "webrtc",
+    "mesh",
+    "decentralized",
+    "sdk"
+  ],
   "license": "MIT"
 }
