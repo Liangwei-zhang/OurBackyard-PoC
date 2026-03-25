@@ -19,8 +19,9 @@ export { Signature } from './crypto/signature.js';
 export { KeyVault } from './crypto/key-vault.js';
 
 // Storage
-export { IStorage } from './storage/storage-interface.js';
-export { MemoryStorage } from './storage/memory-storage.js';
+export { IStorage }         from './storage/storage-interface.js';
+export { MemoryStorage }    from './storage/memory-storage.js';
+export { IndexedDBStorage } from './storage/indexeddb-storage.js';
 
 // Transport
 export { ITransport } from './transport/transport-interface.js';

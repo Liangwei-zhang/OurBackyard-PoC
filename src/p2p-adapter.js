@@ -16,6 +16,8 @@
  */
 
 import { P2PNode } from '../sdk/src/p2p-node.js';
+import { IndexedDBStorage } from '../sdk/src/storage/indexeddb-storage.js';
+import { MemoryStorage } from '../sdk/src/storage/memory-storage.js';
 
 // ── ICE servers shared by the adapter ───────────────────────────────────────
 const ICE_SERVERS = [
@@ -73,12 +75,26 @@ class OurBackyardMesh {
   // ── Lifecycle ────────────────────────────────────────────────────────────────
 
   async init() {
+    // Use IndexedDB for persistence; fall back to MemoryStorage if unavailable
+    let storage;
+    try {
+      // DB name is scoped to the H3 cell so different geographic zones don't share state
+      storage = new IndexedDBStorage(`${this.h3Cell}`);
+      // Eagerly open to surface any errors before the node starts
+      await storage._ready;
+    } catch (e) {
+      console.warn('[SDK Mesh] IndexedDB unavailable, using MemoryStorage:', e.message);
+      storage = new MemoryStorage();
+    }
+    this._storage = storage;
+
     this._node = new P2PNode({
       peerId:        this.peerId,
       h3Cell:        this.h3Cell,
       signalingType: 'nostr',
       relays:        null, // use NostrSignaling defaults
       iceServers:    ICE_SERVERS,
+      storage,
     });
 
     await this._node.init();
