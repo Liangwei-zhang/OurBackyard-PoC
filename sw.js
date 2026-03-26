@@ -117,7 +117,8 @@ self.addEventListener('fetch', event => {
         const networkFetch = fetch(event.request, { cache: 'no-store' })
           .then(res => {
             if (res.ok) {
-              caches.open(CACHE_SHELL).then(c => c.put(event.request, res.clone()));
+              const resClone = res.clone();
+              caches.open(CACHE_SHELL).then(c => c.put(event.request, resClone));
             }
             return res;
           })
@@ -134,8 +135,8 @@ self.addEventListener('fetch', event => {
     fetch(event.request, { cache: 'no-store' })
       .then(res => {
         if (res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE_ASSETS).then(c => c.put(event.request, clone));
+          const resClone = res.clone();
+          caches.open(CACHE_ASSETS).then(c => c.put(event.request, resClone));
         }
         return res;
       })

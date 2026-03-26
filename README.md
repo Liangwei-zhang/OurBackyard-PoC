@@ -1,75 +1,85 @@
 # OurBackyard
 
-A P2P decentralised community marketplace for Calgary neighbourhoods.  
-No central server for data �� end-to-end encrypted, works offline, data stays with users.
+A P2P decentralised community marketplace for Calgary neighbourhoods.
+No central server for user data, end-to-end encrypted messaging, offline-friendly behaviour, and browser-first deployment.
 
-> npm package: [`@ourbackyard/p2p-sdk`](https://www.npmjs.com/package/@ourbackyard/p2p-sdk)
+> npm package: `@ourbackyard/p2p-sdk`
 
 ---
 
 ## Quick Start
 
-### 1. Start the signaling server
+### 1. Install Python dependencies
 
 ```bash
-pip install fastapi uvicorn websockets
-uvicorn server.server:app --reload --port 7070
-# or: bash server/start-server.sh   (simple http.server for testing)
+python -m pip install fastapi uvicorn websockets
 ```
 
-### 2. Open the app
+### 2. Start the app server
 
+```bash
+python -m uvicorn server.server:app --reload --port 7070
 ```
+
+### 3. Open the app
+
+```text
 http://localhost:7070
 ```
 
-Open a second tab (or another device on the same network) and click **Join Network**.
+Open a second tab or another device on the same network and click `Join Network`.
 
 ---
 
 ## Project Structure
 
-```
+```text
 OurBackyard-PoC/
-������ index.html              # PWA entry point (single-file app, 8 k lines)
-������ index-v2.html           # Vite modular build target
-������ ob-utils.js             # Shared UI utilities (escape, notify, compress)
-������ p1p2-features.js        # Core UI feature logic
-������ manifest.json / sw.js   # PWA manifest + service worker
-������ server.py               # FastAPI WebSocket signaling server
-������ vite.config.js          # Vite build config for index-v2
-������ vite.sdk.config.js      # Vite build config for the SDK bundle
-������ package.json
-��
-������ js/                     # Standalone JS vendored libraries
-��   ������ ob-sdk.js           # Pre-built SDK IIFE bundle (window.OurBackyardMesh)
-��   ������ db.js               # IndexedDB (Dexie wrapper)
-��   ������ utils.js            # Helper utilities
-��   ������ dexie.js            # Dexie library
-��   ������ h3-js.js            # H3 geospatial library
-��   ������ secp256k1.js        # secp256k1 cryptography
-��
-������ native/                 # Native UI + helper modules loaded by index.html
-��   ������ ui/                 # Chat UI, P2P image components
-��   ������ ai/                 # Local AI assistant
-��   ������ governance/         # Web-of-Trust
-��   ������ security/           # KeyVault, GeoConsent
-��
-������ sdk/                    # @ourbackyard/p2p-sdk �� 6-layer P2P SDK
-��   ������ src/                # Source (ES Modules, zero external deps)
-��   ������ tests/              # 325 unit tests
-��   ������ *.d.ts              # TypeScript declarations
-��
-������ scripts/                # Build helpers (bundle-app, delta-bundle)
-������ coturn/                 # Self-hosted TURN server config
-������ uploads/                # User-uploaded image assets
+├── index.html              # Main PWA entry point
+├── manifest.json           # Web app manifest
+├── sw.js                   # Service worker
+├── package.json
+├── README.md
+├── STATUS.md
+│
+├── app/
+│   ├── ob-utils.js         # Shared UI utilities
+│   ├── p1p2-features.js    # Marketplace and UI feature pack
+│   └── p2p-adapter.js      # SDK adapter entry used for browser bundle
+│
+├── js/
+│   ├── ob-sdk.js           # Built browser SDK bundle
+│   ├── db.js
+│   ├── utils.js
+│   ├── dexie.js
+│   ├── h3-js.js
+│   └── secp256k1.js
+│
+├── native/
+│   ├── ui/
+│   ├── ai/
+│   ├── governance/
+│   └── security/
+│
+├── server/
+│   ├── server.py           # FastAPI signaling/static server
+│   └── start-server.sh
+│
+├── sdk/
+│   ├── src/                # SDK source
+│   ├── tests/              # Unit and integration tests
+│   └── *.d.ts              # TypeScript declarations
+│
+├── scripts/
+├── coturn/
+└── uploads/
 ```
 
 ---
 
 ## SDK
 
-The P2P logic is extracted into a standalone, framework-agnostic SDK.
+The P2P layer is extracted into a framework-agnostic SDK.
 
 ### Install
 
@@ -83,61 +93,47 @@ npm install @ourbackyard/p2p-sdk
 import { P2PNode, NostrSignaling, MemoryStorage } from '@ourbackyard/p2p-sdk';
 
 const node = new P2PNode({
-  peerId:    'alice-abc123',
-  signaling: new NostrSignaling({ peerId: 'alice-abc123', h3Cell: '8928308280fffff' }),
-  storage:   new MemoryStorage(),
+  peerId: 'alice-abc123',
+  signaling: new NostrSignaling({
+    peerId: 'alice-abc123',
+    h3Cell: '8928308280fffff',
+  }),
+  storage: new MemoryStorage(),
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 });
 
 await node.start();
 node.on('peer:connected', peer => console.log('Connected:', peer));
-node.on('message',        msg  => console.log('Msg:', msg));
+node.on('message', msg => console.log('Msg:', msg));
 node.broadcast('HELLO', { text: 'World' });
 ```
 
-See [`sdk/README.md`](sdk/README.md) for the full API.
+See `sdk/README.md` for the full API.
 
 ---
 
-## Running Tests
+## Development Commands
 
 ```bash
-node --test sdk/tests/*.test.js
-# 325 tests, 0 failures
-```
-
-## Building the SDK bundle
-
-```bash
-npm run build:sdk   # outputs js/ob-sdk.js
+npm run build:sdk
+npm test
 ```
 
 ---
 
-## H3 Test Coordinates (Calgary)
+## Local Test Coordinates
 
-| Location | Lat, Lon | H3 L9 |
-|---|---|---|
-| Downtown | 51.0447, -114.0719 | 8fb29a�� |
-| NW Edgemont | 51.1285, -114.2103 | 8fb2c8�� |
-| NW Dalhousie | 51.1138, -114.1946 | 8fb2b1�� |
+| Location | Lat, Lon |
+|---|---|
+| Downtown Calgary | 51.0447, -114.0719 |
+| NW Edgemont | 51.1285, -114.2103 |
+| NW Dalhousie | 51.1138, -114.1946 |
 
 ---
 
-## P2P Architecture
+## Status
 
-```
-��������������������������������������������������������������������������������
-��            OurBackyard PWA           ��
-��  index.html �� chat-ui �� p1p2-feats   ��
-�����������������������������������Щ�������������������������������������������
-                 �� uses
-��������������������������������������������������������������������������������
-��          @ourbackyard/p2p-sdk        ��
-��  WebRTC ?��? Nostr signaling (7)      ��
-��  GossipSub �� ECDH E2E �� Dead Drop    ��
-��  MultiSignaling failover             ��
-�����������������������������������Щ�������������������������������������������
+See `STATUS.md` for architecture notes and completed milestones.
                  ��
 ��������������������������������������������������������������������������������
 ��  IndexedDB �� CRDT �� Blob streaming   ��
