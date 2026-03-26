@@ -43,9 +43,19 @@ OurBackyard-PoC/
 ├── STATUS.md
 │
 ├── app/
-│   ├── ob-utils.js         # Shared UI utilities
-│   ├── p1p2-features.js    # Marketplace and UI feature pack
-│   └── p2p-adapter.js      # SDK adapter entry used for browser bundle
+│   ├── ob-utils.js           # Shared UI utilities
+│   ├── p1p2-features.js      # Marketplace and UI feature pack
+│   ├── p2p-adapter.js        # SDK adapter entry used for browser bundle
+│   ├── desktop-full-node.js  # Desktop full-node bootstrap
+│   ├── ui/
+│   │   └── chat-ui.js        # Chat modal UI
+│   ├── ai/
+│   │   └── local-ai.js       # Local semantic search (WebLLM stub)
+│   ├── governance/
+│   │   └── wot-trust.js      # Web of Trust peer scoring
+│   └── security/
+│       ├── key-vault.js      # Key management UI
+│       └── geo-consent.js    # Geo permission consent flow
 │
 ├── js/
 │   ├── ob-sdk.js           # Built browser SDK bundle
@@ -54,12 +64,6 @@ OurBackyard-PoC/
 │   ├── dexie.js
 │   ├── h3-js.js
 │   └── secp256k1.js
-│
-├── native/
-│   ├── ui/
-│   ├── ai/
-│   ├── governance/
-│   └── security/
 │
 ├── server/
 │   ├── server.py           # FastAPI signaling/static server

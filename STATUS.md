@@ -32,3 +32,4 @@ sdk/src/
 - [x] TypeScript 类型声明（36 个 `.d.ts` 模块 + `sdk/index.d.ts` barrel，`package.json` 已添加 `types` 字段）
 - [x] npm 发布（`@ourbackyard/p2p-sdk@0.1.0` 已上线 https://www.npmjs.com/package/@ourbackyard/p2p-sdk）
 - [x] 清理废弃文件（删除 153 个文件 / 24k 行：src/ 失败模块化、native/communication|data|ai|governance|security 实验代码、android/ios/capacitor 移动端）
+- [x] native/ 目錄整理完成 — 所有活躍模組移至 app/ 子目錄，native/ 已刪除
