@@ -103,6 +103,8 @@ export class NostrSignaling extends ISignaling {
     else         console.log(`[NostrSignaling] Connected to ${this._connected.size} relays`);
 
     this._startPresenceHeartbeat();
+    // Announce immediately so peers discover us right away (don't wait up to 60s for the timer)
+    if (online) this.announce(this._lastAnnounceMeta).catch(() => {});
     this.emit('status', online ? 'online' : 'offline');
   }
 
@@ -351,7 +353,7 @@ export class NostrSignaling extends ISignaling {
       KIND_ANNOUNCE,
       JSON.stringify({ peerId: this.peerId, ts: Date.now(), ...this._lastAnnounceMeta }),
       [
-        ['h', this.channelCell],
+        ['t', this.channelCell],   // must match subscription filter '#t'
         ['peer', this.peerId],
       ],
     ).then(event => {
