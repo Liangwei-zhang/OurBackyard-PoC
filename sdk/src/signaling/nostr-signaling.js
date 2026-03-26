@@ -23,16 +23,21 @@ const PEER_ID_PATTERN = /^[a-zA-Z0-9_-]{1,50}$/;
 const DEFAULT_RELAYS = [
   'wss://relay.damus.io',
   'wss://nostr.wine',
-  'wss://nos.lol',
   'wss://relay.snort.social',
   'wss://nostr.oxtr.dev',
   'wss://relay.primal.net',
-  'wss://nostr-pub.wellorder.net',
+  // Removed: 'wss://nos.lol'              — requires 28-bit PoW (NIP-13), always rejects us
+  // Removed: 'wss://nostr-pub.wellorder.net' — blocks all events as "spam"
 ];
 
-// Custom Nostr kinds — high numbers avoid polluting public content streams
+// Custom Nostr kinds
+// KIND_SIGNAL  : ephemeral (25001) — real-time only, never stored by relays
+// KIND_ANNOUNCE: replaceable (10751) — stored & returned on query, one per pubkey per kind
+//   WHY: ephemeral (20000-29999) events are NOT stored by relays. Two devices booting near
+//   the same time miss each other's initial announce and rely solely on the 15 s heartbeat.
+//   Replaceable stored events let a new joiner immediately fetch ALL active peers via 'since'.
 const KIND_SIGNAL   = 25001;
-const KIND_ANNOUNCE = 25002;
+const KIND_ANNOUNCE = 10751;
 
 export class NostrSignaling extends ISignaling {
   /**
@@ -44,8 +49,9 @@ export class NostrSignaling extends ISignaling {
    * @param {number}   [opts.bootTimeoutMs=4000]
    * @param {number}   [opts.relayTimeoutMs=6000]
    * @param {number}   [opts.reconnectMs=3000]
+   * @param {number}   [opts.announceIntervalMs=45000]
    */
-  constructor({ peerId, h3Cell, relays, secp256k1, bootTimeoutMs = 4000, relayTimeoutMs = 6000, reconnectMs = 3000 }) {
+  constructor({ peerId, h3Cell, relays, secp256k1, bootTimeoutMs = 4000, relayTimeoutMs = 6000, reconnectMs = 3000, announceIntervalMs = 60000 }) {
     super();
     this.peerId         = peerId;
     this.h3Cell         = h3Cell;
@@ -55,6 +61,7 @@ export class NostrSignaling extends ISignaling {
     this._bootTimeoutMs = bootTimeoutMs;
     this._relayTimeoutMs = relayTimeoutMs;
     this._reconnectMs   = reconnectMs;
+    this._announceIntervalMs = announceIntervalMs;
 
     /** @type {Map<string, WebSocket>} url → socket */
     this._relays        = new Map();
@@ -65,6 +72,10 @@ export class NostrSignaling extends ISignaling {
     this._privkey       = null;
     /** @type {object[]} events queued before first relay connects */
     this._pendingQueue  = [];
+    this._announceTimer  = null;
+    this._lastAnnounceMeta = { h3Cell };
+    /** @type {Set<string>} Dedup set for received Nostr event IDs (multi-relay dedup) */
+    this._seenEventIds  = new Set();
 
     console.log(`[NostrSignaling] L9 cell: ${h3Cell} → L7 channel: ${this.channelCell}`);
   }
@@ -91,10 +102,12 @@ export class NostrSignaling extends ISignaling {
     if (!online) console.warn('[NostrSignaling] No relays connected — falling back to LAN only');
     else         console.log(`[NostrSignaling] Connected to ${this._connected.size} relays`);
 
+    this._startPresenceHeartbeat();
     this.emit('status', online ? 'online' : 'offline');
   }
 
   async disconnect() {
+    this._stopPresenceHeartbeat();
     for (const [url, ws] of this._relays) {
       try { ws.close(); } catch {}
       this._relays.delete(url);
@@ -104,24 +117,29 @@ export class NostrSignaling extends ISignaling {
   }
 
   async sendSignal(targetPeerId, signal) {
+    console.log(`[NostrSignaling] → signal '${signal?.type}' to ${targetPeerId.slice(0, 12)}`);
     const event = await this._buildEvent(
       KIND_SIGNAL,
       JSON.stringify(signal),
       [
-        ['h',      this.channelCell],
+        ['t',      this.channelCell],
         ['peer',   this.peerId],
         ['target', targetPeerId],
       ]
     );
-    this._publish(event);
+    // Signals are directed (have a 'target' tag) so ONE relay is enough —
+    // both peers subscribe to all relays, so only one delivery path is needed.
+    // Sending to all 7 relays floods rate limits (5 ICE × 7 = 35 events per connection).
+    this._publishToOne(event);
   }
 
   async announce(meta = {}) {
+    this._lastAnnounceMeta = { ...this._lastAnnounceMeta, ...meta };
     const event = await this._buildEvent(
       KIND_ANNOUNCE,
-      JSON.stringify({ peerId: this.peerId, ts: Date.now(), ...meta }),
+      JSON.stringify({ peerId: this.peerId, ts: Date.now(), ...this._lastAnnounceMeta }),
       [
-        ['h',    this.channelCell],
+        ['t',    this.channelCell],   // #t (topic) — universally indexed by all relays
         ['peer', this.peerId],
       ]
     );
@@ -177,6 +195,7 @@ export class NostrSignaling extends ISignaling {
           // Flush queued events
           for (const ev of this._pendingQueue) this._publishToRelay(ws, ev);
           this._pendingQueue = [];
+          this._republishPresenceToRelay(ws);
           console.log(`[NostrSignaling] Connected: ${url}`);
           resolve(ws);
         };
@@ -186,7 +205,10 @@ export class NostrSignaling extends ISignaling {
         ws.onclose = () => {
           this._relays.delete(url);
           this._connected.delete(url);
-          if (this._connected.size === 0) this.emit('status', 'offline');
+          if (this._connected.size === 0) {
+            this._stopPresenceHeartbeat();
+            this.emit('status', 'offline');
+          }
           // Reconnect with backoff
           setTimeout(() => this._connectRelay(url), this._reconnectMs);
         };
@@ -205,10 +227,11 @@ export class NostrSignaling extends ISignaling {
   _subscribe(ws) {
     const filter = {
       kinds: [KIND_SIGNAL, KIND_ANNOUNCE],
-      '#h':  [this.channelCell],
-      since: Math.floor(Date.now() / 1000) - 300,
+      '#t':  [this.channelCell],   // #t (topic) replaces #h — widely supported
+      since: Math.floor(Date.now() / 1000) - 1800, // 30 min: fetch stored replaceable announces
     };
     ws.send(JSON.stringify(['REQ', this._subId, filter]));
+    console.log(`[NostrSignaling] Subscribed channel=${this.channelCell} on ${ws.url || 'relay'}`);
   }
 
   // ─────────────────────────── Incoming message handling ───────────────────────────
@@ -216,12 +239,36 @@ export class NostrSignaling extends ISignaling {
   _handleRelayMsg(url, raw) {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
+
+    // Relay diagnostic messages — critical for debugging relay compatibility
+    if (msg[0] === 'NOTICE') {
+      console.log(`[NostrSignaling] NOTICE from ${url}:`, msg[1]);
+      return;
+    }
+    if (msg[0] === 'OK') {
+      if (msg[2] === false) console.warn(`[NostrSignaling] Event REJECTED by ${url}:`, msg[3]);
+      return;
+    }
+    if (msg[0] === 'EOSE') {
+      console.log(`[NostrSignaling] EOSE from ${url} — stored history delivered`);
+      return;
+    }
+
     if (msg[0] !== 'EVENT') return;
 
     const event = msg[2];
     if (!event || typeof event !== 'object' || !event.kind || typeof event.content !== 'string') return;
     if (event.content.length > 65536) return; // 64 KB sanity limit
     if (event.pubkey === this._pubkey) return; // ignore own events
+
+    // Deduplicate events received from multiple relays
+    if (event.id) {
+      if (this._seenEventIds.has(event.id)) return;
+      this._seenEventIds.add(event.id);
+      if (this._seenEventIds.size > 200) {
+        this._seenEventIds.delete(this._seenEventIds.values().next().value);
+      }
+    }
 
     const senderPeerId = this._getTag(event, 'peer');
     const targetPeerId = this._getTag(event, 'target');
@@ -232,6 +279,7 @@ export class NostrSignaling extends ISignaling {
     if (event.kind === KIND_ANNOUNCE) {
       try {
         const meta = JSON.parse(event.content);
+        console.log(`[NostrSignaling] Peer announce: ${senderPeerId} via ${url}`);
         this.emit('peer:announce', senderPeerId, meta);
       } catch {}
       return;
@@ -242,6 +290,7 @@ export class NostrSignaling extends ISignaling {
       if (targetPeerId && targetPeerId !== this.peerId) return;
       try {
         const signal = JSON.parse(event.content);
+        console.log(`[NostrSignaling] ← signal '${signal?.type}' from ${senderPeerId.slice(0, 12)} via ${url}`);
         this.emit('signal', senderPeerId, signal);
       } catch (e) {
         console.error('[NostrSignaling] Signal parse error:', e);
@@ -263,8 +312,51 @@ export class NostrSignaling extends ISignaling {
     if (sent === 0) this._pendingQueue.push(event);
   }
 
+  /**
+   * Publish to exactly ONE connected relay (for directed signals that don't need broadcast).
+   * Falls back to all-relays publish if no connected relay exists.
+   */
+  _publishToOne(event) {
+    // Pick a random connected relay to distribute load
+    const open = [];
+    for (const ws of this._relays.values()) {
+      if (ws.readyState === WebSocket.OPEN) open.push(ws);
+    }
+    if (open.length === 0) { this._pendingQueue.push(event); return; }
+    const ws = open[Math.floor(Math.random() * open.length)];
+    ws.send(JSON.stringify(['EVENT', event]));
+  }
+
   _publishToRelay(ws, event) {
     if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(['EVENT', event]));
+  }
+
+  _startPresenceHeartbeat() {
+    if (this._announceTimer || this._announceIntervalMs <= 0) return;
+    this._announceTimer = setInterval(() => {
+      if (this._connected.size === 0) return;
+      this.announce(this._lastAnnounceMeta).catch(() => {});
+    }, this._announceIntervalMs);
+  }
+
+  _stopPresenceHeartbeat() {
+    if (!this._announceTimer) return;
+    clearInterval(this._announceTimer);
+    this._announceTimer = null;
+  }
+
+  _republishPresenceToRelay(ws) {
+    if (!ws || ws.readyState !== WebSocket.OPEN || !this._pubkey) return;
+    this._buildEvent(
+      KIND_ANNOUNCE,
+      JSON.stringify({ peerId: this.peerId, ts: Date.now(), ...this._lastAnnounceMeta }),
+      [
+        ['h', this.channelCell],
+        ['peer', this.peerId],
+      ],
+    ).then(event => {
+      this._publishToRelay(ws, event);
+    }).catch(() => {});
   }
 
   // ─────────────────────────── NIP-01 event building ───────────────────────────

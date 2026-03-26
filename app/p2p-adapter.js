@@ -121,7 +121,7 @@ class OurBackyardMesh {
     // New peer connected → bridge DataChannel proxy + notify
     node.on('peer:joined', ({ peerId }) => {
       this._bridgePeer(peerId);
-      const count = node.cellShard.getAllPeers().length;
+      const count = node.transport?.peerCount ?? node.cellShard.getAllPeers().length;
       this.onPeers?.(count);
       // Also update the inline-script peer tracking
       if (typeof window !== 'undefined' && typeof window.trackPeer === 'function') {
@@ -132,7 +132,7 @@ class OurBackyardMesh {
     // Peer disconnected → remove bridge + notify
     node.on('peer:left', ({ peerId }) => {
       this._unbridgePeer(peerId);
-      const count = node.cellShard.getAllPeers().length;
+      const count = node.transport?.peerCount ?? node.cellShard.getAllPeers().length;
       this.onPeers?.(count);
     });
 
@@ -193,6 +193,7 @@ class OurBackyardMesh {
       this.lanChannel = new BroadcastChannel(`ourbackyard:${l7}`);
       this.lanChannel.onmessage = (e) => this._handleLANMsg(e.data);
       this._lanAnnounce();
+      this._lanTimer = setInterval(() => this._lanAnnounce(), 15000);
       this.onStatus?.('lan');
     } catch (e) {
       console.warn('[SDK Mesh] BroadcastChannel not available:', e.message);
@@ -247,6 +248,16 @@ class OurBackyardMesh {
   }
 
   // ── Public API (mirroring OurBackyardMesh) ────────────────────────────────────
+
+  /**
+   * Low-level typed send (used by ChatUI for CHAT_READ receipts, etc.)
+   * @param {string} toPeerId
+   * @param {object} msg — must have a `type` field
+   */
+  _send(toPeerId, msg) {
+    if (!this._node || !msg?.type) return;
+    try { this._node.sendMessage(toPeerId, msg.type, msg); } catch (_) {}
+  }
 
   /**
    * Broadcast a new listing to all neighbours via plumtree gossip.

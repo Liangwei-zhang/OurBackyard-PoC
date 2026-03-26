@@ -30,26 +30,6 @@ const CSS = `
 .ai-card-title{font-size:12px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ai-card-price{font-size:11px;color:rgba(255,255,255,.75);margin-top:2px}
 .ai-why{font-size:10px;color:rgba(255,255,255,.5);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#tab-community{display:flex;flex-direction:column;height:calc(100dvh - 89px)}
-.channel-list{display:flex;gap:6px;padding:10px 14px 4px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
-.channel-list::-webkit-scrollbar{display:none}
-.channel-chip{padding:5px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--bg-card);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .15s}
-.channel-chip.active{background:var(--primary);border-color:var(--primary);color:#fff}
-.channel-msgs{flex:1;overflow-y:auto;padding:8px 14px;display:flex;flex-direction:column;gap:10px}
-.ch-msg{display:flex;gap:8px;align-items:flex-start}
-.ch-msg.mine{flex-direction:row-reverse}
-.ch-avatar{width:32px;height:32px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
-.ch-bubble-wrap{max-width:72%;display:flex;flex-direction:column}
-.ch-mine-wrap{align-items:flex-end}
-.ch-sender{font-size:10px;color:var(--text-muted);margin-bottom:2px;padding:0 6px}
-.ch-bubble{padding:8px 12px;border-radius:14px;font-size:14px;line-height:1.45;word-break:break-word;background:var(--bg-card);border:1px solid var(--border)}
-.ch-msg.mine .ch-bubble{background:var(--primary);border-color:var(--primary);color:#fff}
-.ch-time{font-size:10px;color:var(--text-muted);margin-top:3px;padding:0 6px}
-.channel-input-row{display:flex;gap:8px;padding:10px 14px 16px;border-top:1px solid var(--border);background:var(--bg-main);flex-shrink:0}
-.channel-input{flex:1;padding:10px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--bg-card);color:var(--text);font-size:15px;font-family:inherit;outline:none;transition:border-color .15s}
-.channel-input:focus{border-color:var(--primary)}
-.ch-send-btn{width:42px;height:42px;border-radius:21px;border:none;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:18px;transition:transform .15s}
-.ch-send-btn:active{transform:scale(.9)}
 #call-overlay{position:fixed;inset:0;background:#0a0a12;z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:space-between;padding:60px 24px 40px}
 #call-overlay.active{display:flex}
 #call-remote-video{width:100%;max-width:400px;aspect-ratio:9/16;border-radius:20px;background:#1a1a2e;object-fit:cover}
@@ -387,16 +367,39 @@ function initCommunityTab() {
   panel.id = 'tab-community';
   panel.className = 'hidden';
   panel.innerHTML =
-    '<div class="channel-list" id="channel-list">' +
-    CHANNELS.map(function(c){
-      return '<button class="channel-chip' + (c.id === _activeChannel ? ' active' : '') +
-        '" data-ch="' + c.id + '" onclick="window._p1p2_switchChannel(\'' + c.id + '\')">' + c.label + '</button>';
-    }).join('') + '</div>' +
-    '<div class="channel-msgs" id="channel-msgs"></div>' +
-    '<div class="channel-input-row">' +
-      '<input class="channel-input" id="channel-input" type="text" placeholder="Message #' + _activeChannel + '…"' +
-      ' onkeydown="if(event.key===\'Enter\')window._p1p2_sendChannelMsg()">' +
-      '<button class="ch-send-btn" onclick="window._p1p2_sendChannelMsg()">↑</button>' +
+    '<div class="community-shell">' +
+      '<section class="community-hero">' +
+        '<div class="community-copy">' +
+          '<span class="community-kicker">Community board</span>' +
+          '<h1 class="community-title">Local channels for coordination, help requests, and neighborhood signal.</h1>' +
+          '<p class="community-subtitle">Use structured channels to keep urgent coordination, giveaways, and introductions visible without cluttering direct messages.</p>' +
+        '</div>' +
+        '<div class="community-metrics" aria-hidden="true">' +
+          '<div class="community-metric"><span class="community-metric-label">Format</span><strong class="community-metric-value">Channels</strong></div>' +
+          '<div class="community-metric"><span class="community-metric-label">Scope</span><strong class="community-metric-value">Local</strong></div>' +
+          '<div class="community-metric"><span class="community-metric-label">Priority</span><strong class="community-metric-value">Signal</strong></div>' +
+        '</div>' +
+      '</section>' +
+      '<section class="community-panel">' +
+        '<div class="community-panel-head">' +
+          '<div>' +
+            '<span class="community-kicker">Live board</span>' +
+            '<h2 class="community-panel-title">Neighborhood channels</h2>' +
+            '<p class="community-panel-subtitle">Switch topics, review recent context, and publish short updates to the active feed.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="channel-list" id="channel-list">' +
+        CHANNELS.map(function(c){
+          return '<button class="channel-chip' + (c.id === _activeChannel ? ' active' : '') +
+            '" data-ch="' + c.id + '" onclick="window._p1p2_switchChannel(\'' + c.id + '\')">' + c.label + '</button>';
+        }).join('') + '</div>' +
+        '<div class="channel-msgs" id="channel-msgs"></div>' +
+        '<div class="channel-input-row">' +
+          '<input class="channel-input" id="channel-input" type="text" placeholder="Message #' + _activeChannel + '…"' +
+          ' onkeydown="if(event.key===\'Enter\')window._p1p2_sendChannelMsg()">' +
+          '<button class="ch-send-btn" onclick="window._p1p2_sendChannelMsg()">↑</button>' +
+        '</div>' +
+      '</section>' +
     '</div>';
 
   var tabAdd = document.getElementById('tab-add');
@@ -459,7 +462,7 @@ function _renderChannelMsgs() {
   if (!el) return;
   var msgs = _channelMsgs[_activeChannel] || [];
   if (!msgs.length) {
-    el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:32px;font-size:14px">No messages yet in #' + _activeChannel + '<br>Be the first to say hello! 👋</div>';
+    el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:48px 24px;font-size:14px;line-height:1.7">No messages yet in #' + _activeChannel + '<br>Start the thread with a short, clear update.</div>';
     return;
   }
   el.innerHTML = msgs.slice(-100).map(function(m) {

@@ -290,6 +290,8 @@ export class P2PNode extends EventBus {
       this.gossipSync.addPeer(peerId);
       this.resilience.trackPeer(peerId);
       this.emit('peer:joined', { peerId });
+      // Trigger immediate Merkle sync instead of waiting up to 30s for periodic timer
+      this.gossipSync.syncWithPeer(peerId).catch(() => {});
     });
 
     // Transport peer disconnected
@@ -309,11 +311,20 @@ export class P2PNode extends EventBus {
     });
 
     // Signaling: new peer announced
+    // Use a seen-set so we only re-announce for genuinely NEW peers (first sight).
+    // Re-announcing on every heartbeat from a known peer causes a positive-feedback storm:
+    // A announces → B re-announces → A re-announces → ... (all 7 relays × 15s = rate-limited).
+    const _seenPeers = new Set();
     this.signaling.on('peer:announce', (peerId, meta) => {
       if (peerId === cfg.peerId) return;
       const h3Cell = meta?.h3Cell;
       if (h3Cell) this.cellShard.addPeer(peerId, h3Cell);
       this.transport.connect(peerId, cfg.peerId < peerId).catch(() => {});
+      // Re-announce once per peer so they know we exist, but never again on heartbeats.
+      if (!_seenPeers.has(peerId)) {
+        _seenPeers.add(peerId);
+        this.signaling.announce({ h3Cell: cfg.h3Cell }).catch(() => {});
+      }
     });
 
     // CellShard events

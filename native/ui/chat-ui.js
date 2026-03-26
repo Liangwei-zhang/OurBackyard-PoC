@@ -754,17 +754,20 @@ const ChatUI = (() => {
       <!-- INBOX -->
       <div id="ob-view-inbox" style="display:flex;flex-direction:column;height:100%;overflow:hidden">
         <header class="ob-hdr">
-          <div class="ob-hdr-title">Messages</div>
+          <div class="ob-hdr-copy">
+            <div class="ob-hdr-kicker">Direct communication</div>
+            <div class="ob-hdr-title">Messages</div>
+          </div>
           <button id="ob-close1" class="ob-icon-btn" aria-label="Close">✕</button>
         </header>
         <!-- Inbox tab selector -->
         <div class="ob-tab-pills">
           <button class="ob-pill active" data-tab="shopping" onclick="_obSwitchInboxTab('shopping')">
-            🛍 Shopping
+            Shopping
             <span class="ob-pill-badge" id="ob-pill-shop-badge" style="display:none">0</span>
           </button>
           <button class="ob-pill" data-tab="people" onclick="_obSwitchInboxTab('people')">
-            💬 People
+            People
             <span class="ob-pill-badge" id="ob-pill-ppl-badge" style="display:none">0</span>
           </button>
         </div>
@@ -811,105 +814,7 @@ const ChatUI = (() => {
 
   // ── CSS ───────────────────────────────────────────────────────────────────────
   function _injectStyles() {
-    if ($('ob-chat-css')) return;
-    const s = document.createElement('style');
-    s.id = 'ob-chat-css';
-    s.textContent = `
-      #ob-chat-fab{display:none!important}
-      #ob-chat-modal{position:fixed;top:0;bottom:0;left:50%;width:min(100vw,480px);transform:translateX(-50%) translateY(102%);transition:transform .3s cubic-bezier(.4,0,.2,1);background:var(--bg-main,#0f0f18);color:var(--text,#f0f0f0);display:flex;flex-direction:column;z-index:1200;box-shadow:-4px 0 40px rgba(0,0,0,.5),4px 0 40px rgba(0,0,0,.5);overflow:hidden;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-      #ob-chat-modal.open{transform:translateX(-50%) translateY(0)}
-      .ob-hdr{display:flex;align-items:center;gap:10px;padding:12px 14px;flex-shrink:0;background:var(--bg-card,#141420);border-bottom:1px solid var(--border,rgba(255,255,255,.07));min-height:56px}
-      .ob-hdr-title{font-size:18px;font-weight:700;flex:1}
-      .ob-icon-btn{background:none;border:none;cursor:pointer;color:var(--text,#f0f0f0);padding:7px;border-radius:10px;font-size:17px;line-height:1;flex-shrink:0;transition:background .12s;-webkit-tap-highlight-color:transparent}
-      .ob-icon-btn:hover,.ob-icon-btn:active{background:rgba(255,255,255,.07)}
-      .ob-sub{font-size:11px;color:var(--text-muted,#888);margin-top:1px;display:flex;align-items:center;gap:3px}
-      .ob-dot-online{width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block}
-      .ob-avatar{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0}
-      .ob-list-hdr{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted,#888);padding:10px 16px 4px}
-      .ob-inbox-row{display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;transition:background .1s;border-bottom:1px solid var(--border,rgba(255,255,255,.04));-webkit-tap-highlight-color:transparent}
-      .ob-inbox-row:active{background:rgba(255,255,255,.05)}
-      .ob-row-online .ob-inbox-preview{color:#22c55e!important}
-      .ob-inbox-info{flex:1;min-width:0}
-      .ob-inbox-name{font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      .ob-inbox-preview{font-size:13px;color:var(--text-muted,#888);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-      .ob-inbox-meta{font-size:11px;color:var(--text-muted,#888);flex-shrink:0}
-      .ob-badge{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--primary,#6366f1);color:#fff;font-size:10px;font-weight:700}
-      .ob-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;gap:10px;text-align:center;flex:1}
-      .ob-empty-title{font-size:17px;font-weight:600}
-      .ob-empty-sub{font-size:13px;color:var(--text-muted,#888);line-height:1.6}
-      .ob-skel-row{display:flex;gap:12px;padding:13px 16px;align-items:center}
-      .ob-skel-av{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.07);animation:ob-pulse 1.4s ease-in-out infinite;flex-shrink:0}
-      .ob-skel-line{height:12px;border-radius:6px;background:rgba(255,255,255,.07);animation:ob-pulse 1.4s ease-in-out infinite}
-      .ob-skel-bubble{margin:4px 14px}.ob-skel-mine{display:flex;justify-content:flex-end}
-      .ob-skel-mine .ob-skel-line{background:rgba(99,102,241,.2)}
-      @keyframes ob-pulse{0%,100%{opacity:.5}50%{opacity:1}}
-      .ob-day-sep{text-align:center;font-size:11px;color:var(--text-muted,#888);margin:10px 0;letter-spacing:.3px}
-      .ob-bubble-wrap{display:flex;flex-direction:column;max-width:78%}.ob-bubble-wrap.mine{align-self:flex-end}.ob-bubble-wrap.theirs{align-self:flex-start}
-      .ob-bubble{padding:9px 12px;border-radius:18px;font-size:15px;line-height:1.45;word-break:break-word}
-      .ob-bubble-wrap.theirs .ob-bubble{background:var(--bg-card,#1e1e2e);border:1px solid var(--border,rgba(255,255,255,.06));border-bottom-left-radius:5px}
-      .ob-bubble-wrap.mine .ob-bubble{background:var(--primary,#6366f1);color:#fff;border-bottom-right-radius:5px}
-      .ob-bfoot{display:flex;align-items:center;justify-content:flex-end;gap:3px;font-size:10px;margin-top:4px;opacity:.6}
-      .ob-bubble-wrap.theirs .ob-bfoot{justify-content:flex-start}
-      .ob-status{font-size:11px}.ob-status.sending{opacity:.5}
-      .ob-media-img{width:100%;max-width:240px;border-radius:12px;display:block;cursor:zoom-in}
-      .ob-media-audio{width:200px;height:36px}
-      .ob-input-area{flex-shrink:0;background:var(--bg-card,#141420);border-top:1px solid var(--border,rgba(255,255,255,.07))}
-      .ob-tool-row{display:flex;gap:4px;padding:8px 12px 2px}
-      .ob-tool-btn{width:36px;height:36px;border-radius:18px;border:none;background:rgba(255,255,255,.06);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s;flex-shrink:0;-webkit-tap-highlight-color:transparent}
-      .ob-tool-btn:active{background:rgba(255,255,255,.12)}
-      .ob-text-row{display:flex;align-items:flex-end;gap:8px;padding:4px 12px 14px}
-      #ob-input{flex:1;padding:10px 14px;border:1.5px solid var(--border,rgba(255,255,255,.1));border-radius:22px;font-size:15px;font-family:inherit;resize:none;outline:none;max-height:132px;overflow-y:auto;line-height:1.45;background:var(--bg-main,#0f0f18);color:var(--text,#f0f0f0);transition:border-color .15s}
-      #ob-input:focus{border-color:var(--primary,#6366f1)}
-      #ob-input::placeholder{color:var(--text-muted,#888)}
-      .ob-send-btn{width:42px;height:42px;border-radius:21px;border:none;background:var(--primary,#6366f1);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:transform .12s;box-shadow:0 2px 10px rgba(99,102,241,.4);-webkit-tap-highlight-color:transparent}
-      .ob-send-btn:active{transform:scale(.9)}
-      .ob-send-btn:disabled{opacity:.4;cursor:not-allowed}
-      .ob-em{background:none;border:none;font-size:22px;cursor:pointer;padding:5px;border-radius:8px;transition:background .1s;-webkit-tap-highlight-color:transparent}
-      .ob-em:active{background:rgba(255,255,255,.08)}
-      .ob-toast-notif{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--bg-card,#1e1e2e);border:1px solid var(--border,rgba(255,255,255,.1));border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:10px;max-width:320px;width:90%;font-size:14px;color:var(--text,#f0f0f0);box-shadow:0 8px 32px rgba(0,0,0,.4);z-index:2100;cursor:pointer;animation:ob-toast-in .22s cubic-bezier(.4,0,.2,1)}
-      .ob-toast-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0}
-      @keyframes ob-toast-in{from{opacity:0;transform:translateX(-50%) translateY(-12px) scale(.95)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
-      /* ── Inbox tab pills ── */
-      .ob-tab-pills{display:flex;gap:6px;padding:10px 14px;background:var(--bg-card,#141420);border-bottom:1px solid var(--border,rgba(255,255,255,.07));flex-shrink:0}
-      .ob-pill{flex:1;padding:8px 12px;border-radius:22px;border:1.5px solid var(--border,rgba(255,255,255,.1));background:none;color:var(--text-muted,#888);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .15s;-webkit-tap-highlight-color:transparent}
-      .ob-pill.active{background:var(--primary,#6366f1);border-color:var(--primary,#6366f1);color:#fff}
-      .ob-pill-badge{background:#E24B4A;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;padding:0 3px}
-
-      /* ── Shopping rows ── */
-      .ob-shop-row{display:flex;gap:0;padding:14px 16px;cursor:pointer;border-bottom:1px solid var(--border,rgba(255,255,255,.05));transition:background .1s;-webkit-tap-highlight-color:transparent}
-      .ob-shop-row:active{background:rgba(255,255,255,.04)}
-      .ob-shop-thumb-wrap{position:relative;flex-shrink:0;width:72px;height:72px;border-radius:12px;overflow:visible;margin-right:12px}
-      .ob-shop-thumb{width:72px;height:72px;border-radius:12px;object-fit:cover;display:block;background:rgba(255,255,255,.06)}
-      .ob-shop-thumb.loaded{opacity:1}
-      .ob-shop-thumb-placeholder{width:72px;height:72px;border-radius:12px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
-      .ob-shop-online-dot{position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2px solid var(--bg-card,#141420)}
-      .ob-shop-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-      .ob-shop-item-title{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text,#f0f0f0)}
-      .ob-shop-item-meta{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:2px}
-      .ob-shop-price{font-weight:600}.ob-shop-price.free{color:#22c55e}.ob-shop-price.swap{color:#f59e0b}
-      .ob-shop-status{font-size:11px}.ob-shop-status.avail{color:#22c55e}.ob-shop-status.pend{color:#f59e0b}.ob-shop-status.gone{color:#888}
-      .ob-shop-divider{height:1px;background:var(--border,rgba(255,255,255,.06));margin:4px 0}
-      .ob-shop-peer-row{display:flex;align-items:center;gap:7px}
-      .ob-mini-avatar{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
-      .ob-shop-peer-info{display:flex;align-items:center;gap:5px;flex-shrink:0}
-      .ob-shop-role{font-size:11px;font-weight:600;color:var(--text-muted,#888)}
-      .ob-shop-preview{flex:1;font-size:12px;color:var(--text-muted,#888);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-      .ob-shop-time{font-size:11px;color:var(--text-muted,#888);flex-shrink:0}
-
-      /* ── People rows: private chat tag ── */
-      .ob-private-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;background:rgba(99,102,241,.18);color:var(--primary,#6366f1);border-radius:4px;padding:1px 5px;margin-right:4px;flex-shrink:0}
-
-      @keyframes ob-toast-out{from{opacity:1}to{opacity:0;transform:translateX(-50%) translateY(-8px)}}
-      /* Item banner */
-      .ob-banner-thumb{width:48px;height:48px;object-fit:cover;border-radius:10px;flex-shrink:0}
-      .ob-banner-no-img{width:48px;height:48px;border-radius:10px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-      .ob-banner-img-wrap{flex-shrink:0}
-      .ob-banner-info{flex:1;min-width:0}
-      .ob-banner-title{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text,#f0f0f0)}
-      .ob-banner-meta{font-size:13px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      .ob-banner-view{background:none;border:none;color:var(--text-muted,#888);font-size:22px;cursor:pointer;padding:4px 8px;flex-shrink:0;line-height:1}
-    `;
-    document.head.appendChild(s);
+    return;
   }
 
   // Expose tab switcher globally (called from inline onclick)
@@ -923,7 +828,16 @@ const ChatUI = (() => {
     } catch(e) {}
   };
 
-    return { init, openWithSeller, openInbox };
+  // Refresh inbox if it's currently open (called on peer:joined / peer:left)
+  function refresh() {
+    try {
+      const modal = document.getElementById('ob-chat-modal');
+      const isOpen = modal && modal.classList.contains('open');
+      if (isOpen && !_currentChat) _loadInbox();
+    } catch(e) {}
+  }
+
+    return { init, openWithSeller, openInbox, refresh };
 })();
 
 if (typeof window !== 'undefined') window.ChatUI = window.ChatUI || ChatUI;

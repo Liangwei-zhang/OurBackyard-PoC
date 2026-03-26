@@ -52,6 +52,16 @@ export class GossipSync extends EventBus {
 
     // Forward sync completions
     this._merkle.on('sync:completed', (data) => this.emit('sync:completed', data));
+
+    // Forward items received via Merkle reconciliation as item:received
+    // so the application layer (Dexie / UI) gets updated for pre-existing items.
+    this._merkle.on('items:synced', ({ from, items }) => {
+      for (const { key, value } of items) {
+        if (key.startsWith('item:') && value && value.id) {
+          this.emit('item:received', { topic: 'item', payload: value, from, msgId: null });
+        }
+      }
+    });
   }
 
   // ── Peer management ──────────────────────────────────────────────────────────

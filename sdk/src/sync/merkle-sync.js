@@ -281,17 +281,24 @@ export class MerkleSync extends EventBus {
     if (!session) return;
 
     let synced = 0;
+    const newItems = [];
     for (const { key, value } of items) {
       try {
         const existing = await this._storage.get(key);
         if (existing !== value) {
           await this._storage.put(key, value);
           synced++;
+          newItems.push({ key, value });
           this.emit('sync:progress', { sessionId, key, from });
         }
       } catch (e) {
         this.emit('sync:conflict', { sessionId, key, error: e });
       }
+    }
+
+    // Notify upper layers so the app UI (Dexie) can be updated
+    if (newItems.length > 0) {
+      this.emit('items:synced', { from, items: newItems });
     }
 
     this._completeSession(session, { synced: true, itemsSynced: synced });

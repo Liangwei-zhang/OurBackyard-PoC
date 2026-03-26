@@ -127,13 +127,14 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
             # 處理各類訊息
             msg_type = message.get("type")
             
-            if msg_type == "signal":
-                # SDK protocol: relay wrapped signal to target peer
+            if msg_type in {"signal", "WEBRTC_SIGNAL"}:
+                # Relay wrapped WebRTC signaling for both SDK and legacy page protocol
                 target = message.get("target")
                 if target and target in room.clients:
                     await room.clients[target].send_json({
-                        "type": "signal",
+                        "type": "WEBRTC_SIGNAL" if msg_type == "WEBRTC_SIGNAL" else "signal",
                         "from": peer_id,
+                        "target": target,
                         "signal": message.get("signal")
                     })
 

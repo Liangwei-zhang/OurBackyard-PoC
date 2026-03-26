@@ -66,6 +66,31 @@ export class WebRTCTransport extends EventBus {
   }
 
   /**
+   * Backward-compatible transport interface.
+   * Tracks the peer and creates an offer when this side is the offerer.
+   * @param {string} peerId
+   * @param {boolean|object} [shouldOfferOrMeta=true]
+   * @param {object} [meta]
+   */
+  async connect(peerId, shouldOfferOrMeta = true, meta = {}) {
+    let shouldOffer = shouldOfferOrMeta;
+    let peerMeta = meta;
+
+    if (typeof shouldOfferOrMeta === 'object' && shouldOfferOrMeta !== null) {
+      shouldOffer = true;
+      peerMeta = shouldOfferOrMeta;
+    }
+
+    this.trackPeer(peerId, peerMeta);
+
+    if (!shouldOffer || this._peerConns.has(peerId) || this._peerConns.size >= this.maxPeers) {
+      return;
+    }
+
+    await this.createOffer(peerId);
+  }
+
+  /**
    * Handle an incoming signal (offer / answer / ice-candidate).
    * @param {string} fromPeerId
    * @param {object} signal
@@ -135,6 +160,12 @@ export class WebRTCTransport extends EventBus {
     this.removeAllListeners();
   }
 
+  destroyAll() { this.destroy(); }
+
+  close() {
+    this.destroy();
+  }
+
   // ─────────────────────────── Properties ───────────────────────────
 
   /** @returns {string[]} */
@@ -159,6 +190,9 @@ export class WebRTCTransport extends EventBus {
     const dc = this._dataChannels.get(peerId);
     return (dc?.readyState === 'open') ? dc : null;
   }
+
+  /** @returns {string[]} */
+  peers() { return this.connectedPeers; }
 
   // ─────────────────────────── Internal — signal handlers ───────────────────────────
 
@@ -245,6 +279,7 @@ export class WebRTCTransport extends EventBus {
 
     pc.onconnectionstatechange = () => {
       const state = pc.connectionState;
+      console.log(`[WebRTC] ${peerId.slice(0,12)} connectionState → ${state}`);
       if (state === 'failed' || state === 'disconnected') {
         this._cleanPeer(peerId);
         // Auto-reconnect with backoff if the peer is still known
@@ -256,11 +291,21 @@ export class WebRTCTransport extends EventBus {
       }
     };
 
-    // ICE restart on failure
+    // ICE restart on failure: send an explicit new offer with iceRestart:true.
+    // NOTE: onnegotiationneeded is intentionally NOT used — it races with the
+    // explicit createOffer() call in createOffer() when createDataChannel() fires
+    // negotiationneeded, causing 'Failed to set local offer: m-line order mismatch'.
     pc.oniceconnectionstatechange = () => {
-      if (pc.iceConnectionState === 'failed') {
+      console.log(`[WebRTC] ${peerId.slice(0,12)} iceState → ${pc.iceConnectionState}`);
+      if (pc.iceConnectionState === 'failed' && this.peerId < peerId) {
         console.log('[WebRTCTransport] ICE failed, restarting for peer:', peerId);
-        pc.restartIce();
+        pc.createOffer({ iceRestart: true })
+          .then(o => pc.setLocalDescription(o))
+          .then(() => this.emit('signal:send', peerId, {
+            type: 'offer',
+            sdp:  { type: pc.localDescription.type, sdp: pc.localDescription.sdp },
+          }))
+          .catch(e => console.warn('[WebRTCTransport] ICE restart error:', e.message));
       }
     };
 
