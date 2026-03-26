@@ -4527,6 +4527,11 @@ window.showItemDetail = async function (id) {
                     }
                     if (ws && ws.readyState === WebSocket.OPEN)
                         ws.send(JSON.stringify(msg));
+                    // Also propagate via SDK mesh so gossip reaches peers without server
+                    if (window.mesh) {
+                        const itemId = item.id || item.itemId;
+                        if (itemId) window.mesh.broadcastItemUpdate(itemId, status || item.status);
+                    }
                 } catch (err) {
                     console.error("[broadcastItemUpdate] Error:", err);
                 }
