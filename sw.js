@@ -1,7 +1,7 @@
-// OurBackyard Service Worker v41
+// OurBackyard Service Worker v43
 // 策略：App Shell 预缓存 + 动态资源 network-first + IndexedDB 数据离线可用
 
-const APP_SHELL_VERSION = 'v41';
+const APP_SHELL_VERSION = 'v43';
 const CACHE_SHELL  = 'ob-shell-'  + APP_SHELL_VERSION;
 const CACHE_ASSETS = 'ob-assets-' + APP_SHELL_VERSION;
 
