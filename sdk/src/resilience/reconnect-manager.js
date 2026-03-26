@@ -85,7 +85,8 @@ export class ReconnectManager extends EventBus {
    */
   remove(peerId) {
     const state = this._state.get(peerId);
-    if (state?.timer !== null) clearTimeout(state.timer);
+    if (!state) return;
+    if (state.timer !== null) clearTimeout(state.timer);
     this._state.delete(peerId);
   }
 
