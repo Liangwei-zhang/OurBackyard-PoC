@@ -6998,12 +6998,13 @@ window.showItemDetail = async function (id) {
       } catch (e) { console.warn('[Boot] LocalAI index error:', e); }
     }).catch(e => console.warn('[Boot] LocalAI init error:', e));
 
-    // Re-index when new items arrive via P2P
-    const _origOnItem = mesh.options?.onItem;
+    // Re-index when new items arrive via P2P.
+    // IMPORTANT: mesh.options.onItem is checked FIRST by the adapter before
+    // mesh.onItem (saveNeighborItem), so we must always forward here too.
     mesh.options = mesh.options || {};
     mesh.options.onItem = async (item) => {
       if (window.LocalAI) LocalAI.indexItem(item).catch(() => {});
-      if (_origOnItem) _origOnItem(item);
+      mesh.onItem?.(item);  // always forward to saveNeighborItem
     };
   }
 
