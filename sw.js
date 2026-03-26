@@ -1,7 +1,7 @@
-// OurBackyard Service Worker v43
+// OurBackyard Service Worker v44
 // 策略：App Shell 预缓存 + 动态资源 network-first + IndexedDB 数据离线可用
 
-const APP_SHELL_VERSION = 'v43';
+const APP_SHELL_VERSION = 'v44';
 const CACHE_SHELL  = 'ob-shell-'  + APP_SHELL_VERSION;
 const CACHE_ASSETS = 'ob-assets-' + APP_SHELL_VERSION;
 
@@ -21,12 +21,12 @@ const APP_SHELL_FILES = [
   '/js/db.js',
   '/js/ob-sdk.js',
   '/js/secp256k1.js',
-  '/native/ui/chat-ui.js',
-  '/native/ai/local-ai.js',
-  '/native/governance/wot-trust.js',
-  '/native/desktop-full-node.js',
-  '/native/security/key-vault.js',
-  '/native/security/geo-consent.js',
+  '/app/ui/chat-ui.js',
+  '/app/ai/local-ai.js',
+  '/app/governance/wot-trust.js',
+  '/app/desktop-full-node.js',
+  '/app/security/key-vault.js',
+  '/app/security/geo-consent.js',
 ];
 
 // ── 这些文件每次都走网络（动态内容 / 频繁变更）─────────────────────────────
