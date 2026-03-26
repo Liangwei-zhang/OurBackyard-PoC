@@ -1,7 +1,7 @@
-// OurBackyard Service Worker v40
+// OurBackyard Service Worker v41
 // 策略：App Shell 预缓存 + 动态资源 network-first + IndexedDB 数据离线可用
 
-const APP_SHELL_VERSION = 'v40';
+const APP_SHELL_VERSION = 'v41';
 const CACHE_SHELL  = 'ob-shell-'  + APP_SHELL_VERSION;
 const CACHE_ASSETS = 'ob-assets-' + APP_SHELL_VERSION;
 
@@ -13,15 +13,18 @@ const APP_SHELL_FILES = [
   '/icon-192.png',
   '/icon-512.png',
   '/sw.js',
+  '/app/ob-utils.js',
+  '/app/p1p2-features.js',
   '/js/dexie.js',
   '/js/h3-js.js',
   '/js/utils.js',
   '/js/db.js',
+  '/js/ob-sdk.js',
   '/js/secp256k1.js',
-  '/p1p2-features.js',
-  '/native/communication/nostr-signaling.js',
-  '/native/communication/p2p-mesh.js',
   '/native/ui/chat-ui.js',
+  '/native/ai/local-ai.js',
+  '/native/governance/wot-trust.js',
+  '/native/desktop-full-node.js',
   '/native/security/key-vault.js',
   '/native/security/geo-consent.js',
 ];

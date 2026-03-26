@@ -4,6 +4,8 @@ www/
 .DS_Store
 *.log
 *.zip
+__pycache__/
+*.pyc
 
 # test output redirects
 test-out.txt

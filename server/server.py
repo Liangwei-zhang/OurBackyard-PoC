@@ -312,13 +312,13 @@ async def root():
     return FileResponse(os.path.join(BASE_DIR, "index.html"))
 
 
-@app.get("/{filename}")
-async def serve_static(filename: str):
-    """Serve static files including sw.js"""
-    file_path = os.path.join(BASE_DIR, filename)
+@app.get("/{file_path:path}")
+async def serve_static(file_path: str):
+    """Serve static files from the project root, including nested paths."""
+    file_path = os.path.join(BASE_DIR, file_path)
     if os.path.exists(file_path):
         return FileResponse(file_path)
-    return HTTPException(status_code=404, detail="File not found")
+    raise HTTPException(status_code=404, detail="File not found")
 
 
 @app.get("/api/config")
