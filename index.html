@@ -7216,6 +7216,18 @@ window.showItemDetail = async function (id) {
             window.openChatWithSeller = function(itemId, sellerId, name, itemData) {
                 if (window.ChatUI) ChatUI.openWithSeller(itemId, sellerId, name, itemData);
             };
+            window.updateChatPeerSelector = function() {
+                // Legacy chat modal was removed; ChatUI manages inbox/thread state.
+            };
+            window.renderOnlineList = function() {
+                // Legacy online-list renderer removed with ChatUI migration.
+            };
+            window.renderChatMessages = function() {
+                // Legacy chat-message renderer removed with ChatUI migration.
+            };
+            const updateChatPeerSelector = window.updateChatPeerSelector;
+            const renderOnlineList = window.renderOnlineList;
+            const renderChatMessages = window.renderChatMessages;
 
             // Peer count update �?update badge only, no old chat-modal logic
             window.updatePeerCount = function(count) {
@@ -8051,7 +8063,7 @@ window.showItemDetail = async function (id) {
     },
   };
 
-  console.log('[OurBackyard] �?All modules connected �?serverless P2P');
+    console.log('[OurBackyard] All modules connected - serverless P2P');
 
 })();
 
