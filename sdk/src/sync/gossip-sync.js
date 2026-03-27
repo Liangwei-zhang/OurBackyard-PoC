@@ -55,9 +55,15 @@ export class GossipSync extends EventBus {
 
     // Forward items received via Merkle reconciliation as item:received
     // so the application layer (Dexie / UI) gets updated for pre-existing items.
+    // NOTE: MarketplaceProtocol stores under 'listing:' / 'offer:' / 'review:' keys,
+    //       not 'item:' — we must forward all content-bearing keys, not just 'item:'.
     this._merkle.on('items:synced', ({ from, items }) => {
       for (const { key, value } of items) {
-        if (key.startsWith('item:') && value && value.id) {
+        const isContent = key.startsWith('item:') ||
+                          key.startsWith('listing:') ||
+                          key.startsWith('offer:') ||
+                          key.startsWith('review:');
+        if (isContent && value && value.id) {
           this.emit('item:received', { topic: 'item', payload: value, from, msgId: null });
         }
       }

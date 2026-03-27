@@ -237,6 +237,10 @@ export class MarketplaceProtocol {
     const listing = msg.listing;
     if (!listing?.id) return;
     if (this._storage) await this._storage.put(`listing:${listing.id}`, listing);
+    // Emit as gossip item so GossipSync 'item:received' listeners (and the adapter's
+    // onItem callback) are notified \u2014 without this, LISTING_NEW arrivals are silently
+    // written to storage but never surfaced to the UI / Dexie layer.
+    this._node.gossipSync?.emit('item:received', { topic: 'item', payload: listing, from, msgId: null });
   }
 
   /** @private */
@@ -248,6 +252,8 @@ export class MarketplaceProtocol {
     // LWW merge — strict > to prevent same-timestamp re-broadcast from overwriting
     if (!existing || (listing.updatedAt || 0) > (existing.updatedAt || 0)) {
       await this._storage.put(`listing:${listing.id}`, listing);
+      // Notify UI of the status change
+      this._node.gossipSync?.emit('item:received', { topic: 'item', payload: listing, from, msgId: null });
     }
   }
 

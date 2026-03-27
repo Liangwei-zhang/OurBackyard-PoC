@@ -18,6 +18,7 @@
 import { P2PNode } from '../sdk/src/p2p-node.js';
 import { IndexedDBStorage } from '../sdk/src/storage/indexeddb-storage.js';
 import { MemoryStorage } from '../sdk/src/storage/memory-storage.js';
+import { MarketplaceProtocol } from '../sdk/src/protocols/marketplace.js';
 
 // ── ICE servers shared by the adapter ───────────────────────────────────────
 const ICE_SERVERS = [
@@ -31,10 +32,20 @@ const ICE_SERVERS = [
 // Message types handled entirely inside the SDK layer
 // For these types, we do NOT re-route to window.handleMessage to avoid double-processing.
 const SDK_HANDLED_TYPES = new Set([
+  // PlumtreeGossip
   'GOSSIP_PUSH', 'GOSSIP_IHAVE', 'GOSSIP_GRAFT', 'GOSSIP_PRUNE',
+  // MerkleSync — actual type strings used in sdk/src/sync/merkle-sync.js
+  'SYNC_REQ', 'SYNC_RESP', 'SYNC_TREE_REQ', 'SYNC_TREE_RESP',
+  'SYNC_ITEMS_REQ', 'SYNC_ITEMS_RESP',
+  // Legacy aliases (kept for compatibility)
   'SYNC_STATE', 'SYNC_DIFF', 'SYNC_REQUEST', 'SYNC_RESPONSE',
+  // BlobTransfer
   'BLOB_REQ', 'BLOB_RESP', 'BLOB_STREAM_START', 'BLOB_STREAM_END',
+  'BLOB_HEADER', 'BLOB_CHUNK', 'BLOB_ACK',
+  // ResilienceManager
   'HEARTBEAT_PING', 'HEARTBEAT_PONG',
+  // CRDT
+  'CRDT_LWWREG', 'CRDT_ORSET', 'CRDT_GCOUNTER',
 ]);
 
 /**
@@ -98,6 +109,11 @@ class OurBackyardMesh {
     });
 
     await this._node.init();
+    // Install MarketplaceProtocol so LISTING_NEW / LISTING_UPDATE messages from remote
+    // peers are handled by the SDK router (LWW merge, storage persistence, item:received
+    // event emission) rather than falling through to window.handleMessage.
+    this._marketplace = new MarketplaceProtocol(this._node);
+    this._node.use(this._marketplace);
     // Expose the real SDK signaling so callers can use signaling.sendSignal() and signaling.isOnline
     this.signaling = this._node.signaling;
     this._wireNodeEvents();
@@ -266,12 +282,14 @@ class OurBackyardMesh {
    */
   broadcastItem(item, ttl = 4) {
     if (!this._node) return;
-    // SDK plumtree publish (handles dedup + lazy-push automatically)
+    // SDK plumtree publish (handles dedup + lazy-push automatically).
+    // Also persists under item: key so MerkleSync can sync it to late-joining peers.
     this._node.publishItem(item).catch(e =>
       console.warn('[SDK Mesh] broadcastItem failed:', e.message)
     );
-    // Also flood as NEW_ITEM so the inline handleMessage sees it
-    this._node.broadcastMessage('NEW_ITEM', { item, ttl }).catch?.(() => {});
+    // Also broadcast as LISTING_NEW so MarketplaceProtocol handler on remote peers
+    // persists the listing under listing: key in their storage.
+    this._node.broadcastMessage('LISTING_NEW', { listing: item }).catch?.(() => {});
   }
 
   /**
@@ -281,12 +299,21 @@ class OurBackyardMesh {
    */
   broadcastItemUpdate(itemId, status) {
     if (!this._node) return;
+    const ts = Date.now();
+    // LISTING_UPDATE: for SDK peers with MarketplaceProtocol installed —
+    // the handler performs LWW merge and persists under listing: key.
+    this._node.broadcastMessage('LISTING_UPDATE', {
+      listing: { id: itemId, status, updatedAt: ts, from: this.peerId },
+    }).catch?.(() => {});
+    // ITEM_UPDATE: for legacy peers using window.handleMessage (index.html switch-case).
+    // Previously this was the only message sent, but it had no registered SDK router handler
+    // so was silently dropped by remote SDK nodes. Now both are sent for full compatibility.
     this._node.broadcastMessage('ITEM_UPDATE', {
       itemId,
       status,
-      ts:   Date.now(),
+      updatedAt: ts,
       from: this.peerId,
-    });
+    }).catch?.(() => {});
   }
 
   /**
