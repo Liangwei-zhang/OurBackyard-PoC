@@ -49,6 +49,7 @@ export class LANSignaling extends EventBus {
     this._announceTimer = setInterval(() => {
       this._broadcast({ type: 'peer:announce', peerId: this._localId });
     }, interval);
+    this._announceTimer?.unref?.();
   }
 
   sendToPeer(peerId, msg) {

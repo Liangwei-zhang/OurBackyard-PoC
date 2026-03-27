@@ -34,6 +34,7 @@ export class HealthMonitor extends EventBus {
   start() {
     const interval = config.get('healthMonitor.pingIntervalMs');
     this._pingTimer = setInterval(() => this._pingAll(), interval);
+    this._pingTimer?.unref?.();
     log.info('HealthMonitor started');
   }
 

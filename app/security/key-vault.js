@@ -447,7 +447,12 @@ const KeyVault = (() => {
   }
 
   function _b64ToAb(b64) {
-    const bin = atob(b64);
+    let bin;
+    try {
+      bin = atob(b64);
+    } catch (e) {
+      throw new VaultError('Invalid base64 data', 'INVALID_DATA');
+    }
     const arr = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
     return arr.buffer;

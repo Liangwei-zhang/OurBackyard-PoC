@@ -127,6 +127,7 @@ export class WebSocketTransport extends EventBus {
       entry.reconnectTimer = null;
       if (this._peers.has(peerId)) this._openSocket(peerId, url).catch(() => {});
     }, delay);
+    entry.reconnectTimer?.unref?.();
   }
 }
 

@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 import asyncio
 import json
 import os
+import re
 import secrets
 import time
 
@@ -46,6 +47,8 @@ TURN_CONFIG = {
 }
 
 # ============ 房間物品存儲 ============
+MAX_ROOMS = 10_000          # cap on concurrent rooms (OOM guard)
+MAX_ITEMS_PER_ROOM = 1_000  # cap on items stored per room (OOM guard)
 room_items: Dict[str, List[dict]] = {}  # room_id -> [items]
 
 # ============ 房間管理 ============
@@ -66,9 +69,21 @@ def generate_peer_id() -> str:
 @app.websocket("/ws/{room_id}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str):
     await websocket.accept()
-    
+
+    # Validate room_id to prevent OOM and injection (alphanumeric + _ -, max 50 chars)
+    if not re.fullmatch(r'[a-zA-Z0-9_-]{1,50}', room_id):
+        await websocket.send_json({"type": "error", "msg": "Invalid room ID"})
+        await websocket.close(code=1008)
+        return
+
     peer_id = generate_peer_id()
-    
+
+    # Enforce room cap to prevent unbounded memory growth
+    if room_id not in rooms and len(rooms) >= MAX_ROOMS:
+        await websocket.send_json({"type": "error", "msg": "Server at capacity"})
+        await websocket.close(code=1013)
+        return
+
     # 創建或獲取房間
     if room_id not in rooms:
         rooms[room_id] = Room(room_id)
@@ -127,7 +142,11 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
         
         while True:
             data = await websocket.receive_text()
-            message = json.loads(data)
+            try:
+                message = json.loads(data)
+            except json.JSONDecodeError:
+                await websocket.send_json({"type": "error", "msg": "Invalid JSON"})
+                continue
             
             # 處理各類訊息
             msg_type = message.get("type")
@@ -208,11 +227,12 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
                 # 廣播新物品給房間內所有人
                 print(f"[NEW_ITEM] Broadcasting from {peer_id}")
                 
-                # 存儲物品
+                # 存儲物品 (capped to prevent unbounded memory growth)
                 if room_id not in room_items:
                     room_items[room_id] = []
-                item = message.get("item", {})
-                room_items[room_id].append(item)
+                if len(room_items[room_id]) < MAX_ITEMS_PER_ROOM:
+                    item = message.get("item", {})
+                    room_items[room_id].append(item)
                 
                 # 廣播
                 await broadcast_to_room(room_id, message, exclude_peer=peer_id)
@@ -325,7 +345,7 @@ async def serve_static(file_path: str):
     resolved = os.path.realpath(os.path.join(BASE_DIR, file_path))
     base_real = os.path.realpath(BASE_DIR)
     # Prevent path traversal (e.g. ../../etc/passwd)
-    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
+    if not resolved.startswith(base_real + os.sep):
         raise HTTPException(status_code=403, detail="Access denied")
     if os.path.exists(resolved) and os.path.isfile(resolved):
         return FileResponse(resolved)
@@ -383,6 +403,9 @@ import os
 BUCKET_PATH = os.path.join(BASE_DIR, "uploads")
 os.makedirs(BUCKET_PATH, exist_ok=True)
 
+ALLOWED_IMAGE_EXTS = {"jpg", "jpeg", "png", "gif", "webp"}
+MAX_IMAGE_B64_SIZE = 10 * 1024 * 1024  # 10 MB base64 input (≈7.5 MB decoded)
+
 @app.post("/api/upload/image")
 async def upload_image(data: dict):
     """上傳圖片並返回 URL"""
@@ -390,12 +413,20 @@ async def upload_image(data: dict):
         image_data = data.get("image")  # base64 encoded
         if not image_data:
             raise HTTPException(status_code=400, detail="No image data")
-        
+
+        # Reject oversized payloads before decoding to prevent DoS
+        if len(image_data) > MAX_IMAGE_B64_SIZE:
+            raise HTTPException(status_code=413, detail="Image too large")
+
+        # Whitelist extension to prevent executable file upload
+        file_ext = str(data.get("ext", "jpg")).lower().strip(".")
+        if file_ext not in ALLOWED_IMAGE_EXTS:
+            raise HTTPException(status_code=400, detail="Invalid file extension")
+
         # 解碼 base64
         image_bytes = base64.b64decode(image_data)
         
         # 生成唯一文件名
-        file_ext = data.get("ext", "jpg")
         file_id = hashlib.md5(str(uuid.uuid4()).encode()).hexdigest()[:12]
         filename = f"{file_id}.{file_ext}"
         filepath = os.path.join(BUCKET_PATH, filename)
@@ -413,6 +444,8 @@ async def upload_image(data: dict):
             "size": len(image_bytes)
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         return {"success": False, "error": str(e)}
 

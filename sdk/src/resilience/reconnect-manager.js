@@ -121,6 +121,7 @@ export class ReconnectManager extends EventBus {
         this._schedule(peerId);
       }
     }, delay);
+    state.timer?.unref?.();
   }
 }
 

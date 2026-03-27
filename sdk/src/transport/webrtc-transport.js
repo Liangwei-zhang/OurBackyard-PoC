@@ -283,11 +283,12 @@ export class WebRTCTransport extends EventBus {
       if (state === 'failed' || state === 'disconnected') {
         this._cleanPeer(peerId);
         // Auto-reconnect with backoff if the peer is still known
-        setTimeout(() => {
+        const t = setTimeout(() => {
           if (this._peerMeta.has(peerId) && !this._peerConns.has(peerId)) {
             if (this.peerId < peerId) this.createOffer(peerId).catch(() => {});
           }
         }, this.reconnectMs);
+        t?.unref?.();
       }
     };
 

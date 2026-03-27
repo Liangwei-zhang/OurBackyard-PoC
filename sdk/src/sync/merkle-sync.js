@@ -142,6 +142,7 @@ export class MerkleSync extends EventBus {
         try { await this.syncWithPeer(peerId); } catch (e) { /* ignore individual failures */ }
       }
     }, this._syncIntervalMs);
+    this._intervalId?.unref?.();
   }
 
   /** Stop periodic sync. */

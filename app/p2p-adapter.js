@@ -235,7 +235,9 @@ class OurBackyardMesh {
       const shouldOffer = this.peerId < data.peerId;
       this._node.transport.connect(data.peerId, shouldOffer).catch(() => {});
     } else if (data.type === 'SIGNAL' && data.target === this.peerId && this._node) {
-      this._node.transport.handleSignal(data.from, data.signal).catch?.(() => {});
+      this._node.transport.handleSignal(data.from, data.signal).catch(err => {
+        console.warn('[SDK Mesh] handleSignal failed:', err.message);
+      });
     }
   }
 

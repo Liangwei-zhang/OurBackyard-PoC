@@ -90,6 +90,7 @@ export class ResilienceManager extends EventBus {
   startMonitoring() {
     if (this._heartbeatTimer) return;
     this._heartbeatTimer = setInterval(() => this._heartbeatTick(), this._heartbeatIntervalMs);
+    this._heartbeatTimer?.unref?.();
   }
 
   /**
