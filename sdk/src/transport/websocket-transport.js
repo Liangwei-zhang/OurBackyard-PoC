@@ -98,6 +98,7 @@ export class WebSocketTransport extends EventBus {
       ws.onclose = ({ code, reason }) => {
         log.info(`WebSocket closed for ${peerId}: ${code} ${reason}`);
         this.emit('close', { peerId, reason });
+        if (!resolved) { resolved = true; reject(new Error(`WebSocket closed before open: ${code} ${reason}`)); }
         if (!this._peers.has(peerId)) return;
         this._scheduleReconnect(peerId, url);
       };

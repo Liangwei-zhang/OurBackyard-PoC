@@ -95,7 +95,8 @@ export class NostrSignaling extends ISignaling {
         if (settled >= total) resolve();
       };
       this._relayUrls.forEach(url => this._connectRelay(url).then(onDone).catch(onDone));
-      setTimeout(resolve, this._bootTimeoutMs);
+      const boot = setTimeout(resolve, this._bootTimeoutMs);
+      boot?.unref?.();
     });
 
     const online = this._connected.size > 0;
@@ -120,31 +121,40 @@ export class NostrSignaling extends ISignaling {
 
   async sendSignal(targetPeerId, signal) {
     console.log(`[NostrSignaling] → signal '${signal?.type}' to ${targetPeerId.slice(0, 12)}`);
-    const event = await this._buildEvent(
-      KIND_SIGNAL,
-      JSON.stringify(signal),
-      [
-        ['t',      this.channelCell],
-        ['peer',   this.peerId],
-        ['target', targetPeerId],
-      ]
-    );
-    // Signals are directed (have a 'target' tag) so ONE relay is enough —
-    // both peers subscribe to all relays, so only one delivery path is needed.
-    // Sending to all 7 relays floods rate limits (5 ICE × 7 = 35 events per connection).
+    let event;
+    try {
+      event = await this._buildEvent(
+        KIND_SIGNAL,
+        JSON.stringify(signal),
+        [
+          ['t',      this.channelCell],
+          ['peer',   this.peerId],
+          ['target', targetPeerId],
+        ]
+      );
+    } catch (e) {
+      this.emit('error', e);
+      return;
+    }
     this._publishToOne(event);
   }
 
   async announce(meta = {}) {
     this._lastAnnounceMeta = { ...this._lastAnnounceMeta, ...meta };
-    const event = await this._buildEvent(
-      KIND_ANNOUNCE,
-      JSON.stringify({ peerId: this.peerId, ts: Date.now(), ...this._lastAnnounceMeta }),
-      [
-        ['t',    this.channelCell],   // #t (topic) — universally indexed by all relays
-        ['peer', this.peerId],
-      ]
-    );
+    let event;
+    try {
+      event = await this._buildEvent(
+        KIND_ANNOUNCE,
+        JSON.stringify({ peerId: this.peerId, ts: Date.now(), ...this._lastAnnounceMeta }),
+        [
+          ['t',    this.channelCell],
+          ['peer', this.peerId],
+        ]
+      );
+    } catch (e) {
+      this.emit('error', e);
+      return;
+    }
     this._publish(event);
   }
 
@@ -185,6 +195,7 @@ export class NostrSignaling extends ISignaling {
   _connectRelay(url) {
     return new Promise((resolve) => {
       const timeout = setTimeout(() => resolve(null), this._relayTimeoutMs);
+      timeout?.unref?.();
 
       try {
         const ws = new WebSocket(url);
@@ -212,7 +223,8 @@ export class NostrSignaling extends ISignaling {
             this.emit('status', 'offline');
           }
           // Reconnect with backoff
-          setTimeout(() => this._connectRelay(url), this._reconnectMs);
+          const rTimer = setTimeout(() => this._connectRelay(url), this._reconnectMs);
+          rTimer?.unref?.();
         };
 
         ws.onerror = () => {
@@ -339,6 +351,8 @@ export class NostrSignaling extends ISignaling {
       if (this._connected.size === 0) return;
       this.announce(this._lastAnnounceMeta).catch(() => {});
     }, this._announceIntervalMs);
+    // unref so this timer doesn't prevent process exit (e.g. in tests / clean shutdown)
+    this._announceTimer?.unref?.();
   }
 
   _stopPresenceHeartbeat() {
@@ -406,9 +420,7 @@ export class NostrSignaling extends ISignaling {
     if (this._privkey && lib?.schnorrSign) {
       return lib.schnorrSign(id, this._privkey);
     }
-    // Fallback mock signature (64 bytes = 128 hex chars)
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(id + this.peerId));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('') + '0'.repeat(64);
+    throw new Error('[NostrSignaling] secp256k1 unavailable — cannot produce valid Schnorr signatures; install the secp256k1 library');
   }
 
   // ─────────────────────────── Helpers ───────────────────────────

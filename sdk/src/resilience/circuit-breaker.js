@@ -79,6 +79,10 @@ export class CircuitBreaker extends EventBus {
     log.warn(`Failure recorded for ${peerId} (reason: ${reason}, total: ${b.failures})`);
 
     const threshold = config.get('circuitBreaker.failureThreshold');
+    if (typeof threshold !== 'number' || threshold <= 0) {
+      log.warn('Invalid circuitBreaker.failureThreshold config:', threshold);
+      return;
+    }
     if (b.failures >= threshold && b.state === BreakerState.CLOSED) {
       b.state = BreakerState.OPEN;
       b.openedAt = Date.now();

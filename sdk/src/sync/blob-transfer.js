@@ -148,6 +148,21 @@ export class BlobTransfer extends EventBus {
   }
 
   /**
+   * Get transfer progress for an active outbound transfer, looked up by content hash.
+   * @param {string} hash - SHA-256 hex hash of the blob
+   * @returns {{progress: number}|null} progress 0..1, or null if not tracking
+   */
+  getTransferProgress(hash) {
+    for (const state of this._outbound.values()) {
+      if (state.hash === hash) {
+        // Outbound state is recorded after all chunks are sent (awaiting ACK), so progress ≈ 1
+        return { progress: state.progress ?? 1 };
+      }
+    }
+    return null;
+  }
+
+  /**
    * @private - route a message to a peer (delegates to router's send callback if set, or emits)
    */
   async _send(toPeerId, message) {

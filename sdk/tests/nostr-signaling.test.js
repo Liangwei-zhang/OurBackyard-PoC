@@ -53,6 +53,13 @@ beforeEach(() => MockWebSocket.reset());
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
 
+// Default mock secp256k1 — injected into most tests so signing works without the real library.
+// Tests that specifically test "no secp256k1" behaviour pass { secp256k1: null } explicitly.
+const MOCK_SECP256K1 = {
+  getPublicKey: (privkey) => 'mock-pub-' + privkey.slice(0, 55),
+  schnorrSign:  (_id, _privkey) => '0'.repeat(128),
+};
+
 function makeSignaling(opts = {}) {
   return new NostrSignaling({
     peerId:             'peer_abc123',
@@ -62,6 +69,7 @@ function makeSignaling(opts = {}) {
     relayTimeoutMs:     300,
     reconnectMs:        999999,       // disable auto-reconnect in tests
     announceIntervalMs: 999999,       // disable heartbeat in tests
+    secp256k1:          MOCK_SECP256K1, // ensure signing works in tests by default
     ...opts,
   });
 }
@@ -135,7 +143,7 @@ describe('NostrSignaling — constructor', () => {
 
 describe('NostrSignaling._initKeys()', () => {
   it('sets _pubkey to a 64-char hex string (mock mode)', async () => {
-    const s = makeSignaling();
+    const s = makeSignaling({ secp256k1: null }); // explicitly test without secp256k1
     await s._initKeys();
     assert.equal(typeof s._pubkey, 'string');
     assert.equal(s._pubkey.length, 64);

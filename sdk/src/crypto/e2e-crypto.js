@@ -133,8 +133,6 @@ export class E2ECrypto extends EventBus {
 
     const key = this._sharedKeys.get(peerId);
     if (!key) {
-      // If it looks like plain text already, return as-is; otherwise throw
-      if (envelope && typeof envelope === 'object' && !envelope.ciphertext) return envelope;
       throw new Error('No shared key for peer: ' + peerId);
     }
 

@@ -74,8 +74,11 @@ export class ChatProtocol {
     // Try direct send; fall back to dead-drop storage
     try {
       this._node.sendMessage(toPeerId, 'CHAT_MSG', msg);
-    } catch {
-      // Peer offline: store as dead-drop
+    } catch (e) {
+      // Peer offline: store as dead-drop; log unexpected errors
+      if (e?.message && !e.message.includes('not connected') && !e.message.includes('not running')) {
+        console.warn('[Chat] sendMessage error:', e.message);
+      }
       if (this._storage) {
         const deadDropKey = `deadDrop:${toPeerId}:${msg.id}`;
         await this._storage.put(deadDropKey, msg);

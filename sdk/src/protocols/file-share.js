@@ -113,14 +113,7 @@ export class FileShareProtocol {
    */
   getTransferProgress(hash) {
     if (!this._node.blobTransfer) return null;
-    // BlobTransfer stores active outbound transfers keyed by transferId, not hash
-    // We look through outbound for a matching hash
-    for (const [, state] of this._node.blobTransfer._outbound || new Map()) {
-      if (state.hash === hash) {
-        return { progress: state.progress || 0 };
-      }
-    }
-    return null;
+    return this._node.blobTransfer.getTransferProgress(hash);
   }
 
   // ── Message handlers ──────────────────────────────────────────────────────

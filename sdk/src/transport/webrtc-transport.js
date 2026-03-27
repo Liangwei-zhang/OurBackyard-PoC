@@ -225,7 +225,7 @@ export class WebRTCTransport extends EventBus {
     pc.ondatachannel = (e) => this._setupDataChannel(peerId, e.channel);
 
     try {
-      await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+      await pc.setRemoteDescription(signal.sdp);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       this.emit('signal:send', peerId, {
@@ -245,7 +245,7 @@ export class WebRTCTransport extends EventBus {
       return;
     }
     try {
-      await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+      await pc.setRemoteDescription(signal.sdp);
     } catch (e) {
       console.warn('[WebRTCTransport] answer handling error:', e.message);
     }

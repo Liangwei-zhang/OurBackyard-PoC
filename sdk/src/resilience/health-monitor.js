@@ -24,8 +24,8 @@ export class HealthMonitor extends EventBus {
     /** @type {Map<string, PeerHealth>} */
     this._health = new Map();
     this._pingTimer = null;
-    /** @type {Set<ReturnType<typeof setTimeout>>} active ping timeout handles */
-    this._pingTimeouts = new Set();
+    /** @type {Map<string, Set<ReturnType<typeof setTimeout>>>} per-peer ping timeout handles */
+    this._pingTimeouts = new Map();
   }
 
   /**
@@ -43,7 +43,9 @@ export class HealthMonitor extends EventBus {
   stop() {
     clearInterval(this._pingTimer);
     this._pingTimer = null;
-    for (const t of this._pingTimeouts) clearTimeout(t);
+    for (const timers of this._pingTimeouts.values()) {
+      for (const t of timers) clearTimeout(t);
+    }
     this._pingTimeouts.clear();
   }
 
@@ -63,6 +65,12 @@ export class HealthMonitor extends EventBus {
    */
   removePeer(peerId) {
     this._health.delete(peerId);
+    // Cancel any outstanding ping timeout for this peer to prevent stale callbacks
+    const timers = this._pingTimeouts.get(peerId);
+    if (timers) {
+      for (const t of timers) clearTimeout(t);
+      this._pingTimeouts.delete(peerId);
+    }
   }
 
   /**
@@ -145,8 +153,10 @@ export class HealthMonitor extends EventBus {
       }
       h.lastPing = ts;
       // Timeout check — store handle to allow cleanup on stop()/removePeer()
+      if (!this._pingTimeouts.has(peerId)) this._pingTimeouts.set(peerId, new Set());
+      const peerTimers = this._pingTimeouts.get(peerId);
       const t = setTimeout(() => {
-        this._pingTimeouts.delete(t);
+        peerTimers.delete(t);
         if (h.lastPing === ts) {
           // No pong received
           h.misses++;
@@ -157,7 +167,7 @@ export class HealthMonitor extends EventBus {
           }
         }
       }, timeout);
-      this._pingTimeouts.add(t);
+      peerTimers.add(t);
     }
   }
 }

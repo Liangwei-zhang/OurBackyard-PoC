@@ -48,6 +48,7 @@ export function hex2ab(hex) {
  * @returns {Promise<string>}
  */
 export async function sha256hex(text) {
+  if (!crypto?.subtle) throw new Error('crypto.subtle is not available in this context (requires secure context or Node ≥ 15)');
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return ab2hex(buf);
 }

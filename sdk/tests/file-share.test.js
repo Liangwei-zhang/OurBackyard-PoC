@@ -23,6 +23,12 @@ function makeNode(peerId = 'alice') {
 
   const blobTransfer = {
     _outbound: new Map(),
+    getTransferProgress(hash) {
+      for (const state of this._outbound.values()) {
+        if (state.hash === hash) return { progress: state.progress ?? 1 };
+      }
+      return null;
+    },
     async send(toPeerId, data, meta) {
       const tid = `transfer-${Date.now()}`;
       _transfers.push({ toPeerId, meta, tid });
