@@ -103,7 +103,10 @@ export class E2ECrypto extends EventBus {
    */
   async encrypt(peerId, plaintext) {
     const key = this._sharedKeys.get(peerId);
-    if (!key) return plaintext; // graceful fallback to plaintext
+    if (!key) {
+      console.warn(`[E2ECrypto] No shared key for ${peerId} — message will be sent as plaintext`);
+      return plaintext; // graceful fallback: key exchange still in progress
+    }
 
     const iv         = crypto.getRandomValues(new Uint8Array(12));
     const encoded    = new TextEncoder().encode(

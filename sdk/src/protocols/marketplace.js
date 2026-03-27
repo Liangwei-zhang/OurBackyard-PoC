@@ -245,8 +245,8 @@ export class MarketplaceProtocol {
     if (!listing?.id) return;
     if (!this._storage) return;
     const existing = await this._storage.get(`listing:${listing.id}`);
-    // LWW merge
-    if (!existing || (listing.updatedAt || 0) >= (existing.updatedAt || 0)) {
+    // LWW merge — strict > to prevent same-timestamp re-broadcast from overwriting
+    if (!existing || (listing.updatedAt || 0) > (existing.updatedAt || 0)) {
       await this._storage.put(`listing:${listing.id}`, listing);
     }
   }

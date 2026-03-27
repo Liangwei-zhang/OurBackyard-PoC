@@ -315,6 +315,7 @@ export class P2PNode extends EventBus {
     // Re-announcing on every heartbeat from a known peer causes a positive-feedback storm:
     // A announces → B re-announces → A re-announces → ... (all 7 relays × 15s = rate-limited).
     const _seenPeers = new Set();
+    const MAX_SEEN_PEERS = 5000; // cap to prevent unbounded growth in long-running nodes
     this.signaling.on('peer:announce', (peerId, meta) => {
       if (peerId === cfg.peerId) return;
       const h3Cell = meta?.h3Cell;
@@ -322,6 +323,10 @@ export class P2PNode extends EventBus {
       this.transport.connect(peerId, cfg.peerId < peerId).catch(() => {});
       // Re-announce once per peer so they know we exist, but never again on heartbeats.
       if (!_seenPeers.has(peerId)) {
+        // Evict oldest entry when cap is reached
+        if (_seenPeers.size >= MAX_SEEN_PEERS) {
+          _seenPeers.delete(_seenPeers.values().next().value);
+        }
         _seenPeers.add(peerId);
         this.signaling.announce({ h3Cell: cfg.h3Cell }).catch(() => {});
       }

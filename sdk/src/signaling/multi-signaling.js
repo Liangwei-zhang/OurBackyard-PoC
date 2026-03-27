@@ -42,8 +42,11 @@ export class MultiSignaling extends EventBus {
 
     log.info(`MultiSignaling: ${alive.length}/${this._backends.length} backends online`);
 
-    // Wire events from every backend
-    for (const backend of this._backends) {
+    // Wire events only from backends that initialised successfully
+    const aliveBackends = results
+      .filter(r => r.status === 'fulfilled')
+      .map(r => this._backends[r.value]);
+    for (const backend of aliveBackends) {
       backend.on('peer:announce', data => this.emit('peer:announce', data));
       backend.on('signal', data => {
         const key = `${data.from}:${JSON.stringify(data.msg)}`;

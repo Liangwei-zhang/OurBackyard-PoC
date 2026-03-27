@@ -74,7 +74,11 @@ export class Identity extends EventBus {
 
     const storageKey = config.get('identity.storageKey');
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(storageKey, JSON.stringify(this._identity));
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(this._identity));
+      } catch {
+        console.warn('[Identity] Could not persist identity to localStorage (quota exceeded or unavailable)');
+      }
     }
     this.emit('identity:created', this._identity);
     return this._identity;

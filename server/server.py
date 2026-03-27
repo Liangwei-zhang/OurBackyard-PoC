@@ -11,15 +11,21 @@ from typing import Dict, List, Optional
 import asyncio
 import json
 import os
+import secrets
 import time
 
 app = FastAPI(title="OurBackyard Signaling Server")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:7070",
+        "http://localhost:3000",
+        "http://127.0.0.1:7070",
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -53,8 +59,7 @@ class Room:
 rooms: Dict[str, Room] = {}
 
 def generate_peer_id() -> str:
-    import random
-    return "peer_" + "".join(random.choices("abcdefghijklmnopqrstuvwxyz0123456789", k=9))
+    return "peer_" + secrets.token_hex(8)  # 16 hex chars, CSPRNG
 
 
 # ============ WebSocket 端點 ============
@@ -289,6 +294,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
             # 清理空房間
             if len(rooms[room_id].clients) == 0:
                 del rooms[room_id]
+                room_items.pop(room_id, None)  # Prevent memory leak
 
 
 async def broadcast_to_room(room_id: str, message: dict, exclude_peer: str = None):
@@ -316,9 +322,13 @@ async def root():
 @app.get("/{file_path:path}")
 async def serve_static(file_path: str):
     """Serve static files from the project root, including nested paths."""
-    file_path = os.path.join(BASE_DIR, file_path)
-    if os.path.exists(file_path):
-        return FileResponse(file_path)
+    resolved = os.path.realpath(os.path.join(BASE_DIR, file_path))
+    base_real = os.path.realpath(BASE_DIR)
+    # Prevent path traversal (e.g. ../../etc/passwd)
+    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
+        raise HTTPException(status_code=403, detail="Access denied")
+    if os.path.exists(resolved) and os.path.isfile(resolved):
+        return FileResponse(resolved)
     raise HTTPException(status_code=404, detail="File not found")
 
 

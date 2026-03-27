@@ -300,10 +300,10 @@ export class WebRTCTransport extends EventBus {
       if (pc.iceConnectionState === 'failed' && this.peerId < peerId) {
         console.log('[WebRTCTransport] ICE failed, restarting for peer:', peerId);
         pc.createOffer({ iceRestart: true })
-          .then(o => pc.setLocalDescription(o))
-          .then(() => this.emit('signal:send', peerId, {
+          .then(offer => pc.setLocalDescription(offer).then(() => offer))
+          .then(offer => this.emit('signal:send', peerId, {
             type: 'offer',
-            sdp:  { type: pc.localDescription.type, sdp: pc.localDescription.sdp },
+            sdp:  { type: offer.type, sdp: offer.sdp },
           }))
           .catch(e => console.warn('[WebRTCTransport] ICE restart error:', e.message));
       }

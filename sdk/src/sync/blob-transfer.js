@@ -186,6 +186,8 @@ export class BlobTransfer extends EventBus {
     const { transferId, index, data } = msg;
     const state = this._inbound.get(transferId);
     if (!state) return;
+    // Bounds check: reject out-of-range indices to prevent memory corruption
+    if (typeof index !== 'number' || index < 0 || index >= state.totalChunks) return;
     state.chunks[index] = new Uint8Array(data);
     state.received++;
     const progress = state.received / state.totalChunks;

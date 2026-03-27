@@ -4,14 +4,15 @@
  */
 
 /**
- * Generate a RFC-4122 v4 UUID.
+ * Generate a RFC-4122 v4 UUID using the CSPRNG.
  * @returns {string}
  */
 export function uuid() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = Math.random() * 16 | 0;
-    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-  });
+  const a = crypto.getRandomValues(new Uint8Array(16));
+  a[6] = (a[6] & 0x0f) | 0x40; // version 4
+  a[8] = (a[8] & 0x3f) | 0x80; // variant 1
+  const h = Array.from(a).map(b => b.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
 }
 
 /**
