@@ -1,475 +1,174 @@
-# OurBackyard PoC - Phase 1: P2P WebRTC Signaling Server
-# 運行方式 (从项目根目录运行):
+# OurBackyard — Pure P2P Signaling Server (v2.0)
+# 
+# Design principles:
+#   ✅ Only relay SDP/ICE signaling (a few hundred bytes, one-time per connection)
+#   ✅ Only track peer presence (join/leave)
+#   ✅ Zero data storage — no items, no images, no messages
+#   ✅ Zero external API dependency — self-hosted STUN/TURN only
+#   ✅ Minimal memory footprint → target 1M daily active on single machine
+#
+# Run:
 #   pip install fastapi uvicorn websockets
 #   uvicorn server.server:app --reload --port 7070
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from pydantic import BaseModel
-from typing import Dict, List, Optional
-import asyncio
+from typing import Dict
 import json
 import os
 import re
 import secrets
 import time
 
-app = FastAPI(title="OurBackyard Signaling Server")
+app = FastAPI(title="OurBackyard Signaling Server v2.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:7070",
-        "http://localhost:3000",
-        "http://127.0.0.1:7070",
-        "http://127.0.0.1:3000",
-    ],
-    allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["GET"],
     allow_headers=["*"],
 )
 
-# 项目根目录 (server.py 位于 server/ 子目录中)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# ============ TURN 配置 ============
-TURN_CONFIG = {
-    "stun": [
-        "stun:stun.l.google.com:19302",
-        "stun:stun1.l.google.com:19302",
-    ],
-    # 部署 Coturn 後填入
-    "turn": [],  
-    "turns": [],
-    "username": "",
-    "credential": ""
+# ============ Self-hosted ICE config ============
+ICE_CONFIG = {
+    "iceServers": [],
+    "ttl": 3600,
 }
 
-# ============ 房間物品存儲 ============
-MAX_ROOMS = 10_000          # cap on concurrent rooms (OOM guard)
-MAX_ITEMS_PER_ROOM = 1_000  # cap on items stored per room (OOM guard)
-room_items: Dict[str, List[dict]] = {}  # room_id -> [items]
+MAX_ROOMS = 100_000
 
-# ============ 房間管理 ============
 class Room:
-    def __init__(self, room_id: str, topic: str = None):
-        self.room_id = room_id
-        self.topic = topic
+    __slots__ = ('clients', 'created_at')
+    def __init__(self):
         self.clients: Dict[str, WebSocket] = {}
-        self.created_at = time.time()
+        self.created_at: float = time.time()
 
 rooms: Dict[str, Room] = {}
 
-def generate_peer_id() -> str:
-    return "peer_" + secrets.token_hex(8)  # 16 hex chars, CSPRNG
+def _peer_id() -> str:
+    return "p_" + secrets.token_hex(6)
 
-
-# ============ WebSocket 端點 ============
 @app.websocket("/ws/{room_id}")
-async def websocket_endpoint(websocket: WebSocket, room_id: str):
+async def ws_signaling(websocket: WebSocket, room_id: str):
     await websocket.accept()
-
-    # Validate room_id to prevent OOM and injection (alphanumeric + _ -, max 50 chars)
     if not re.fullmatch(r'[a-zA-Z0-9_-]{1,50}', room_id):
         await websocket.send_json({"type": "error", "msg": "Invalid room ID"})
         await websocket.close(code=1008)
         return
 
-    peer_id = generate_peer_id()
+    peer_id = _peer_id()
 
-    # Enforce room cap to prevent unbounded memory growth
     if room_id not in rooms and len(rooms) >= MAX_ROOMS:
         await websocket.send_json({"type": "error", "msg": "Server at capacity"})
         await websocket.close(code=1013)
         return
 
-    # 創建或獲取房間
     if room_id not in rooms:
-        rooms[room_id] = Room(room_id)
-    
+        rooms[room_id] = Room()
     room = rooms[room_id]
     room.clients[peer_id] = websocket
-    
-    print(f"[+] {peer_id} joined room: {room_id} ({len(room.clients)} clients)")
-    
+
     try:
-        # 發送歡迎訊息 + TURN 配置
         await websocket.send_json({
-            "type": "sys",
-            "msg": f"Joined {room_id}",
+            "type": "welcome",
             "peerId": peer_id,
-            "peerCount": len(room.clients),
-            "peers": list(room.clients.keys()),
-            "turn": TURN_CONFIG
+            "peers": [pid for pid in room.clients if pid != peer_id],
         })
+        await websocket.send_json({"type": "ice-config", "config": ICE_CONFIG})
+        await _broadcast(room, {"type": "peer-joined", "peerId": peer_id}, exclude=peer_id)
 
-        # Send ice-config in SDK format
-        def _turn_entry(url):
-            entry = {"urls": url}
-            if TURN_CONFIG.get("username"):
-                entry["username"] = TURN_CONFIG["username"]
-            if TURN_CONFIG.get("credential"):
-                entry["credential"] = TURN_CONFIG["credential"]
-            return entry
-
-        ice_servers = [{"urls": url} for url in TURN_CONFIG.get("stun", [])]
-        ice_servers += [_turn_entry(url) for url in TURN_CONFIG.get("turn", [])]
-        ice_servers += [_turn_entry(url) for url in TURN_CONFIG.get("turns", [])]
-        await websocket.send_json({
-            "type": "ice-config",
-            "config": {
-                "iceServers": ice_servers,
-                "ttl": 3600
-            }
-        })
-        
-        # 廣播新用戶加入
-        await broadcast_to_room(room_id, {
-            "type": "peer-joined",
-            "peerId": peer_id,
-            "peerCount": len(room.clients)
-        }, exclude_peer=peer_id)
-        
-        # 發送歷史物品給新用戶
-        if room_id in room_items and len(room_items[room_id]) > 0:
-            print(f"[HISTORY] Sending {len(room_items[room_id])} items to new peer {peer_id}")
-            for item in room_items[room_id]:
-                await websocket.send_json({
-                    "type": "NEW_ITEM",
-                    "item": item
-                })
-        
         while True:
-            data = await websocket.receive_text()
+            raw = await websocket.receive_text()
             try:
-                message = json.loads(data)
+                msg = json.loads(raw)
             except json.JSONDecodeError:
-                await websocket.send_json({"type": "error", "msg": "Invalid JSON"})
                 continue
-            
-            # 處理各類訊息
-            msg_type = message.get("type")
-            
-            if msg_type in {"signal", "WEBRTC_SIGNAL"}:
-                # Relay wrapped WebRTC signaling for both SDK and legacy page protocol
-                target = message.get("target")
-                if target and target in room.clients:
-                    await room.clients[target].send_json({
-                        "type": "WEBRTC_SIGNAL" if msg_type == "WEBRTC_SIGNAL" else "signal",
-                        "from": peer_id,
-                        "target": target,
-                        "signal": message.get("signal")
-                    })
 
-            elif msg_type == "announce":
-                # SDK protocol: broadcast announce to all other peers in room
-                announce_room_id = message.get("roomId", room_id)
-                target_room_id = announce_room_id if announce_room_id != room_id and announce_room_id in rooms else room_id
-                meta = message.get("meta", {})
-                await broadcast_to_room(target_room_id, {
-                    "type": "announce",
-                    "peerId": peer_id,
-                    "meta": meta
-                }, exclude_peer=peer_id)
+            t = msg.get("type")
 
-            elif msg_type == "offer":
-                # WebRTC offer - 轉發給目標peer
-                target = message.get("target")
+            if t in ("signal", "WEBRTC_SIGNAL"):
+                target = msg.get("target")
                 if target and target in room.clients:
-                    await room.clients[target].send_json({
-                        "type": "offer",
-                        "sdp": message.get("sdp"),
-                        "from": peer_id
-                    })
-                    
-            elif msg_type == "answer":
-                # WebRTC answer - 轉發給目標peer
-                target = message.get("target")
-                if target and target in room.clients:
-                    await room.clients[target].send_json({
-                        "type": "answer",
-                        "sdp": message.get("sdp"),
-                        "from": peer_id
-                    })
-                    
-            elif msg_type == "ice-candidate":
-                # ICE candidate - 轉發給目標peer
-                target = message.get("target")
-                if target and target in room.clients:
-                    await room.clients[target].send_json({
-                        "type": "ice-candidate",
-                        "candidate": message.get("candidate"),
-                        "from": peer_id
-                    })
-                    
-            elif msg_type == "text":
-                # 普通訊息 - 廣播
-                content = message.get("content", "")
-                print(f"[TEXT] Broadcasting from {peer_id}: {content[:50]}")
-                msg_data = {
-                    "type": "text",
-                    "from": peer_id,
-                    "content": content,
-                    "timestamp": time.time()
-                }
-                await broadcast_to_room(room_id, msg_data, exclude_peer=peer_id)
-                    
-            elif msg_type == "get-peers":
-                # 獲取房間內所有peer
-                await websocket.send_json({
-                    "type": "peers",
-                    "peers": list(room.clients.keys()),
-                    "excluding": peer_id
-                })
-                
-            elif msg_type == "NEW_ITEM":
-                # 廣播新物品給房間內所有人
-                print(f"[NEW_ITEM] Broadcasting from {peer_id}")
-                
-                # 存儲物品 (capped to prevent unbounded memory growth)
-                if room_id not in room_items:
-                    room_items[room_id] = []
-                if len(room_items[room_id]) < MAX_ITEMS_PER_ROOM:
-                    item = message.get("item", {})
-                    room_items[room_id].append(item)
-                
-                # 廣播
-                await broadcast_to_room(room_id, message, exclude_peer=peer_id)
-                
-            elif msg_type == "REQUEST_HISTORY":
-                # 新用戶請求歷史物品
-                if room_id in room_items and len(room_items[room_id]) > 0:
-                    print(f"[HISTORY] Sending {len(room_items[room_id])} items to {peer_id}")
-                    for item in room_items[room_id]:
-                        await websocket.send_json({
-                            "type": "NEW_ITEM",
-                            "item": item
+                    try:
+                        await room.clients[target].send_json({
+                            "type": t, "from": peer_id, "signal": msg.get("signal"),
                         })
-                # 去中心化：也從其他 Peers 請求
-                await broadcast_to_room(room_id, {
-                    "type": "REQUEST_PEER_ITEMS",
-                    "from": peer_id
-                }, exclude_peer=peer_id)
-                
-            elif msg_type == "SYNC_REQUEST":
-                # Merkle 同步請求 - 廣播給其他 Peers
-                print(f"[SYNC] Received from {peer_id}")
-                await broadcast_to_room(room_id, message, exclude_peer=peer_id)
-                
-            elif msg_type == "SYNC_RESPONSE":
-                # Merkle 同步響應 - 轉發給請求者
-                print(f"[SYNC] Broadcasting response from {peer_id}")
-                await broadcast_to_room(room_id, message, exclude_peer=peer_id)
-            
-            elif msg_type == "REQ_IMAGE":
-                # 圖片請求 - 廣播給所有 Peers
-                print(f"[REQ_IMAGE] Broadcasting image request from {peer_id}: {message.get('imageHash')}")
-                await broadcast_to_room(room_id, message, exclude_peer=peer_id)
-                
-            elif msg_type == "IMG_HEADER":
-                # 圖片頭部 - 廣播給所有 Peers
-                print(f"[IMG_HEADER] Broadcasting from {peer_id}")
-                await broadcast_to_room(room_id, message, exclude_peer=peer_id)
-                
-            elif msg_type == "IMG_CHUNK":
-                # 圖片數據塊 - 廣播給所有 Peers
-                await broadcast_to_room(room_id, message, exclude_peer=peer_id)
-                
-            elif msg_type == "IMG_END":
-                # 圖片結束 - 廣播給所有 Peers
-                print(f"[IMG_END] Broadcasting from {peer_id}")
-                await broadcast_to_room(room_id, message, exclude_peer=peer_id)
-            
-            elif msg_type == "CHAT":
-                # Chat message - route to specific peer or broadcast
-                target = message.get('to')
-                if target:
-                    # Direct message to specific peer
-                    if target in room.clients:
-                        await room.clients[target].send_json(message)
+                    except Exception:
+                        pass
+
+            elif t == "announce":
+                await _broadcast(room, {
+                    "type": "announce", "peerId": peer_id, "meta": msg.get("meta", {}),
+                }, exclude=peer_id)
+
+            elif t in ("offer", "answer", "ice-candidate"):
+                target = msg.get("target")
+                if target and target in room.clients:
+                    relay = {"type": t, "from": peer_id}
+                    if t in ("offer", "answer"):
+                        relay["sdp"] = msg.get("sdp")
                     else:
-                        # Peer not found, send back to sender
-                        await websocket.send_json({
-                            "type": "error",
-                            "msg": "Peer not found"
-                        })
-                else:
-                    # Broadcast to all
-                    await broadcast_to_room(room_id, message, exclude_peer=peer_id)
-                
+                        relay["candidate"] = msg.get("candidate")
+                    try:
+                        await room.clients[target].send_json(relay)
+                    except Exception:
+                        pass
+
     except WebSocketDisconnect:
-        print(f"[-] {peer_id} left room: {room_id}")
+        pass
     finally:
         if room_id in rooms and peer_id in rooms[room_id].clients:
             del rooms[room_id].clients[peer_id]
-            
-            # 通知其他人
-            await broadcast_to_room(room_id, {
-                "type": "peer-left",
-                "peerId": peer_id,
-                "peerCount": len(rooms[room_id].clients)
-            })
-            
-            # 清理空房間
-            if len(rooms[room_id].clients) == 0:
+            await _broadcast(rooms.get(room_id), {"type": "peer-left", "peerId": peer_id})
+            if room_id in rooms and len(rooms[room_id].clients) == 0:
                 del rooms[room_id]
-                room_items.pop(room_id, None)  # Prevent memory leak
 
-
-async def broadcast_to_room(room_id: str, message: dict, exclude_peer: str = None):
-    """廣播訊息到房間內所有客戶端"""
-    if room_id not in rooms:
+async def _broadcast(room, message, exclude=None):
+    if not room:
         return
-    
-    room = rooms[room_id]
-    msg_text = json.dumps(message)
-    
-    for peer_id, ws in room.clients.items():
-        if peer_id != exclude_peer:
+    dead = []
+    for pid, ws in room.clients.items():
+        if pid != exclude:
             try:
                 await ws.send_json(message)
-            except Exception as e:
-                print(f"[!] Send error to {peer_id}: {e}")
+            except Exception:
+                dead.append(pid)
+    for pid in dead:
+        room.clients.pop(pid, None)
 
+@app.get("/health")
+async def health():
+    total_peers = sum(len(r.clients) for r in rooms.values())
+    return {
+        "status": "ok",
+        "rooms": len(rooms),
+        "peers": total_peers,
+        "uptime_hours": round((time.time() - _start_time) / 3600, 1),
+    }
 
-# ============ REST API ============
+_start_time = time.time()
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 @app.get("/")
 async def root():
-    return FileResponse(os.path.join(BASE_DIR, "index.html"))
-
+    from fastapi.responses import FileResponse
+    index = os.path.join(BASE_DIR, "index.html")
+    if os.path.isfile(index):
+        return FileResponse(index)
+    return {"msg": "OurBackyard Signaling Server v2.0"}
 
 @app.get("/{file_path:path}")
 async def serve_static(file_path: str):
-    """Serve static files from the project root, including nested paths."""
-    resolved = os.path.realpath(os.path.join(BASE_DIR, file_path))
-    base_real = os.path.realpath(BASE_DIR)
-    # Prevent path traversal (e.g. ../../etc/passwd)
-    if not resolved.startswith(base_real + os.sep):
-        raise HTTPException(status_code=403, detail="Access denied")
-    if os.path.exists(resolved) and os.path.isfile(resolved):
-        return FileResponse(resolved)
-    raise HTTPException(status_code=404, detail="File not found")
-
-
-@app.get("/api/config")
-async def get_config():
-    """返回 TURN 服務器配置"""
-    return TURN_CONFIG
-
-
-@app.post("/api/config/turn")
-async def set_turn_config(config: dict):
-    """設置 TURN 服務器配置"""
-    global TURN_CONFIG
-    TURN_CONFIG.update(config)
-    return {"status": "ok", "config": TURN_CONFIG}
-
-
-@app.get("/api/rooms")
-async def list_rooms():
-    """列出所有房間"""
-    return {
-        room_id: {
-            "topic": room.topic,
-            "peerCount": len(room.clients),
-            "createdAt": room.created_at
-        }
-        for room_id, room in rooms.items()
-    }
-
-
-@app.get("/api/rooms/{room_id}")
-async def get_room(room_id: str):
-    """獲取房間詳情"""
-    if room_id not in rooms:
-        raise HTTPException(status_code=404, detail="Room not found")
-    
-    room = rooms[room_id]
-    return {
-        "roomId": room.room_id,
-        "topic": room.topic,
-        "peers": list(room.clients.keys()),
-        "peerCount": len(room.clients)
-    }
-
-
-# ============ S3/OSS 上傳 ============
-import base64
-import uuid
-import hashlib
-import os
-
-BUCKET_PATH = os.path.join(BASE_DIR, "uploads")
-os.makedirs(BUCKET_PATH, exist_ok=True)
-
-ALLOWED_IMAGE_EXTS = {"jpg", "jpeg", "png", "gif", "webp"}
-MAX_IMAGE_B64_SIZE = 10 * 1024 * 1024  # 10 MB base64 input (≈7.5 MB decoded)
-
-@app.post("/api/upload/image")
-async def upload_image(data: dict):
-    """上傳圖片並返回 URL"""
-    try:
-        image_data = data.get("image")  # base64 encoded
-        if not image_data:
-            raise HTTPException(status_code=400, detail="No image data")
-
-        # Reject oversized payloads before decoding to prevent DoS
-        if len(image_data) > MAX_IMAGE_B64_SIZE:
-            raise HTTPException(status_code=413, detail="Image too large")
-
-        # Whitelist extension to prevent executable file upload
-        file_ext = str(data.get("ext", "jpg")).lower().strip(".")
-        if file_ext not in ALLOWED_IMAGE_EXTS:
-            raise HTTPException(status_code=400, detail="Invalid file extension")
-
-        # 解碼 base64
-        image_bytes = base64.b64decode(image_data)
-        
-        # 生成唯一文件名
-        file_id = hashlib.md5(str(uuid.uuid4()).encode()).hexdigest()[:12]
-        filename = f"{file_id}.{file_ext}"
-        filepath = os.path.join(BUCKET_PATH, filename)
-        
-        # 保存文件
-        with open(filepath, "wb") as f:
-            f.write(image_bytes)
-        
-        # 返回 URL
-        image_url = f"/uploads/{filename}"
-        
-        return {
-            "success": True,
-            "url": image_url,
-            "size": len(image_bytes)
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
-
-@app.get("/uploads/{filename}")
-async def get_uploaded_image(filename: str):
-    """提供上傳的圖片"""
-    filepath = os.path.join(BUCKET_PATH, filename)
-    if not os.path.exists(filepath):
-        raise HTTPException(status_code=404, detail="Image not found")
-    
-    # 根據擴展名判斷 content-type
-    ext = filename.split('.')[-1].lower()
-    content_type = {
-        "jpg": "image/jpeg",
-        "jpeg": "image/jpeg", 
-        "png": "image/png",
-        "gif": "image/gif",
-        "webp": "image/webp"
-    }.get(ext, "image/jpeg")
-    
     from fastapi.responses import FileResponse
-    return FileResponse(filepath, media_type=content_type)
-
+    from fastapi import HTTPException
+    resolved = os.path.realpath(os.path.join(BASE_DIR, file_path))
+    if not resolved.startswith(os.path.realpath(BASE_DIR) + os.sep):
+        raise HTTPException(status_code=403)
+    if os.path.isfile(resolved):
+        return FileResponse(resolved)
+    raise HTTPException(status_code=404)
 
 if __name__ == "__main__":
     import uvicorn
