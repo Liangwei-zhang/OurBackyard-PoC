@@ -342,6 +342,8 @@ export class P2PNode extends EventBus {
     // A announces → B re-announces → A re-announces → ... (all 7 relays × 15s = rate-limited).
     const _seenPeers = new Set();
     const MAX_SEEN_PEERS = 5000; // cap to prevent unbounded growth in long-running nodes
+    /** @type {Set<string>} peers that already have a pending relay-sync timer */
+    const _pendingRelaySync = new Set();
     this.signaling.on('peer:announce', (peerId, meta) => {
       if (peerId === cfg.peerId) return;
       const h3Cell = meta?.h3Cell;
@@ -357,8 +359,13 @@ export class P2PNode extends EventBus {
         // If WebRTC ICE fails (no TURN, strict NAT), the DC may never open.
         // Schedule a relay-backed MerkleSync after 3 s so we don't wait the
         // full 30 s periodic interval before exchanging listings.
-        if (this._state === 'running' && this.gossipSync) {
+        // Guard: only schedule ONE timer per peer at a time — without this guard,
+        // multiple announces (even after NostrSignaling dedup) can still fire within
+        // one session if DC opens-and-closes, or on the next 60-second heartbeat.
+        if (this._state === 'running' && this.gossipSync && !_pendingRelaySync.has(peerId)) {
+          _pendingRelaySync.add(peerId);
           const t = setTimeout(() => {
+            _pendingRelaySync.delete(peerId);
             const dc = this.transport.getDataChannel?.(peerId);
             if (!dc) {
               console.log('[SDK] peer:announce: no DC after 3 s, relay-sync for', peerId?.slice(0, 12));

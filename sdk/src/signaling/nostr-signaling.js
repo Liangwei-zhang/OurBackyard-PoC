@@ -77,6 +77,13 @@ export class NostrSignaling extends ISignaling {
     this._lastAnnounceMeta = { h3Cell };
     /** @type {Set<string>} Dedup set for received Nostr event IDs (multi-relay dedup) */
     this._seenEventIds  = new Set();
+    /**
+     * Peer-level announce dedup: peerId → last emit timestamp.
+     * Multiple relays deliver the same logical announce with DIFFERENT Nostr event IDs
+     * (each relay connection triggers _republishPresenceToRelay with ts: Date.now()).
+     * Event-level dedup alone can't catch these; we suppress re-emits within 15 s.
+     */
+    this._seenPeerAnnounces = new Map();
     /** @type {Map<string, object[]>} ICE candidate batch buffer: targetPeerId → candidates[] */
     this._iceBatch      = new Map();
     /** @type {Map<string, ReturnType<typeof setTimeout>>} flush timers */
@@ -345,6 +352,21 @@ export class NostrSignaling extends ISignaling {
     if (event.kind === KIND_ANNOUNCE) {
       try {
         const meta = JSON.parse(event.content);
+        // Peer-level dedup: same peer announced by 4 relays → emit only once per 15 s.
+        const now = Date.now();
+        const lastSeen = this._seenPeerAnnounces.get(senderPeerId) || 0;
+        if (now - lastSeen < 15000) {
+          // Still emit a log at debug level so relay activity is visible, but suppress the
+          // peer:announce event that would trigger another WebRTC connect + relay-sync timer.
+          return;
+        }
+        this._seenPeerAnnounces.set(senderPeerId, now);
+        // Evict stale entries to prevent unbounded growth in long-running nodes
+        if (this._seenPeerAnnounces.size > 1000) {
+          for (const [k, v] of this._seenPeerAnnounces) {
+            if (now - v > 120000) this._seenPeerAnnounces.delete(k);
+          }
+        }
         console.log(`[NostrSignaling] Peer announce: ${senderPeerId} via ${url}`);
         this.emit('peer:announce', senderPeerId, meta);
       } catch {}
