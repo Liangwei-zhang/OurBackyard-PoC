@@ -3356,12 +3356,13 @@ self.onmessage = async function(e) {
                         // Send chunks as base64 JSON
                         for (let offset = 0; offset < buffer.byteLength; offset += CHUNK_SIZE) {
                             const chunk = new Uint8Array(buffer.slice(offset, offset + CHUNK_SIZE));
-                            let binaryStr = '';
-                            for (let i = 0; i < chunk.length; i++) binaryStr += String.fromCharCode(chunk[i]);
+                            // Use array join instead of string concatenation for performance
+                            const chars = new Array(chunk.length);
+                            for (let i = 0; i < chunk.length; i++) chars[i] = String.fromCharCode(chunk[i]);
                             sdkDC.send(JSON.stringify({
                                 type: "IMG_CHUNK",
                                 imageHash,
-                                data: btoa(binaryStr),
+                                data: btoa(chars.join('')),
                                 offset,
                             }));
                         }

@@ -305,19 +305,17 @@ class OurBackyardMesh {
     if (!this._node) return;
     const ts = Date.now();
     // LISTING_UPDATE: for SDK peers with MarketplaceProtocol installed —
-    // the handler performs LWW merge and persists under listing: key.
-    this._node.broadcastMessage('LISTING_UPDATE', {
+    // the handler performs LWW merge and persists under item: key.
+    try { this._node.broadcastMessage('LISTING_UPDATE', {
       listing: { id: itemId, status, updatedAt: ts, from: this.peerId },
-    }).catch?.(() => {});
+    }); } catch (_) {}
     // ITEM_UPDATE: for legacy peers using window.handleMessage (index.html switch-case).
-    // Previously this was the only message sent, but it had no registered SDK router handler
-    // so was silently dropped by remote SDK nodes. Now both are sent for full compatibility.
-    this._node.broadcastMessage('ITEM_UPDATE', {
+    try { this._node.broadcastMessage('ITEM_UPDATE', {
       itemId,
       status,
       updatedAt: ts,
       from: this.peerId,
-    }).catch?.(() => {});
+    }); } catch (_) {}
   }
 
   /**
