@@ -171,6 +171,12 @@ class OurBackyardMesh {
       if (typeof window !== 'undefined' && typeof window.trackPeer === 'function') {
         window.trackPeer(peerId);
       }
+      // DataChannel just opened → flush any queued image downloads
+      if (typeof window !== 'undefined' && typeof window.processDownloadQueue === 'function') {
+        setTimeout(() => {
+          try { window.processDownloadQueue(); } catch (_) {}
+        }, 500);
+      }
     });
 
     // Peer disconnected → remove bridge + notify

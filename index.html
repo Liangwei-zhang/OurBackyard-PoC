@@ -2511,6 +2511,13 @@ self.onmessage = async function(e) {
                             console.warn("[Reset] SDK storage clear failed:", sdkErr);
                         }
                     }
+                    // Directly delete SDK IndexedDB so it cannot persist across page reloads
+                    try {
+                        const _h3Cell = window.currentH3 || localStorage.getItem('ourbackyard_h3') || '8912ccd508bffff';
+                        const _sdkDbName = `ob_sdk_${_h3Cell}`;
+                        indexedDB.deleteDatabase(_sdkDbName);
+                        log('[Reset] SDK IndexedDB deleted:', _sdkDbName);
+                    } catch (_) {}
 
                     // Clear localStorage
                     localStorage.clear();
@@ -6129,7 +6136,7 @@ window.showItemDetail = async function (id) {
             // has no open DC and no WS → request queued forever.
             // Solution: retry up to 5 times, waiting progressively longer for a DC to open.
             function scheduleImageRequest(hash, sellerId, opts = {}) {
-                const { retries = 5, baseDelay = 3000 } = opts;
+                const { retries = 8, baseDelay = 2000 } = opts;
                 let attempt = 0;
                 const tryRequest = () => {
                     attempt++;
@@ -7051,6 +7058,27 @@ window.showItemDetail = async function (id) {
 
   await mesh.init();
   window.mesh = mesh;
+
+  // ── MerkleSync 完成后检查 SDK Storage ↔ Dexie 一致性 ──────────────
+  // 保险机制：itemsSynced === 0 时 Dexie 可能仍然是空的（由于 root hash 相同）
+  mesh._node?.gossipSync?.on('sync:completed', async ({ itemsSynced }) => {
+    if (itemsSynced === 0 && mesh._storage && typeof mesh._storage.getByPrefix === 'function') {
+      try {
+        const sdkItems = await mesh._storage.getByPrefix('item:');
+        const dexieCount = await window.db.items.where('status').notEqual('gone').count();
+        if (sdkItems.length > 0 && dexieCount === 0) {
+          console.log('[Sync] Post-sync consistency check: SDK has', sdkItems.length, 'items but Dexie is empty — pushing to Dexie');
+          for (const { key, value } of sdkItems) {
+            if (value && value.title) {
+              try { await saveNeighborItem(value); } catch (_) {}
+            }
+          }
+          loadItems();
+        }
+      } catch (_) {}
+    }
+  });
+
     Object.defineProperty(mesh, 'dataChannels', {
         configurable: true,
         enumerable: false,

@@ -214,8 +214,10 @@ export class WebRTCTransport extends EventBus {
         // Some failed handshakes can return to stable without ever reaching open.
         const dc = this._dataChannels.get(peerId);
         if (dc?.readyState === 'open') return;
+        // DC not open → tear down stale connection fully, accept the new offer
         pc.close();
         this._peerConns.delete(peerId);
+        this._dataChannels.delete(peerId);
         pc = null;
       }
 
