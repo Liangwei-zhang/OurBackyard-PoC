@@ -7126,23 +7126,34 @@ window.showItemDetail = async function (id) {
     // cleared, MerkleSync roots match and no new items are emitted. Rehydrate UI DB
     // from SDK storage so listings become visible again.
     try {
+        console.log('[Boot] SDK→Dexie reverse backfill: starting check...');
         const _sdkStorage = mesh._storage;
-        console.log('[Boot] Checking SDK→Dexie reverse backfill. _storage available:', !!_sdkStorage, 'getByPrefix:', typeof _sdkStorage?.getByPrefix);
         if (_sdkStorage && typeof _sdkStorage.getByPrefix === 'function') {
             const _sdkItems = await _sdkStorage.getByPrefix('item:');
             const _dexieItems = await window.db.items.where('status').notEqual('gone').toArray();
+            console.log('[Boot] SDK→Dexie reverse backfill: SDK has', _sdkItems.length, 'items, Dexie has', _dexieItems.length, 'items');
             if (_sdkItems.length > 0 && _dexieItems.length < _sdkItems.length) {
-                console.log(`[Boot] SDK→Dexie reverse backfill: SDK has ${_sdkItems.length}, Dexie has ${_dexieItems.length}`);
+                console.log(`[Boot] SDK→Dexie reverse backfill needed: SDK has ${_sdkItems.length}, Dexie has ${_dexieItems.length}`);
                 let _reverseBackfilled = 0;
                 for (const { key, value } of _sdkItems) {
                     if (!value || typeof value !== 'object') continue;
                     const _remoteId = value.id || (typeof key === 'string' && key.startsWith('item:') ? key.slice(5) : null);
+                    if (!_remoteId) continue;
                     const _candidate = { ...value, id: _remoteId };
-                    const _existing = await SyncController.isItemSynced(_candidate).catch(() => false);
-                    if (_existing) continue;
-                    await SyncController.syncItem(_candidate).catch(() => {});
-                    _reverseBackfilled++;
-
+                    try {
+                        const _existing = await SyncController.isItemSynced(_candidate);
+                        if (_existing) {
+                            console.log('[Boot] Reverse backfill: already synced, skipping:', _remoteId);
+                            continue;
+                        }
+                        const _localId = await SyncController.syncItem(_candidate);
+                        if (_localId) {
+                            _reverseBackfilled++;
+                            console.log('[Boot] Reverse backfill: added item:', _remoteId, '→ localId:', _localId);
+                        }
+                    } catch (_itemErr) {
+                        console.warn('[Boot] Reverse backfill: failed for', _remoteId, ':', _itemErr?.message);
+                    }
                     const _hashes = value.imageHashes || (value.imageHash ? [value.imageHash] : []);
                     for (const _hash of _hashes) {
                         if (_hash && value.sellerId && value.sellerId !== peerId) {
@@ -7154,8 +7165,14 @@ window.showItemDetail = async function (id) {
                     console.log(`[Boot] SDK→Dexie reverse backfill: added ${_reverseBackfilled} items`);
                     if (typeof window.debouncedLoadItems === 'function') window.debouncedLoadItems();
                     else if (typeof window.loadItems === 'function') window.loadItems();
+                } else {
+                    console.log('[Boot] SDK→Dexie reverse backfill: all items already in Dexie');
                 }
+            } else {
+                console.log('[Boot] SDK→Dexie reverse backfill: not needed (SDK:', _sdkItems.length, 'Dexie:', _dexieItems.length, ')');
             }
+        } else {
+            console.log('[Boot] SDK→Dexie reverse backfill: storage not available', !!_sdkStorage, typeof _sdkStorage?.getByPrefix);
         }
     } catch (_err) {
         console.warn('[Boot] SDK→Dexie reverse backfill failed (non-fatal):', _err);

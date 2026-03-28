@@ -48,7 +48,17 @@ export class WebRTCTransport extends EventBus {
    * @param {string} targetPeerId
    */
   async createOffer(targetPeerId) {
-    if (this._peerConns.has(targetPeerId)) return;
+    // If an existing connection is in a terminal/broken state, clean it up first.
+    // Without this, a failed ICE connection blocks all future reconnect attempts.
+    const existingPC = this._peerConns.get(targetPeerId);
+    if (existingPC) {
+      const state = existingPC.connectionState || existingPC.iceConnectionState;
+      if (state === 'failed' || state === 'closed' || state === 'disconnected') {
+        this._cleanPeer(targetPeerId);
+      } else {
+        return; // healthy (or in-progress) connection — skip
+      }
+    }
     if (this._peerConns.size >= this.maxPeers) return;
 
     const pc = this._newPC(targetPeerId);

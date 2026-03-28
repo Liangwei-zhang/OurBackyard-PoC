@@ -184,6 +184,28 @@ describe('WebRTCTransport — createOffer()', () => {
     await t.createOffer('peer-c'); // should be rejected
     assert.equal(MockRTCPeerConnection._instances.length, 2);
   });
+
+  it('cleans up failed connection and re-offers (zombie cleanup)', async () => {
+    const t = makeTransport();
+    const signals = [];
+    t.on('signal:send', (target, sig) => signals.push({ target, sig }));
+
+    // First offer — creates a PC
+    await t.createOffer('remote-peer');
+    assert.equal(signals.length, 1);
+
+    // Simulate ICE failure: mark the existing PC as failed
+    const failedPC = MockRTCPeerConnection._instances[0];
+    failedPC.connectionState = 'failed';
+    // Manually register it in _peerConns (mock createOffer does this via _newPC)
+    // The PC is already in _peerConns from the first offer call.
+
+    // Second offer — should detect 'failed' state, clean up, and re-offer
+    MockRTCPeerConnection._instances.length = 0; // reset instance tracking
+    await t.createOffer('remote-peer');
+    assert.equal(signals.length, 2, 'Should emit a second offer signal after cleanup');
+    assert.equal(signals[1].sig.type, 'offer');
+  });
 });
 
 // ── connect() ─────────────────────────────────────────────────────────────────
