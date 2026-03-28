@@ -309,6 +309,14 @@ export class MerkleSync extends EventBus {
   /** @private */
   async _onSyncItemsReq(from, msg) {
     const { sessionId, keys } = msg;
+    // Dedup: SYNC_ITEMS_REQ arrives on multiple Nostr relays simultaneously.
+    // Without this, each relay delivery triggers a separate SYNC_ITEMS_RESP,
+    // wasting relay quota and creating redundant item deliveries on the receiver.
+    const dedupeKey = `items:${from}:${sessionId}`;
+    const now = Date.now();
+    const lastReply = this._recentSyncReqReplies.get(dedupeKey);
+    if (lastReply && now - lastReply < 5000) return;
+    this._recentSyncReqReplies.set(dedupeKey, now);
     const items = [];
     for (const key of keys) {
       let value = await this._storage.get(key);

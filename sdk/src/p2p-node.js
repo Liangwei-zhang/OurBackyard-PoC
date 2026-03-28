@@ -162,8 +162,15 @@ export class P2PNode extends EventBus {
     // Start resilience monitoring
     this.resilience.startMonitoring();
 
-    // Start gossip sync (30-second periodic fallback in case the immediate sync fails)
-    this.gossipSync.startSync(() => this.cellShard.getNearbyPeers().map(p => p.peerId));
+    // Start gossip sync — periodic fallback only for peers with open DataChannels.
+    // Relay-only peers are synced on announce (3 s one-shot timer in _wireEvents).
+    // Including relay-only peers here floods Nostr with SYNC_REQ events every 30 s,
+    // which exhausts relay rate limits and cascades into a sync storm.
+    this.gossipSync.startSync(() =>
+      this.cellShard.getNearbyPeers()
+        .map(p => p.peerId)
+        .filter(pid => this.transport.getDataChannel?.(pid) !== null)
+    );
 
     // Connect signaling (NOW we can yield to event loop — sendFn is already wired)
     await this.signaling.connect();
@@ -348,6 +355,8 @@ export class P2PNode extends EventBus {
     const MAX_SEEN_PEERS = 5000; // cap to prevent unbounded growth in long-running nodes
     /** @type {Set<string>} peers that already have a pending relay-sync timer */
     const _pendingRelaySync = new Set();
+    /** Debounce timer for re-announce (one announce covers multiple simultaneous peer events) */
+    let _reannounceTimer = null;
     /**
      * Root Cause 3: relay-backed sync failure backoff.
      * If relay-sync fails (no answer, peer unreachable — e.g. stale peerId from cache-clear),
@@ -406,13 +415,22 @@ export class P2PNode extends EventBus {
       }
 
       // Re-announce once per peer so they know we exist, but never again on heartbeats.
+      // Debounce: multiple peers often appear at the same time (EOSE burst). Without
+      // debouncing, 4 separate announce() calls go out simultaneously (4 × 4 relays =
+      // 16 Nostr events) exhausting the relay rate-limit budget before ICE even starts.
       if (!_seenPeers.has(peerId)) {
         // Evict oldest entry when cap is reached
         if (_seenPeers.size >= MAX_SEEN_PEERS) {
           _seenPeers.delete(_seenPeers.values().next().value);
         }
         _seenPeers.add(peerId);
-        this.signaling.announce({ h3Cell: cfg.h3Cell }).catch(() => {});
+        if (!_reannounceTimer) {
+          _reannounceTimer = setTimeout(() => {
+            _reannounceTimer = null;
+            this.signaling.announce({ h3Cell: cfg.h3Cell }).catch(() => {});
+          }, 500);
+          if (typeof _reannounceTimer?.unref === 'function') _reannounceTimer.unref();
+        }
       }
     });
 
