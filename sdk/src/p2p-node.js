@@ -138,7 +138,19 @@ export class P2PNode extends EventBus {
     // before any items are exchanged — this is the primary cause of "商品无法同步".
     const sendFn = (peerId, msg) => {
       const data = JSON.stringify(msg);
-      return this.transport.send(peerId, data);
+      const sent = this.transport.send(peerId, data);
+      if (!sent) {
+        // DataChannel not open — relay small messages through the signaling channel.
+        // This allows MerkleSync to work even when NAT traversal fails (no TURN).
+        // Nostr event size limit is ~64 KB; we guard at 16 KB to stay well under.
+        if (data.length < 16000 && typeof this.signaling?.sendSignal === 'function') {
+          this.signaling.sendSignal(peerId, { type: 'relay-msg', payload: msg })
+            .catch(() => {});
+          console.log('[SDK] DC not open — relaying via signaling:', msg.type, 'to', peerId?.slice(0, 12));
+          return true; // optimistically assume relay delivery
+        }
+      }
+      return sent;
     };
     this.gossipSync.setSendFn(sendFn);
     this.resilience.setSendFn(sendFn);
@@ -315,6 +327,12 @@ export class P2PNode extends EventBus {
 
     // Signaling: incoming ICE/SDP
     this.signaling.on('signal', (fromPeerId, signal) => {
+      // relay-msg: a data message forwarded through the signaling channel because the
+      // sender's DataChannel was not open (DC failed, NAT traversal issue, etc.).
+      if (signal.type === 'relay-msg' && signal.payload) {
+        this.router.route(fromPeerId, signal.payload).catch(() => {});
+        return;
+      }
       this.transport.handleSignal?.(fromPeerId, signal);
     });
 

@@ -25,8 +25,11 @@ const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun.cloudflare.com:3478' },
+  { urls: 'stun:global.stun.twilio.com:3478' },          // Twilio free STUN
   { urls: 'turn:openrelay.metered.ca:80',  username: 'openrelayproject', credential: 'openrelayproject' },
   { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+  // ── coturn: 自建 TURN（本地测试 / 生产推荐）─────────────────────────
+  // { urls: 'turn:YOUR_TURN_HOST:3478', username: 'YOUR_USER', credential: 'YOUR_PASS' },
 ];
 
 // Message types handled entirely inside the SDK layer
@@ -46,6 +49,8 @@ const SDK_HANDLED_TYPES = new Set([
   'HEARTBEAT_PING', 'HEARTBEAT_PONG',
   // CRDT
   'CRDT_LWWREG', 'CRDT_ORSET', 'CRDT_GCOUNTER',
+  // relay-msg is a signaling-level envelope; payload is dispatched directly by p2p-node
+  'relay-msg',
 ]);
 
 /**

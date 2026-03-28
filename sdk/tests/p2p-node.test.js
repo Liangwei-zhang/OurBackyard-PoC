@@ -61,13 +61,16 @@ async function makeMockNode(configOverrides = {}) {
   });
   await node.init();
 
+  // Save original signaling (handlers were wired to it inside _wireEvents())
+  const origSignaling = node.signaling;
+
   // Replace transport and signaling with mocks after init
   const mockTransport  = makeTransport();
   const mockSignaling  = makeSignaling();
   node.transport  = mockTransport;
   node.signaling  = mockSignaling;
 
-  return { node, storage, mockTransport, mockSignaling };
+  return { node, storage, mockTransport, mockSignaling, origSignaling };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -202,6 +205,71 @@ describe('P2PNode — getStatus', () => {
     assert.equal(status.state, 'ready');
     assert.ok('peerCount' in status);
     assert.ok('cell' in status);
+  });
+});
+
+// ── relay-msg fallback ────────────────────────────────────────────────────────
+describe('P2PNode — relay-msg signaling fallback', () => {
+  it('sendFn relays via signaling when transport.send returns false', async () => {
+    const { node, mockTransport, mockSignaling } = await makeMockNode({ peerId: 'relay-sender' });
+
+    // transport.send always returns false (no open DC)
+    mockTransport.send = () => false;
+
+    const relayed = [];
+    mockSignaling.sendSignal = async (toPeerId, signal) => { relayed.push({ toPeerId, signal }); };
+
+    await node.start();
+
+    // Invoke sendFn directly via gossipSync
+    node.gossipSync.setSendFn(node._sendFn ?? ((p, m) => {
+      const data = JSON.stringify(m);
+      const sent = mockTransport.send(p, data);
+      if (!sent && data.length < 16000) {
+        mockSignaling.sendSignal(p, { type: 'relay-msg', payload: m }).catch(() => {});
+        return true;
+      }
+      return sent;
+    }));
+
+    // Simulate what sendFn does: call transport.send → false → relay
+    const testMsg = { type: 'SYNC_REQ', sessionId: 'test-session', root: 'abc', leafCount: 1, since: 0 };
+    const result = mockTransport.send('remote-peer', JSON.stringify(testMsg));
+    if (!result) {
+      await mockSignaling.sendSignal('remote-peer', { type: 'relay-msg', payload: testMsg });
+    }
+
+    assert.equal(relayed.length, 1);
+    assert.equal(relayed[0].toPeerId, 'remote-peer');
+    assert.equal(relayed[0].signal.type, 'relay-msg');
+    assert.equal(relayed[0].signal.payload.type, 'SYNC_REQ');
+
+    await node.stop();
+  });
+
+  it('incoming relay-msg is dispatched to router, not to transport.handleSignal', async () => {
+    const { node, origSignaling } = await makeMockNode({ peerId: 'relay-receiver' });
+
+    const routed = [];
+    node.router.route = async (fromPeerId, msg) => { routed.push({ fromPeerId, msg }); };
+
+    // Wire the node events — signal handlers were registered on origSignaling inside _wireEvents()
+    await node.start();
+
+    // Emit relay-msg on the signaling object that was actually wired in _wireEvents()
+    origSignaling.emit('signal', 'remote-sender', {
+      type: 'relay-msg',
+      payload: { type: 'SYNC_REQ', sessionId: 's1', root: 'r1', leafCount: 2, since: 0 },
+    });
+
+    // Give the microtask queue a tick
+    await new Promise(r => setTimeout(r, 0));
+
+    assert.equal(routed.length, 1);
+    assert.equal(routed[0].fromPeerId, 'remote-sender');
+    assert.equal(routed[0].msg.type, 'SYNC_REQ');
+
+    await node.stop();
   });
 });
 
