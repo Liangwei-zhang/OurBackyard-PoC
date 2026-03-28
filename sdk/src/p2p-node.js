@@ -154,6 +154,10 @@ export class P2PNode extends EventBus {
     };
     this.gossipSync.setSendFn(sendFn);
     this.resilience.setSendFn(sendFn);
+    // BlobTransfer must also get sendFn so BLOB_START/CHUNK/END are actually sent.
+    // Without this, _send() falls through to emit('send') which has no listener
+    // and every image transfer silently disappears.
+    this.blobTransfer.setSendFn(sendFn);
 
     // Start resilience monitoring
     this.resilience.startMonitoring();

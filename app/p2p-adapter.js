@@ -423,34 +423,6 @@ class OurBackyardMesh {
     }
   }
 
-  /**
-   * Send a chat message directly to a peer.
-   * E2E encryption is handled by the existing key-vault layer if available.
-   * @param {string} toPeerId
-   * @param {string} text
-   * @param {string|null} itemId
-   * @param {object} [opts] — extra options (e.g. mediaType for voice/photo)
-   * @returns {Promise<void>}
-   */
-  /**
-   * Send a binary blob (image / file) to a peer via BlobTransfer.
-   * Returns the SHA-256 content hash (for use as imageHash in follow-up chat messages).
-   * @param {string} toPeerId
-   * @param {ArrayBuffer} data
-   * @param {object} [meta] — { mimeType, type, hash }
-   * @returns {Promise<string|null>} hex hash or null on failure
-   */
-  async sendBlob(toPeerId, data, meta = {}) {
-    if (!this._node?.blobTransfer) return null;
-    try {
-      await this._node.blobTransfer.send(toPeerId, data, meta, 1 /* LISTING priority */);
-      return meta.hash || null;
-    } catch (e) {
-      console.warn('[SDK Mesh] sendBlob failed:', e.message);
-      return null;
-    }
-  }
-
   async sendChat(toPeerId, text, itemId, opts = {}) {
     if (!this._node) return;
     const msg = {
