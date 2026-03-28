@@ -6108,6 +6108,36 @@ window.showItemDetail = async function (id) {
             // can both pass the isItemSynced check before either has inserted, causing duplicates.
             const _saveItemLocks = new Map();
 
+            // Retry image requests with exponential backoff.
+            // Problem: when an item arrives via MerkleSync the WebRTC DataChannel may not yet be
+            // established (Nostr rate-limit delays the WebRTC handshake). Immediate executeImageRequest
+            // has no open DC and no WS → request queued forever.
+            // Solution: retry up to 5 times, waiting progressively longer for a DC to open.
+            function scheduleImageRequest(hash, sellerId, opts = {}) {
+                const { retries = 5, baseDelay = 3000 } = opts;
+                let attempt = 0;
+                const tryRequest = () => {
+                    attempt++;
+                    // Check for any open DataChannel (to seller preferred, any otherwise)
+                    const dcMap = window.dataChannels || {};
+                    const sellerDC = sellerId && dcMap[sellerId];
+                    const hasDC = (sellerDC && sellerDC.readyState === 'open') ||
+                        Object.values(dcMap).some(d => d?.readyState === 'open');
+                    if (hasDC) {
+                        executeImageRequest(hash, sellerId);
+                    } else if (attempt < retries) {
+                        const delay = baseDelay * attempt; // 3s, 6s, 9s, 12s
+                        const t = setTimeout(tryRequest, delay);
+                        t?.unref?.();
+                    } else {
+                        console.warn('[Image] Gave up requesting', hash?.slice(0, 12), 'after', attempt, 'attempts');
+                    }
+                };
+                // First attempt after baseDelay to let WebRTC finish handshaking
+                const t = setTimeout(tryRequest, baseDelay);
+                t?.unref?.();
+            }
+
             async function saveNeighborItem(item) {
                 // Validate incoming P2P item before writing to local DB
                 if (!item || typeof item !== "object") return;
@@ -6142,11 +6172,11 @@ window.showItemDetail = async function (id) {
                             window._itemIdMapping[item.id] = localId;
                         }
 
-                        // Request ALL missing images from seller
+                        // Request ALL missing images from seller (with retry on DC not yet open)
                         const hashes = item.imageHashes || (item.imageHash ? [item.imageHash] : []);
                         for (const hash of hashes) {
                             if (item.sellerId !== peerId) {
-                                executeImageRequest(hash, item.sellerId);
+                                scheduleImageRequest(hash, item.sellerId);
                             }
                         }
 

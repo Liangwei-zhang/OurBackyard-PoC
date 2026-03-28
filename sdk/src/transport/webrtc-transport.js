@@ -100,6 +100,14 @@ export class WebRTCTransport extends EventBus {
       case 'offer':   return this._handleOffer(fromPeerId, signal);
       case 'answer':  return this._handleAnswer(fromPeerId, signal);
       case 'ice-candidate': return this._handleIceCandidate(fromPeerId, signal);
+      case 'ice-candidates-batch': {
+        // Handle batched ICE candidates (sent by NostrSignaling to reduce relay events)
+        const candidates = signal.candidates || [];
+        for (const candidate of candidates) {
+          await this._handleIceCandidate(fromPeerId, { candidate });
+        }
+        return;
+      }
     }
   }
 

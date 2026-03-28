@@ -129,6 +129,34 @@ class OurBackyardMesh {
   _wireNodeEvents() {
     const node = this._node;
 
+    // Adapter-level item dedup: same logical item may arrive via multiple paths
+    // (PlumtreeGossip broadcast + MerkleSync reconciliation + NEW_ITEM route:unhandled).
+    // A 5-second window collapses duplicates before they reach saveNeighborItem() / Dexie.
+    const _seenItems = new Map(); // itemId → timestamp
+    const ITEM_DEDUP_MS = 5000;
+    const _deduplicatedOnItem = (item) => {
+      if (!item?.id) {
+        if (this.options?.onItem) this.options.onItem(item);
+        else this.onItem?.(item);
+        return;
+      }
+      const now = Date.now();
+      const last = _seenItems.get(item.id);
+      if (last && now - last < ITEM_DEDUP_MS) {
+        console.log('[SDK Mesh] Dedup: skipping duplicate item within 5s window, id:', item.id);
+        return;
+      }
+      _seenItems.set(item.id, now);
+      // Periodic cleanup to prevent unbounded growth
+      if (_seenItems.size > 300) {
+        for (const [k, t] of _seenItems) {
+          if (now - t > ITEM_DEDUP_MS) _seenItems.delete(k);
+        }
+      }
+      if (this.options?.onItem) this.options.onItem(item);
+      else this.onItem?.(item);
+    };
+
     // Synchronise signaling online status callback
     node.signaling.on('status', (status) => {
       this.onStatus?.(status === 'online' ? 'nostr' : 'offline');
@@ -156,12 +184,7 @@ class OurBackyardMesh {
     node.gossipSync.on('item:received', ({ payload }) => {
       if (!payload) return;
       console.log('[SDK Mesh] item:received:', payload?.title || payload?.id, 'id:', payload?.id);
-      // options.onItem may be patched by LocalAI
-      if (this.options?.onItem) {
-        this.options.onItem(payload);
-      } else {
-        this.onItem?.(payload);
-      }
+      _deduplicatedOnItem(payload);
     });
 
     // Unhandled message types → forward to inline handleMessage
@@ -184,10 +207,7 @@ class OurBackyardMesh {
       // NEW_ITEM / ITEM: treat as gossip item
       if (type === 'NEW_ITEM' || type === 'ITEM') {
         const item = msg.item;
-        if (item) {
-          if (this.options?.onItem) this.options.onItem(item);
-          else this.onItem?.(item);
-        }
+        if (item) _deduplicatedOnItem(item);
         return;
       }
 

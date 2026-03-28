@@ -328,7 +328,15 @@ export class P2PNode extends EventBus {
       if (peerId === cfg.peerId) return;
       const h3Cell = meta?.h3Cell;
       if (h3Cell) this.cellShard.addPeer(peerId, h3Cell);
-      this.transport.connect(peerId, cfg.peerId < peerId).catch(() => {});
+
+      // Always attempt to connect if no DataChannel exists yet.
+      // This handles re-connects after cache clear (new peerId) and cases where the
+      // initial WebRTC handshake failed (Nostr rate-limit during startup).
+      const hasOpenDC = this.transport.getDataChannel?.(peerId) !== null;
+      if (!hasOpenDC) {
+        this.transport.connect(peerId, cfg.peerId < peerId).catch(() => {});
+      }
+
       // Re-announce once per peer so they know we exist, but never again on heartbeats.
       if (!_seenPeers.has(peerId)) {
         // Evict oldest entry when cap is reached

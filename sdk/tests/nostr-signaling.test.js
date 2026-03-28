@@ -354,23 +354,32 @@ describe('NostrSignaling — sendSignal()', () => {
     assert.equal(targetTag[1], 'peer_target99');
   });
 
-  it('signal is published to all connected relays (not just one)', async () => {
+  it('ICE candidates are batched and sent as a single event to one relay', async () => {
     const s = makeSignaling();
     await s.connect();
-    // Drain pending async announces before clearing, same reason as test above.
+    // Drain pending async announces
     await tick(50);
     MockWebSocket._instances.forEach(ws => { ws.sent = []; });
 
-    await s.sendSignal('peer_other1', { type: 'ice-candidate', candidate: {} });
-    await tick(30);
+    // Send 3 ICE candidates in quick succession
+    const ice = { candidate: 'candidate:1', sdpMid: '0', sdpMLineIndex: 0 };
+    s.sendSignal('peer_other1', { type: 'ice-candidate', candidate: ice });
+    s.sendSignal('peer_other1', { type: 'ice-candidate', candidate: ice });
+    s.sendSignal('peer_other1', { type: 'ice-candidate', candidate: ice });
 
-    // _publish sends to ALL connected relays for reliability
-    // (avoids write-restricted relays like nostr.wine silently dropping signals)
-    const connectedCount = MockWebSocket._instances.filter(ws => ws.readyState === 1).length;
-    const totalEvents = MockWebSocket._instances
+    // Before flush timer fires: no events should be sent yet
+    const beforeFlush = MockWebSocket._instances.flatMap(ws => ws.sent).length;
+    assert.equal(beforeFlush, 0, 'ICE candidates must be buffered before 300ms flush');
+
+    // After flush timer fires: exactly ONE event to ONE relay
+    await tick(350);
+    const allEvents = MockWebSocket._instances
       .flatMap(ws => ws.sent.map(m => JSON.parse(m)))
       .filter(m => m[0] === 'EVENT');
-    assert.ok(totalEvents.length >= connectedCount, `Signal must go to all ${connectedCount} connected relays, got ${totalEvents.length}`);
+    assert.equal(allEvents.length, 1, `ICE batch must be sent as 1 event, got ${allEvents.length}`);
+    const batch = JSON.parse(allEvents[0][1].content);
+    assert.equal(batch.type, 'ice-candidates-batch');
+    assert.equal(batch.candidates.length, 3, 'Batch must contain all 3 candidates');
   });
 });
 

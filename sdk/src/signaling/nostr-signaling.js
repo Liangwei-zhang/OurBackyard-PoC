@@ -77,6 +77,10 @@ export class NostrSignaling extends ISignaling {
     this._lastAnnounceMeta = { h3Cell };
     /** @type {Set<string>} Dedup set for received Nostr event IDs (multi-relay dedup) */
     this._seenEventIds  = new Set();
+    /** @type {Map<string, object[]>} ICE candidate batch buffer: targetPeerId → candidates[] */
+    this._iceBatch      = new Map();
+    /** @type {Map<string, ReturnType<typeof setTimeout>>} flush timers */
+    this._iceFlushTimers = new Map();
 
     console.log(`[NostrSignaling] L9 cell: ${h3Cell} → L7 channel: ${this.channelCell}`);
   }
@@ -121,6 +125,24 @@ export class NostrSignaling extends ISignaling {
   }
 
   async sendSignal(targetPeerId, signal) {
+    // ICE candidates: buffer and batch to reduce Nostr relay event counts.
+    // 3 peers × ~10 ICE candidates × 4 relays = ~120 events/s → rate-limited immediately.
+    // Batching: collect all ICE candidates for 300ms, then send as one event to ONE relay.
+    if (signal?.type === 'ice-candidate') {
+      if (!this._iceBatch.has(targetPeerId)) {
+        this._iceBatch.set(targetPeerId, []);
+      }
+      this._iceBatch.get(targetPeerId).push(signal.candidate);
+
+      // Schedule flush if not already pending
+      if (!this._iceFlushTimers.has(targetPeerId)) {
+        const t = setTimeout(() => this._flushIceBatch(targetPeerId), 300);
+        t?.unref?.();
+        this._iceFlushTimers.set(targetPeerId, t);
+      }
+      return;
+    }
+
     console.log(`[NostrSignaling] → signal '${signal?.type}' to ${targetPeerId.slice(0, 12)}`);
     let event;
     try {
@@ -137,11 +159,36 @@ export class NostrSignaling extends ISignaling {
       this.emit('error', e);
       return;
     }
-    // Broadcast to ALL relays — WebRTC signaling requires the remote peer to receive every
-    // signal (offer, answer, ICE candidates). Using _publishToOne risks picking a write-
-    // restricted relay (e.g. nostr.wine) for any individual message, which silently drops
-    // that signal and breaks the WebRTC handshake. Broadcasting is the safe choice here.
-    this._publish(event);
+    // offer/answer: send to ONE relay (receiver subscribes to all — one delivery is enough).
+    // This halves the relay event rate vs broadcasting, reducing rate-limit risk.
+    this._publishToOne(event);
+  }
+
+  /** Flush buffered ICE candidates for a peer as a single batched event */
+  async _flushIceBatch(targetPeerId) {
+    this._iceFlushTimers.delete(targetPeerId);
+    const candidates = this._iceBatch.get(targetPeerId) || [];
+    this._iceBatch.delete(targetPeerId);
+    if (candidates.length === 0) return;
+
+    console.log(`[NostrSignaling] → ice-candidates-batch (${candidates.length}) to ${targetPeerId.slice(0, 12)}`);
+    let event;
+    try {
+      event = await this._buildEvent(
+        KIND_SIGNAL,
+        JSON.stringify({ type: 'ice-candidates-batch', candidates }),
+        [
+          ['t',      this.channelCell],
+          ['peer',   this.peerId],
+          ['target', targetPeerId],
+        ]
+      );
+    } catch (e) {
+      this.emit('error', e);
+      return;
+    }
+    // ICE batch → single relay is sufficient (peer subscribes to all relays)
+    this._publishToOne(event);
   }
 
   async announce(meta = {}) {
