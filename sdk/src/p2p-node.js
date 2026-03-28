@@ -140,10 +140,10 @@ export class P2PNode extends EventBus {
       const data = JSON.stringify(msg);
       const sent = this.transport.send(peerId, data);
       if (!sent) {
-        // DataChannel not open — relay small messages through the signaling channel.
+        // DataChannel not open — relay messages through the signaling channel.
         // This allows MerkleSync to work even when NAT traversal fails (no TURN).
-        // Nostr event size limit is ~64 KB; we guard at 16 KB to stay well under.
-        if (data.length < 16000 && typeof this.signaling?.sendSignal === 'function') {
+        // Nostr event size limit is ~256 KB; we guard at 200 KB to stay safely under.
+        if (data.length < 200000 && typeof this.signaling?.sendSignal === 'function') {
           this.signaling.sendSignal(peerId, { type: 'relay-msg', payload: msg })
             .catch(() => {});
           console.log('[SDK] DC not open — relaying via signaling:', msg.type, 'to', peerId?.slice(0, 12));
@@ -353,6 +353,20 @@ export class P2PNode extends EventBus {
       const hasOpenDC = this.transport.getDataChannel?.(peerId) !== null;
       if (!hasOpenDC) {
         this.transport.connect(peerId, cfg.peerId < peerId).catch(() => {});
+
+        // If WebRTC ICE fails (no TURN, strict NAT), the DC may never open.
+        // Schedule a relay-backed MerkleSync after 3 s so we don't wait the
+        // full 30 s periodic interval before exchanging listings.
+        if (this._state === 'running' && this.gossipSync) {
+          const t = setTimeout(() => {
+            const dc = this.transport.getDataChannel?.(peerId);
+            if (!dc) {
+              console.log('[SDK] peer:announce: no DC after 3 s, relay-sync for', peerId?.slice(0, 12));
+              this.gossipSync.syncWithPeer(peerId).catch(() => {});
+            }
+          }, 3000);
+          if (typeof t?.unref === 'function') t.unref(); // don't block Node.js exit in tests
+        }
       }
 
       // Re-announce once per peer so they know we exist, but never again on heartbeats.
