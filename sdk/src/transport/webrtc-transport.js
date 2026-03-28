@@ -209,9 +209,17 @@ export class WebRTCTransport extends EventBus {
 
     if (pc) {
       const state = pc.signalingState;
-      if (state === 'stable') return; // already connected — ignore re-offer
+      if (state === 'stable') {
+        // Accept re-offer only if we do NOT have an open DataChannel.
+        // Some failed handshakes can return to stable without ever reaching open.
+        const dc = this._dataChannels.get(peerId);
+        if (dc?.readyState === 'open') return;
+        pc.close();
+        this._peerConns.delete(peerId);
+        pc = null;
+      }
 
-      if (state === 'have-local-offer') {
+      if (pc && state === 'have-local-offer') {
         // Glare resolution: lower peerId wins (becomes answerer)
         if (this.peerId > peerId) {
           // We lose — roll back our offer and answer theirs
@@ -221,7 +229,7 @@ export class WebRTCTransport extends EventBus {
         }
       }
 
-      if (pc.signalingState !== 'stable') {
+      if (pc && pc.signalingState !== 'stable') {
         // Unexpected state — start fresh
         pc.close();
         this._peerConns.delete(peerId);

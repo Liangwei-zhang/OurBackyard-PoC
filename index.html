@@ -2497,6 +2497,21 @@ self.onmessage = async function(e) {
                     await indexedDB.deleteDatabase("OurBackyardDB");
                     log("[Reset] IndexedDB deleted");
 
+                    // Also clear SDK storage so Merkle roots do not stay "already synced"
+                    // while Dexie UI tables are empty after reset.
+                    if (window.mesh?._storage) {
+                        try {
+                            if (typeof window.mesh._storage.destroy === 'function') {
+                                await window.mesh._storage.destroy();
+                            } else if (typeof window.mesh._storage.clear === 'function') {
+                                await window.mesh._storage.clear();
+                            }
+                            log("[Reset] SDK storage cleared");
+                        } catch (sdkErr) {
+                            console.warn("[Reset] SDK storage clear failed:", sdkErr);
+                        }
+                    }
+
                     // Clear localStorage
                     localStorage.clear();
                     log("[Reset] localStorage cleared");
@@ -7077,6 +7092,45 @@ window.showItemDetail = async function (id) {
   } catch (_err) {
     console.warn('[Boot] SDK Storage backfill failed (non-fatal):', _err);
   }
+
+    // ── SDK Storage → Dexie 反向回填 ─────────────────────────────────────
+    // If SDK storage still has items (e.g. from previous sessions) but Dexie was
+    // cleared, MerkleSync roots match and no new items are emitted. Rehydrate UI DB
+    // from SDK storage so listings become visible again.
+    try {
+        const _sdkStorage = mesh._storage;
+        if (_sdkStorage && typeof _sdkStorage.getByPrefix === 'function') {
+            const _sdkItems = await _sdkStorage.getByPrefix('item:');
+            const _dexieItems = await window.db.items.where('status').notEqual('gone').toArray();
+            if (_sdkItems.length > 0 && _dexieItems.length < _sdkItems.length) {
+                console.log(`[Boot] SDK→Dexie reverse backfill: SDK has ${_sdkItems.length}, Dexie has ${_dexieItems.length}`);
+                let _reverseBackfilled = 0;
+                for (const { key, value } of _sdkItems) {
+                    if (!value || typeof value !== 'object') continue;
+                    const _remoteId = value.id || (typeof key === 'string' && key.startsWith('item:') ? key.slice(5) : null);
+                    const _candidate = { ...value, id: _remoteId };
+                    const _existing = await SyncController.isItemSynced(_candidate).catch(() => false);
+                    if (_existing) continue;
+                    await SyncController.syncItem(_candidate).catch(() => {});
+                    _reverseBackfilled++;
+
+                    const _hashes = value.imageHashes || (value.imageHash ? [value.imageHash] : []);
+                    for (const _hash of _hashes) {
+                        if (_hash && value.sellerId && value.sellerId !== peerId) {
+                            scheduleImageRequest(_hash, value.sellerId);
+                        }
+                    }
+                }
+                if (_reverseBackfilled > 0) {
+                    console.log(`[Boot] SDK→Dexie reverse backfill: added ${_reverseBackfilled} items`);
+                    if (typeof window.debouncedLoadItems === 'function') window.debouncedLoadItems();
+                    else if (typeof window.loadItems === 'function') window.loadItems();
+                }
+            }
+        }
+    } catch (_err) {
+        console.warn('[Boot] SDK→Dexie reverse backfill failed (non-fatal):', _err);
+    }
 
   // ── 4. Web of Trust ────────────────────────────────────────────────────
   if (window.WebOfTrust) {

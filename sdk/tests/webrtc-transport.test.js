@@ -238,6 +238,35 @@ describe('WebRTCTransport — handleSignal()', () => {
     );
   });
 
+  it('accepts re-offer in stable state when no DataChannel is open', async () => {
+    const t = makeTransport();
+    const signals = [];
+    t.on('signal:send', (target, sig) => signals.push({ target, sig }));
+
+    // First offer creates a PC and sends answer.
+    await t.handleSignal('remote-peer', {
+      type: 'offer',
+      sdp:  { type: 'offer', sdp: 'remote-sdp-1' },
+    });
+    const firstPc = t._peerConns.get('remote-peer');
+    assert.ok(firstPc, 'first peer connection should exist');
+
+    // Simulate "stable but no open data channel" case.
+    firstPc.signalingState = 'stable';
+
+    // Second offer should replace stale PC and emit another answer.
+    await t.handleSignal('remote-peer', {
+      type: 'offer',
+      sdp:  { type: 'offer', sdp: 'remote-sdp-2' },
+    });
+
+    const secondPc = t._peerConns.get('remote-peer');
+    assert.notEqual(secondPc, firstPc, 'stale stable PC should be replaced when no open DC exists');
+    assert.equal(firstPc._closed, true, 'old PC should be closed');
+    const answers = signals.filter(s => s.sig.type === 'answer');
+    assert.ok(answers.length >= 2, 'should answer re-offer instead of ignoring it');
+  });
+
   it('ignores duplicate answers (not in have-local-offer state)', async () => {
     const t = makeTransport();
     t.on('signal:send', () => {});

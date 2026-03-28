@@ -187,6 +187,26 @@ class OurBackyardMesh {
       _deduplicatedOnItem(payload);
     });
 
+    // Reconciliation fallback: if MerkleSync reports 0 new items but UI DB was cleared,
+    // replay canonical SDK items through the same onItem pipeline.
+    node.gossipSync.on('sync:completed', async ({ itemsSynced }) => {
+      if (itemsSynced !== 0) return;
+      if (typeof window === 'undefined' || !window.db?.items) return;
+      try {
+        const sdkItems = await this._storage?.getByPrefix?.('item:');
+        if (!sdkItems || sdkItems.length === 0) return;
+        const dexieCount = await window.db.items.where('status').notEqual('gone').count();
+        if (dexieCount > 0) return;
+
+        console.log('[SDK Mesh] Dexie empty while SDK storage has items, replaying to UI:', sdkItems.length);
+        for (const { value } of sdkItems) {
+          if (value && value.id) _deduplicatedOnItem(value);
+        }
+      } catch (e) {
+        console.warn('[SDK Mesh] sync:completed reconciliation failed:', e?.message || e);
+      }
+    });
+
     // Unhandled message types → forward to inline handleMessage
     node.router.on('route:unhandled', (type, fromPeerId, msg) => {
       if (typeof window === 'undefined') return;
