@@ -20,18 +20,33 @@ import { IndexedDBStorage } from '../sdk/src/storage/indexeddb-storage.js';
 import { MemoryStorage } from '../sdk/src/storage/memory-storage.js';
 import { MarketplaceProtocol } from '../sdk/src/protocols/marketplace.js';
 
-// ── Self-hosted STUN / TURN (coturn) ─────────────────────────────────────────
-// Start coturn: cd coturn && docker-compose up -d
-// For LAN / production replace 'localhost' with your server's public IP.
-const ICE_SERVERS = [
-  { urls: 'stun:localhost:3478' },
-  { urls: 'turn:localhost:3478', username: 'turnuser', credential: 'turnpassword123' },
-];
+// ── Deployment environment detection ──────────────────────────────────────────
+// Local (localhost / LAN IP): use self-hosted WS signaling + coturn STUN/TURN.
+// Remote / HTTPS (ngrok, production): use Nostr signaling + public STUN.
+// ws:// over HTTPS is blocked as Mixed Content — always detect and route correctly.
+const _isLocal = typeof location !== 'undefined'
+  && (location.hostname === 'localhost'
+      || location.hostname === '127.0.0.1'
+      || /^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[01])\./.test(location.hostname));
 
-// Signaling server URL (self-hosted WS — no external relay dependencies)
-const _signalingBase = typeof location !== 'undefined'
-  ? `ws://${location.hostname}:7070/ws`
-  : 'ws://localhost:7070/ws';
+const ICE_SERVERS = _isLocal
+  // Self-hosted coturn (cd coturn && docker-compose up -d)
+  ? [
+      { urls: 'stun:localhost:3478' },
+      { urls: 'turn:localhost:3478', username: 'turnuser', credential: 'turnpassword123' },
+    ]
+  // Remote / HTTPS: public STUN (coturn not reachable from outside without port-forward)
+  : [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun.cloudflare.com:3478' },
+    ];
+
+// Local: self-hosted WS;  Remote: Nostr (already works over WSS)
+const _signalingType = _isLocal ? 'websocket' : 'nostr';
+const _signalingBase = _isLocal
+  ? `ws://${typeof location !== 'undefined' ? location.hostname : 'localhost'}:7070/ws`
+  : null;
 
 // Message types handled entirely inside the SDK layer
 // For these types, we do NOT re-route to window.handleMessage to avoid double-processing.
@@ -110,8 +125,9 @@ class OurBackyardMesh {
     this._node = new P2PNode({
       peerId:        this.peerId,
       h3Cell:        this.h3Cell,
-      signalingType: 'websocket',
-      signalingUrl:  `${_signalingBase}/${this.h3Cell}`,
+      signalingType: _signalingType,
+      signalingUrl:  _signalingType === 'websocket' ? `${_signalingBase}/${this.h3Cell}` : undefined,
+      relays:        _signalingType === 'nostr' ? null : undefined,  // null = NostrSignaling defaults
       iceServers:    ICE_SERVERS,
       storage,
     });
