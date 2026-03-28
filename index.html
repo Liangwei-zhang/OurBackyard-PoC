@@ -454,9 +454,11 @@
         <script>
             // ============ Build Config ============
             const DEBUG = false; // Set to true to enable console logging
-            const log = (...args) => DEBUG && console.log(...args);
+            const log = (...args) => console.log('[OB]', ...args); // Always log with prefix
             const warn = (...args) => console.warn(...args); // Always show warnings
             const error = (...args) => console.error(...args);
+            // Expose log to window so all script blocks can use it
+            window.log = log;
 
             // ============ Global Error Handling ============
             window.onerror = function(msg, url, line, col, err) {
@@ -6761,7 +6763,7 @@ window.showItemDetail = async function (id) {
                             newImageHashes.push(hash);
                             if (i === 0) newImageHash = hash; // First as thumbnail
 
-                            log('[Edit] New image processed, hash:', hash);
+                            console.log('[Edit] New image processed, hash:', hash);
 
                             // Broadcast new image to neighbors!
                             if (P2PStreamer && P2PStreamer.getPeers().length > 0) {
@@ -6784,7 +6786,7 @@ window.showItemDetail = async function (id) {
                     updatedAt: Date.now()
                 };
                 await db.items.put(updatedItem);
-                log('[Edit] Item updated:', id);
+                console.log('[Edit] Item updated:', id);
                 // Broadcast to neighbors
                 broadcastItemUpdate(updatedItem);
                 closeEditModal();
@@ -6796,18 +6798,18 @@ window.showItemDetail = async function (id) {
                 try {
                     // Get pending items from sync table
                     const pendingItems = await db.sync.where("type").equals("pending-publish").toArray();
-                    log("[Sync] Found pending items:", pendingItems.length);
+                    console.log("[Sync] Found pending items:", pendingItems.length);
 
                     for (const record of pendingItems) {
                         try {
                             await broadcastNewItem(record.data);
                             await db.sync.delete(record.id);
-                            log("[Sync] Published and removed:", record.id);
+                            console.log("[Sync] Published and removed:", record.id);
                         } catch (err) {
                             console.error("[Sync] Failed to publish item:", err);
                         }
                     }
-                    log("[Sync] Offline items published.");
+                    console.log("[Sync] Offline items published.");
                 } catch (err) {
                     console.error("[Sync] Failed to publish pending items:", err);
                 }
@@ -6852,8 +6854,8 @@ window.showItemDetail = async function (id) {
 
             // Expose key functions on window so OurBackyardMesh bridge and external
             // modules can call them. Assigned here (after all function declarations).
-            window.handleMessage = handleMessage;
-            window.connectToPeer = connectToPeer;
+            if (typeof handleMessage === 'function') window.handleMessage = handleMessage;
+            if (typeof connectToPeer === 'function') window.connectToPeer = connectToPeer;
 
 (async function OurBackyardBoot() {
 
