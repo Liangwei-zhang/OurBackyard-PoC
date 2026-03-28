@@ -5740,74 +5740,50 @@ window.showItemDetail = async function (id) {
                                 }
                             }
                             break;
-                        case "IMG_HEADER":
-                            log(
-                                "[WS] 📥 IMG_HEADER received:",
-                                JSON.stringify({
-                                    imageHash: msg.imageHash,
-                                    size: msg.size,
-                                    sellerId: msg.sellerId,
-                                    title: msg.title,
-                                }),
-                            );
-                            // Use hash-based content addressing!
-                            // Note: Binary chunks now come as base64 strings!
+                        case "IMG_HEADER": {
                             const himg = msg;
-                            (async () => {
-                                try {
-                                    // Find local item by matching sellerId and title
-                                    const localItems = await db.items.where("status").notEqual("gone").toArray();
-                                    const matchingItem = localItems.find(
-                                        (i) =>
-                                            i.sellerId === himg.sellerId &&
-                                            i.title === himg.title,
-                                    );
-
-                                    const targetId = matchingItem
-                                        ? matchingItem.id
-                                        : himg.itemId;
-                                    const imageHash = himg.imageHash;
-
-                                    log(
-                                        "[IMG_HEADER] Received:",
-                                        imageHash,
-                                        "for item:",
-                                        targetId,
-                                    );
-
-                                    // Register item -> hash mapping
-                                    if (targetId && imageHash) {
-                                        ImageRegistry.register(
-                                            targetId,
-                                            imageHash,
-                                        );
-
-                                        // Store in items table for persistence
-                                        await db.items.update(targetId, {
-                                            imageHash: imageHash,
-                                        });
+                            const _imgH = himg.imageHash;
+                            log("[IMG_HEADER] Received hash:", _imgH, "size:", himg.size);
+                            // Set up incomingImages SYNCHRONOUSLY before any await so IMG_CHUNK
+                            // messages that arrive in the same tick find the correct expectedSize.
+                            // Race: IMG_HEADER async IIFE used to yield on db.items query, causing
+                            // all IMG_CHUNKs to arrive with expectedSize=999999999 and never assemble.
+                            if (_imgH) {
+                                if (incomingImages[_imgH]) {
+                                    // IMG_CHUNK already started (race) — only fix expectedSize
+                                    if (incomingImages[_imgH].expectedSize >= 999999999) {
+                                        incomingImages[_imgH].expectedSize = himg.size;
                                     }
-
-                                    // Initialize incoming image storage by HASH (not itemId)
-                                    window._currentImageReceive = {
-                                        itemId: targetId,
-                                        imageHash: imageHash,
-                                        expectedSize: himg.size,
-                                        mimeType: himg.mimeType || "image/jpeg",
-                                    };
-                                    incomingImages[imageHash] = {
-                                        // Key by hash!
-                                        itemId: targetId,
+                                    incomingImages[_imgH].mimeType = himg.mimeType || 'image/jpeg';
+                                } else {
+                                    incomingImages[_imgH] = {
                                         expectedSize: himg.size,
                                         chunks: [],
                                         received: 0,
-                                        mimeType: himg.mimeType || "image/jpeg",
+                                        mimeType: himg.mimeType || 'image/jpeg',
+                                        lastUpdate: Date.now(),
                                     };
-                                } catch (err) {
-                                    console.error("[IMG_HEADER] error:", err);
                                 }
+                            }
+                            // Async: DB item association (non-critical, runs in background)
+                            if (_imgH) (async () => {
+                                try {
+                                    let targetId = himg.itemId || null;
+                                    if (!targetId && himg.sellerId && himg.title) {
+                                        const localItems = await db.items.where('status').notEqual('gone').toArray();
+                                        const matchingItem = localItems.find(
+                                            i => i.sellerId === himg.sellerId && i.title === himg.title
+                                        );
+                                        targetId = matchingItem ? matchingItem.id : null;
+                                    }
+                                    if (targetId) {
+                                        ImageRegistry.register(targetId, _imgH);
+                                        await db.items.update(targetId, { imageHash: _imgH });
+                                    }
+                                } catch (_e) { console.warn('[IMG_HEADER async]', _e); }
                             })();
                             break;
+                        }
                         case "IMG_CHUNK":
                             // msg already parsed above �?use directly, no second JSON.parse
                             try {
@@ -5927,38 +5903,43 @@ window.showItemDetail = async function (id) {
                                 console.error("[IMG_CHUNK] decode error:", err);
                             }
                             break;
-                        case "IMG_END":
-                            // Assemble and save binary image BY HASH
-                            const endMsg = msg;
-                            // Find the hash that matches this item
-                            (async () => {
+                        case "IMG_END": {
+                            // Assemble directly by imageHash (works for SDK-bridge path which
+                            // doesn't include sellerId/title in the message).
+                            const _endHash = msg.imageHash;
+                            const _endImgData = _endHash ? incomingImages[_endHash] : null;
+                            if (_endImgData && !_endImgData.isAssembling) {
+                                _endImgData.isAssembling = true;
                                 try {
-                                    const localItems = await db.items.where("status").notEqual("gone").toArray();
-                                    const matchingItem = localItems.find(
-                                        (i) =>
-                                            i.sellerId === endMsg.sellerId &&
-                                            i.title === endMsg.title,
-                                    );
-                                    if (
-                                        matchingItem &&
-                                        matchingItem.imageHash
-                                    ) {
-                                        if (
-                                            incomingImages[
-                                                matchingItem.imageHash
-                                            ]
-                                        ) {
-                                            await assembleAndSaveImage(
-                                                matchingItem.imageHash,
-                                                matchingItem.id,
-                                            );
-                                        }
-                                    }
-                                } catch (err) {
-                                    console.error("[IMG_END] error:", err);
+                                    const _endBlob = new Blob(_endImgData.chunks, { type: _endImgData.mimeType || 'image/jpeg' });
+                                    await saveBlobWithQuotaCheck(_endHash, _endBlob);
+                                    onImageDownloadComplete(_endHash);
+                                    notifyImageReady(_endHash);
+                                    debouncedLoadItems();
+                                    log('[IMG_END] Assembled and saved:', _endHash, 'size:', _endBlob.size);
+                                } catch (_e) {
+                                    console.error('[IMG_END] Save error:', _e);
+                                    _endImgData.isAssembling = false;
+                                    onImageDownloadComplete(_endHash);
                                 }
-                            })();
+                                delete incomingImages[_endHash];
+                            } else if (!_endHash || !_endImgData) {
+                                // Fallback: legacy path with sellerId+title lookup
+                                const _endMsg = msg;
+                                (async () => {
+                                    try {
+                                        const _localItems = await db.items.where('status').notEqual('gone').toArray();
+                                        const _match = _localItems.find(
+                                            i => i.sellerId === _endMsg.sellerId && i.title === _endMsg.title
+                                        );
+                                        if (_match && _match.imageHash && incomingImages[_match.imageHash]) {
+                                            await assembleAndSaveImage(_match.imageHash, _match.id);
+                                        }
+                                    } catch (_e) { console.error('[IMG_END legacy] error:', _e); }
+                                })();
+                            }
                             break;
+                        }
                         case "REQ_IMAGE":
                             // On-Demand Pull: Neighbor is requesting an image we might have
                             log(
@@ -6177,9 +6158,12 @@ window.showItemDetail = async function (id) {
                     // Use Sync Controller to avoid duplicates, get local ID back
                     const localId = await SyncController.syncItem(item);
                     if (localId) {
-                        // Map original itemId to local id for image association
-                        if (item.id && item.id !== localId) {
-                            window._itemIdMapping = window._itemIdMapping || {};
+                    // Also write to SDK Storage so MerkleSync can propagate this item
+                    // to peers that connect later (forward-sync / gossip relay).
+                    if (window.mesh && window.mesh._storage && item.id) {
+                        window.mesh._storage.put(`item:${item.id}`, item).catch(() => {});
+                    }
+
                             window._itemIdMapping[item.id] = localId;
                         }
 
@@ -7067,6 +7051,28 @@ window.showItemDetail = async function (id) {
   window.broadcastItemViaP2P   = item     => mesh.broadcastItem(item);
   window.broadcastItemUpdate   = (id, st) => mesh.broadcastItemUpdate(id, st);
   window.openChatWithSeller    = (itemId, sellerId, name) => ChatUI.openWithSeller(itemId, sellerId, name);
+
+  // ── Dexie → SDK Storage 启动回填 ─────────────────────────────────────
+  // MerkleSync 只能同步 SDK Storage 中的数据。历史商品只在 Dexie 中，
+  // 需要在启动时安静地写入 SDK Storage，让 MerkleSync 能看到全部商品。
+  try {
+    const _backfillItems = await window.db.items.where('status').notEqual('gone').toArray();
+    const _sdkStorage = mesh._storage;
+    if (_sdkStorage && _backfillItems.length > 0) {
+      let _backfilled = 0;
+      for (const _item of _backfillItems) {
+        const _key = `item:${_item.id}`;
+        const _existing = await _sdkStorage.get(_key);
+        if (!_existing) {
+          await _sdkStorage.put(_key, _item);
+          _backfilled++;
+        }
+      }
+      console.log(`[Boot] SDK Storage backfill: ${_backfilled}/${_backfillItems.length} items added (MerkleSync will now see all items)`);
+    }
+  } catch (_err) {
+    console.warn('[Boot] SDK Storage backfill failed (non-fatal):', _err);
+  }
 
   // ── 4. Web of Trust ────────────────────────────────────────────────────
   if (window.WebOfTrust) {
