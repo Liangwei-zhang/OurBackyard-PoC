@@ -3324,15 +3324,7 @@ self.onmessage = async function(e) {
                         requesterId: peerId,
                     });
                 }
-
-                // Also send via WebSocket for broader reach (use queue if not connected)
-                const msg = {
-                    type: "REQ_IMAGE",
-                    imageHash: imageHash,
-                    requesterId: peerId,
-                    sellerId: sellerId,
-                };
-                sendWsMessage(msg);
+                // Server no longer relays images — all image transfer is P2P only.
             }
 
             // Handle incoming image request from neighbor
@@ -3361,54 +3353,22 @@ self.onmessage = async function(e) {
                     return;
                 }
 
-                // 2. SDK bridge DataChannel: send as base64 JSON (binary chunks are
-                //    silently dropped by the SDK router which JSON.parse's everything).
-                const sdkDC = (window.dataChannels || {})[requesterId];
-                if (sdkDC && sdkDC.readyState === 'open') {
-                    log("[P2P] Serving image via SDK bridge (base64) to:", requesterId);
+                // 2. SDK BlobTransfer (binary ArrayBuffer — zero base64 inflation)
+                if (window.mesh?.sendBlob) {
+                    log("[P2P] Serving image via SDK BlobTransfer to:", requesterId);
                     try {
                         const buffer = await blob.arrayBuffer();
-                        const CHUNK_SIZE = 16384;
-                        // Send header
-                        sdkDC.send(JSON.stringify({
-                            type: "IMG_HEADER",
-                            imageHash,
-                            size: buffer.byteLength,
-                            mimeType: "image/jpeg",
-                            encoding: "base64",
-                        }));
-                        // Send chunks as base64 JSON
-                        for (let offset = 0; offset < buffer.byteLength; offset += CHUNK_SIZE) {
-                            const chunk = new Uint8Array(buffer.slice(offset, offset + CHUNK_SIZE));
-                            // Use array join instead of string concatenation for performance
-                            const chars = new Array(chunk.length);
-                            for (let i = 0; i < chunk.length; i++) chars[i] = String.fromCharCode(chunk[i]);
-                            sdkDC.send(JSON.stringify({
-                                type: "IMG_CHUNK",
-                                imageHash,
-                                data: btoa(chars.join('')),
-                                offset,
-                            }));
-                        }
-                        sdkDC.send(JSON.stringify({
-                            type: "IMG_END",
-                            imageHash,
-                            totalSize: buffer.byteLength,
-                        }));
-                        log("[P2P] Image sent via SDK bridge:", imageHash, "size:", buffer.byteLength);
+                        const hashBuf = await crypto.subtle.digest('SHA-256', buffer);
+                        const hash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
+                        await window.mesh.sendBlob(requesterId, buffer, { mimeType: blob.type || 'image/webp', type: 'image', hash: imageHash || hash });
+                        log("[P2P] Image sent via BlobTransfer:", imageHash, "size:", buffer.byteLength);
                     } catch (err) {
-                        console.warn("[P2P] SDK bridge image send failed:", err);
+                        console.warn("[P2P] BlobTransfer image send failed:", err);
                     }
                     return;
                 }
 
-                // 3. Fall back to WebSocket relay
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    log("[P2P] Serving image via WebSocket to:", requesterId);
-                    await sendImageBinaryWS(ws, blob, null, imageHash);
-                } else {
-                    log("[P2P] No channel available for:", requesterId);
-                }
+                log("[P2P] No channel available for:", requesterId);
             }
 
             // Targeted image update - update only affected images
@@ -5023,46 +4983,9 @@ window.showItemDetail = async function (id) {
                         signedMsg = { ...message, signature: null, did: DIDService.getDID() || "anonymous" };
                     }
 
-                // Send item metadata first via WebSocket
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify(signedMsg));
-
-                    // If item has image, send as binary chunks via P2P (not base64)
-                    // Use imageHash for content-addressable storage!
-                    log(
-                        "[Broadcast] Checking imageHash:",
-                        item.imageHash,
-                    );
-                    if (item.imageHash) {
-                        const blobs = await db.blobs
-                            .where("hash")
-                            .equals(item.imageHash)
-                            .toArray();
-                        log(
-                            "[Broadcast] Found blobs:",
-                            blobs.length,
-                            "for hash:",
-                            item.imageHash,
-                        );
-                        if (blobs.length > 0) {
-                            log("[Broadcast] Sending image binary...");
-                            await sendImageBinaryWS(
-                                ws,
-                                blobs[0].blob,
-                                item.id,
-                                item.imageHash,
-                            );
-                            log("[Broadcast] Image sent!");
-                        } else {
-                            log(
-                                "[Broadcast] No blob found for hash:",
-                                item.imageHash,
-                            );
-                        }
-                    }
-                }
-
-                // P2P Mesh broadcast (GossipSub �?works without server.py)
+                // P2P Mesh broadcast (GossipSub — works without server.py)
+                // Images travel P2P via BlobTransfer; no WebSocket relay needed.
+                if (window.broadcastItemViaP2P) {�?works without server.py)
                 if (window.broadcastItemViaP2P) {
                     window.broadcastItemViaP2P(itemForBroadcast);
                     log("[P2P] Item broadcast via mesh:", item.title);

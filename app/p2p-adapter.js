@@ -20,17 +20,18 @@ import { IndexedDBStorage } from '../sdk/src/storage/indexeddb-storage.js';
 import { MemoryStorage } from '../sdk/src/storage/memory-storage.js';
 import { MarketplaceProtocol } from '../sdk/src/protocols/marketplace.js';
 
-// ── ICE servers shared by the adapter ───────────────────────────────────────
+// ── Self-hosted STUN / TURN (coturn) ─────────────────────────────────────────
+// Start coturn: cd coturn && docker-compose up -d
+// For LAN / production replace 'localhost' with your server's public IP.
 const ICE_SERVERS = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun.cloudflare.com:3478' },
-  { urls: 'stun:global.stun.twilio.com:3478' },          // Twilio free STUN
-  { urls: 'turn:openrelay.metered.ca:80',  username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-  // ── coturn: 自建 TURN（本地测试 / 生产推荐）─────────────────────────
-  // { urls: 'turn:YOUR_TURN_HOST:3478', username: 'YOUR_USER', credential: 'YOUR_PASS' },
+  { urls: 'stun:localhost:3478' },
+  { urls: 'turn:localhost:3478', username: 'turnuser', credential: 'turnpassword123' },
 ];
+
+// Signaling server URL (self-hosted WS — no external relay dependencies)
+const _signalingBase = typeof location !== 'undefined'
+  ? `ws://${location.hostname}:7070/ws`
+  : 'ws://localhost:7070/ws';
 
 // Message types handled entirely inside the SDK layer
 // For these types, we do NOT re-route to window.handleMessage to avoid double-processing.
@@ -42,9 +43,11 @@ const SDK_HANDLED_TYPES = new Set([
   'SYNC_ITEMS_REQ', 'SYNC_ITEMS_RESP',
   // Legacy aliases (kept for compatibility)
   'SYNC_STATE', 'SYNC_DIFF', 'SYNC_REQUEST', 'SYNC_RESPONSE',
-  // BlobTransfer
+  // BlobTransfer (actual types used by sdk/src/sync/blob-transfer.js)
+  'BLOB_START', 'BLOB_CHUNK', 'BLOB_END', 'BLOB_ACK', 'BLOB_ERROR',
+  // Legacy BlobTransfer aliases
   'BLOB_REQ', 'BLOB_RESP', 'BLOB_STREAM_START', 'BLOB_STREAM_END',
-  'BLOB_HEADER', 'BLOB_CHUNK', 'BLOB_ACK',
+  'BLOB_HEADER',
   // ResilienceManager
   'HEARTBEAT_PING', 'HEARTBEAT_PONG',
   // CRDT
@@ -107,8 +110,8 @@ class OurBackyardMesh {
     this._node = new P2PNode({
       peerId:        this.peerId,
       h3Cell:        this.h3Cell,
-      signalingType: 'nostr',
-      relays:        null, // use NostrSignaling defaults
+      signalingType: 'websocket',
+      signalingUrl:  `${_signalingBase}/${this.h3Cell}`,
       iceServers:    ICE_SERVERS,
       storage,
     });
@@ -196,6 +199,24 @@ class OurBackyardMesh {
       if (!payload) return;
       console.log('[SDK Mesh] item:received:', payload?.title || payload?.id, 'id:', payload?.id);
       _deduplicatedOnItem(payload);
+    });
+
+    // BlobTransfer: incoming binary blob → save to IndexedDB + dispatch p2p-image-ready
+    node.blobTransfer.on('transfer:complete', async ({ data, meta, from }) => {
+      if (meta?.type !== 'image' && !meta?.mimeType?.startsWith('image/')) return;
+      const hash = meta?.hash;
+      if (!hash) return;
+      try {
+        const blob = new Blob([data], { type: meta.mimeType || 'image/webp' });
+        if (typeof window !== 'undefined' && window.db?.blobs) {
+          await window.db.blobs.put({ hash, blob, timestamp: Date.now() });
+          window.dispatchEvent(new CustomEvent('p2p-image-ready', { detail: { imageHash: hash } }));
+        }
+        this.onBlob?.({ hash, blob, from, meta });
+        console.log('[SDK Mesh] BlobTransfer image saved hash:', hash?.slice(0, 12), 'from:', from?.slice(0, 12));
+      } catch (e) {
+        console.warn('[SDK Mesh] BlobTransfer save failed:', e?.message || e);
+      }
     });
 
     // Reconciliation fallback: always verify SDK storage vs Dexie after sync.
@@ -369,6 +390,24 @@ class OurBackyardMesh {
   }
 
   /**
+   * Send a binary blob (image / file) to a peer via BlobTransfer (zero base64 inflation).
+   * @param {string} toPeerId
+   * @param {ArrayBuffer} data
+   * @param {object} [meta] — { mimeType, type, hash }
+   * @returns {Promise<string|null>} content hash or null on failure
+   */
+  async sendBlob(toPeerId, data, meta = {}) {
+    if (!this._node?.blobTransfer) return null;
+    try {
+      await this._node.blobTransfer.send(toPeerId, data, meta, 1 /* LISTING priority */);
+      return meta.hash || null;
+    } catch (e) {
+      console.warn('[SDK Mesh] sendBlob failed:', e.message);
+      return null;
+    }
+  }
+
+  /**
    * Send a chat message directly to a peer.
    * E2E encryption is handled by the existing key-vault layer if available.
    * @param {string} toPeerId
@@ -377,6 +416,25 @@ class OurBackyardMesh {
    * @param {object} [opts] — extra options (e.g. mediaType for voice/photo)
    * @returns {Promise<void>}
    */
+  /**
+   * Send a binary blob (image / file) to a peer via BlobTransfer.
+   * Returns the SHA-256 content hash (for use as imageHash in follow-up chat messages).
+   * @param {string} toPeerId
+   * @param {ArrayBuffer} data
+   * @param {object} [meta] — { mimeType, type, hash }
+   * @returns {Promise<string|null>} hex hash or null on failure
+   */
+  async sendBlob(toPeerId, data, meta = {}) {
+    if (!this._node?.blobTransfer) return null;
+    try {
+      await this._node.blobTransfer.send(toPeerId, data, meta, 1 /* LISTING priority */);
+      return meta.hash || null;
+    } catch (e) {
+      console.warn('[SDK Mesh] sendBlob failed:', e.message);
+      return null;
+    }
+  }
+
   async sendChat(toPeerId, text, itemId, opts = {}) {
     if (!this._node) return;
     const msg = {

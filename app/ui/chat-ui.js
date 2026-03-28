@@ -36,6 +36,21 @@ const ChatUI = (() => {
       _buildDOM();
       _bindEvents();
       mesh.onChat = _onIncoming;
+      // Update chat image bubbles when a BlobTransfer image arrives
+      if (typeof window !== 'undefined') {
+        window.addEventListener('p2p-image-ready', async (e) => {
+          const hash = e.detail?.imageHash;
+          if (!hash || !_db?.blobs) return;
+          try {
+            const row = await _db.blobs.where('hash').equals(hash).first();
+            if (!row) return;
+            const url = URL.createObjectURL(row.blob);
+            document.querySelectorAll(`img.ob-media-img[data-hash="${hash}"]`).forEach(el => {
+              if (!el.src || !el.src.startsWith('blob:')) el.src = url;
+            });
+          } catch (_) {}
+        });
+      }
       console.log('[ChatUI] v5.0 ready');
     } catch(e) {
       console.error('[ChatUI] init failed:', e);
@@ -494,6 +509,19 @@ const ChatUI = (() => {
       let body = '';
       if (msg.mediaType === 'image' && msg.mediaData) {
         body = `<img src="${msg.mediaData}" class="ob-media-img" loading="lazy" alt="Photo" onclick="this.requestFullscreen?.()">`;
+      } else if (msg.mediaType === 'image' && msg.imageHash) {
+        // BlobTransfer delivery — render via IndexedDB hash (no base64 on wire)
+        const h = OBUtils.esc(msg.imageHash);
+        body = `<img class="ob-media-img" data-hash="${h}" alt="Photo"
+          style="min-height:80px;background:var(--surface2,#f5f5f5)"
+          loading="lazy" onclick="this.requestFullscreen?.()">`;
+        if (_db?.blobs) {
+          _db.blobs.where('hash').equals(msg.imageHash).first().then(row => {
+            if (!row) return;
+            const el = document.querySelector(`img.ob-media-img[data-hash="${h}"]`);
+            if (el && !el.src.startsWith('blob:')) el.src = URL.createObjectURL(row.blob);
+          }).catch(() => {});
+        }
       } else if (msg.mediaType === 'audio' && msg.mediaData) {
         body = `<audio controls src="${msg.mediaData}" class="ob-media-audio" preload="metadata"></audio>`;
       } else {
@@ -551,10 +579,38 @@ const ChatUI = (() => {
       if (file.size > 8 * 1024 * 1024) { OBUtils.notify('Image too large (max 8MB)', 'error'); return; }
 
       OBUtils.haptic('light');
-      const dataUrl = await OBUtils.compressImage(file, { maxDim: 900, quality: 0.78, maxSizeKB: 280 });
-      const opt = _optimistic({ mediaType: 'image', mediaData: dataUrl, text: '[photo]', status: 'sending' });
+
+      // Compress to Blob (WebP binary — no base64 inflation on the wire)
+      const blob = OBUtils.compressToBlob
+        ? await OBUtils.compressToBlob(file, { maxDim: 900, quality: 0.78 })
+        : await (async () => {
+            const dataUrl = await OBUtils.compressImage(file, { maxDim: 900, quality: 0.78, maxSizeKB: 280 });
+            const res = await fetch(dataUrl); return res.blob();
+          })();
+
+      const ab = await blob.arrayBuffer();
+
+      // SHA-256 content hash (browser WebCrypto — no library needed)
+      const hashBuf = await crypto.subtle.digest('SHA-256', ab);
+      const hash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+      // Persist locally (sender always has it)
+      if (_db?.blobs) {
+        await _db.blobs.put({ hash, blob, timestamp: Date.now() });
+      }
+
+      // Optimistic bubble: object URL (no base64 dataUrl in memory)
+      const localUrl = URL.createObjectURL(blob);
+      const opt = _optimistic({ mediaType: 'image', mediaData: localUrl, imageHash: hash, text: '[photo]', status: 'sending' });
       _appendBubble(opt);
-      _mesh.sendChat(_currentChat.peerId, '[photo]', _currentChat.itemId || null, { mediaType: 'image', mediaData: dataUrl })
+
+      // Send binary via BlobTransfer (P2P DataChannel — zero wire inflation)
+      if (_mesh.sendBlob) {
+        _mesh.sendBlob(_currentChat.peerId, ab, { mimeType: 'image/webp', type: 'image', hash }).catch(() => {});
+      }
+
+      // Notify peer with imageHash only — no base64 on the wire
+      _mesh.sendChat(_currentChat.peerId, '[photo]', _currentChat.itemId || null, { mediaType: 'image', imageHash: hash })
         .then(() => _updateStatus(opt.id, '✓'))
         .catch(e => { console.warn('[ChatUI]', e.message); _updateStatus(opt.id, '✓'); });
     } catch(e) { OBUtils.notify('Could not send image', 'error'); console.error('[ChatUI] image error:', e); }
