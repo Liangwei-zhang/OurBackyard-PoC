@@ -344,8 +344,25 @@ export class P2PNode extends EventBus {
     const MAX_SEEN_PEERS = 5000; // cap to prevent unbounded growth in long-running nodes
     /** @type {Set<string>} peers that already have a pending relay-sync timer */
     const _pendingRelaySync = new Set();
+    /**
+     * Root Cause 3: relay-backed sync failure backoff.
+     * If relay-sync fails (no answer, peer unreachable — e.g. stale peerId from cache-clear),
+     * increment fail count. After MAX failures, stop retrying that peer entirely.
+     */
+    const _relaySyncFailures = new Map(); // peerId → failCount
+    const MAX_RELAY_SYNC_FAILURES = 2;
     this.signaling.on('peer:announce', (peerId, meta) => {
       if (peerId === cfg.peerId) return;
+
+      // Root Cause 3A: ignore announces older than 5 minutes.
+      // After a cache-clear the old peerId's KIND_ANNOUNCE remains stored on relays and is
+      // returned on every EOSE.  Its timestamp reveals the staleness.
+      const announceAge = Date.now() - (meta?.ts || 0);
+      if (announceAge > 5 * 60 * 1000) {
+        console.log('[SDK] Ignoring stale announce from', peerId?.slice(0, 12), 'age:', Math.round(announceAge / 1000), 's');
+        return;
+      }
+
       const h3Cell = meta?.h3Cell;
       if (h3Cell) this.cellShard.addPeer(peerId, h3Cell);
 
@@ -363,16 +380,24 @@ export class P2PNode extends EventBus {
         // multiple announces (even after NostrSignaling dedup) can still fire within
         // one session if DC opens-and-closes, or on the next 60-second heartbeat.
         if (this._state === 'running' && this.gossipSync && !_pendingRelaySync.has(peerId)) {
-          _pendingRelaySync.add(peerId);
-          const t = setTimeout(() => {
-            _pendingRelaySync.delete(peerId);
-            const dc = this.transport.getDataChannel?.(peerId);
-            if (!dc) {
-              console.log('[SDK] peer:announce: no DC after 3 s, relay-sync for', peerId?.slice(0, 12));
-              this.gossipSync.syncWithPeer(peerId).catch(() => {});
-            }
-          }, 3000);
-          if (typeof t?.unref === 'function') t.unref(); // don't block Node.js exit in tests
+          // Root Cause 3B: skip peers that have already failed MAX times (stale / unreachable).
+          const failures = _relaySyncFailures.get(peerId) || 0;
+          if (failures >= MAX_RELAY_SYNC_FAILURES) {
+            console.log('[SDK] Skipping relay-sync for', peerId?.slice(0, 12), '— failed', failures, 'times (unreachable)');
+          } else {
+            _pendingRelaySync.add(peerId);
+            const t = setTimeout(() => {
+              _pendingRelaySync.delete(peerId);
+              const dc = this.transport.getDataChannel?.(peerId);
+              if (!dc) {
+                console.log('[SDK] peer:announce: no DC after 3 s, relay-sync for', peerId?.slice(0, 12));
+                this.gossipSync.syncWithPeer(peerId)
+                  .then(() => _relaySyncFailures.delete(peerId))
+                  .catch(() => _relaySyncFailures.set(peerId, (_relaySyncFailures.get(peerId) || 0) + 1));
+              }
+            }, 3000);
+            if (typeof t?.unref === 'function') t.unref(); // don't block Node.js exit in tests
+          }
         }
       }
 

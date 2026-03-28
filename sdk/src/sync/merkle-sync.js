@@ -38,6 +38,16 @@ export class MerkleSync extends EventBus {
     /** @type {Map<string, object>} - sessionId -> pending sync state */
     this._sessions = new Map();
 
+    /**
+     * Dedup incoming SYNC_REQs from the same peer with the same remote root.
+     * Root Cause 2: both peers initiate sync simultaneously AND relay-msg may be
+     * re-delivered by multiple Nostr relays even when sent via _publishToOne
+     * (relay fan-out or relay re-connection re-deliver buffered events).
+     * Key: `${from}:${remoteRoot}`, value: timestamp of last reply.
+     * Suppress duplicate replies within a 5-second window.
+     */
+    this._recentSyncReqReplies = new Map();
+
     router.handle('SYNC_REQ', (from, msg) => this._onSyncReq(from, msg));
     router.handle('SYNC_RESP', (from, msg) => this._onSyncResp(from, msg));
     router.handle('SYNC_TREE_REQ', (from, msg) => this._onSyncTreeReq(from, msg));
@@ -176,6 +186,21 @@ export class MerkleSync extends EventBus {
   /** @private */
   async _onSyncReq(from, msg) {
     const { sessionId, root: remoteRoot, leafCount: remoteLeafCount, since = 0 } = msg;
+
+    // Dedup: if we already replied to this exact (peer, remoteRoot) within 5 s, skip.
+    // Prevents redundant SYNC_RESP bursts when relay re-delivers buffered relay-msgs.
+    const dedupeKey = `${from}:${remoteRoot}`;
+    const now = Date.now();
+    const lastReply = this._recentSyncReqReplies.get(dedupeKey);
+    if (lastReply && now - lastReply < 5000) return;
+    this._recentSyncReqReplies.set(dedupeKey, now);
+    // Evict stale entries
+    if (this._recentSyncReqReplies.size > 200) {
+      for (const [k, t] of this._recentSyncReqReplies) {
+        if (now - t > 10000) this._recentSyncReqReplies.delete(k);
+      }
+    }
+
     const tree = await this.buildTree(since);
     console.log('[SDK] _onSyncReq from', from, '— remote root:', remoteRoot?.slice(0,8), 'local root:', tree.root?.slice(0,8), 'leaves:', tree.leafCount);
 
