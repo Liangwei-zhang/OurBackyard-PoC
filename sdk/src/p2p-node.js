@@ -130,11 +130,12 @@ export class P2PNode extends EventBus {
     if (this._state !== 'ready') throw new Error(`start() called in invalid state: ${this._state}`);
     this._state = 'running';
 
-    // Connect signaling
-    await this.signaling.connect();
-    await this.signaling.announce({ h3Cell: this._config.h3Cell });
-
-    // Wire send function through transport
+    // Wire send function FIRST, before any awaits.
+    // peer:connected can fire as soon as signaling.connect() yields to the event loop
+    // (e.g. a cached Nostr announcement or a BroadcastChannel LAN peer triggers
+    // transport.connect immediately).  If _sendFn is not set by then, the initial
+    // MerkleSync SYNC_REQ is emitted to nobody and the 30-second session times out
+    // before any items are exchanged — this is the primary cause of "商品无法同步".
     const sendFn = (peerId, msg) => {
       const data = JSON.stringify(msg);
       this.transport.send(peerId, data);
@@ -145,8 +146,12 @@ export class P2PNode extends EventBus {
     // Start resilience monitoring
     this.resilience.startMonitoring();
 
-    // Start gossip sync
+    // Start gossip sync (30-second periodic fallback in case the immediate sync fails)
     this.gossipSync.startSync(() => this.cellShard.getNearbyPeers().map(p => p.peerId));
+
+    // Connect signaling (NOW we can yield to event loop — sendFn is already wired)
+    await this.signaling.connect();
+    await this.signaling.announce({ h3Cell: this._config.h3Cell });
   }
 
   /**
@@ -291,7 +296,10 @@ export class P2PNode extends EventBus {
       this.resilience.trackPeer(peerId);
       this.emit('peer:joined', { peerId });
       // Trigger immediate Merkle sync instead of waiting up to 30s for periodic timer
-      this.gossipSync.syncWithPeer(peerId).catch(() => {});
+      console.log('[SDK] peer:connected', peerId, '— starting MerkleSync');
+      this.gossipSync.syncWithPeer(peerId)
+        .then(r  => console.log('[SDK] MerkleSync with', peerId, 'done:', r))
+        .catch(e => console.warn('[SDK] MerkleSync with', peerId, 'failed:', e?.message));
     });
 
     // Transport peer disconnected

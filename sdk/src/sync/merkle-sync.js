@@ -102,6 +102,7 @@ export class MerkleSync extends EventBus {
     this.emit('sync:started', { sessionId, peerId });
 
     const tree = await this.buildTree(since);
+    console.log('[SDK] MerkleSync starting with', peerId, '— local tree:', tree.leafCount, 'leaves, root:', tree.root?.slice(0,8));
     const session = { sessionId, peerId, since, tree, resolve: null, reject: null };
 
     const promise = new Promise((resolve, reject) => {
@@ -168,6 +169,7 @@ export class MerkleSync extends EventBus {
   async _onSyncReq(from, msg) {
     const { sessionId, root: remoteRoot, leafCount: remoteLeafCount, since = 0 } = msg;
     const tree = await this.buildTree(since);
+    console.log('[SDK] _onSyncReq from', from, '— remote root:', remoteRoot?.slice(0,8), 'local root:', tree.root?.slice(0,8), 'leaves:', tree.leafCount);
 
     if (tree.root === remoteRoot) {
       // In sync
@@ -222,6 +224,8 @@ export class MerkleSync extends EventBus {
         missingKeys.push(key);
       }
     }
+
+    console.log('[SDK] _onSyncResp from', from, '— remote leaves:', remoteLeaves.length, 'missing/diff keys:', missingKeys.length, missingKeys.slice(0,5));
 
     if (missingKeys.length === 0) {
       this._completeSession(session, { synced: true, itemsSynced: 0 });
@@ -298,6 +302,7 @@ export class MerkleSync extends EventBus {
     }
 
     // Notify upper layers so the app UI (Dexie) can be updated
+    console.log('[SDK] _onSyncItemsResp from', from, '— received', items.length, 'items, synced', synced, 'new');
     if (newItems.length > 0) {
       this.emit('items:synced', { from, items: newItems });
     }

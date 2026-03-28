@@ -1,7 +1,7 @@
-// OurBackyard Service Worker v44
+// OurBackyard Service Worker v45
 // 策略：App Shell 预缓存 + 动态资源 network-first + IndexedDB 数据离线可用
 
-const APP_SHELL_VERSION = 'v44';
+const APP_SHELL_VERSION = 'v48';
 const CACHE_SHELL  = 'ob-shell-'  + APP_SHELL_VERSION;
 const CACHE_ASSETS = 'ob-assets-' + APP_SHELL_VERSION;
 
@@ -146,7 +146,14 @@ self.addEventListener('fetch', event => {
 
 // ── Background Sync：发布商品离线队列 ────────────────────────────────────────
 self.addEventListener('sync', event => {
-  if (event.tag === 'sync-items') {
+  if (event.tag === 'sync-publish') {
+    // Trigger pending-publish retry in all open clients
+    event.waitUntil(
+      self.clients.matchAll().then(clients => {
+        clients.forEach(c => c.postMessage({ type: 'SYNC_PUBLISH' }));
+      })
+    );
+  } else if (event.tag === 'sync-items') {
     event.waitUntil(
       self.clients.matchAll().then(clients => {
         clients.forEach(c => c.postMessage({ type: 'BG_SYNC_ITEMS' }));

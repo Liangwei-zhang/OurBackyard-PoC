@@ -58,13 +58,17 @@ export class GossipSync extends EventBus {
     // NOTE: MarketplaceProtocol stores under 'listing:' / 'offer:' / 'review:' keys,
     //       not 'item:' — we must forward all content-bearing keys, not just 'item:'.
     this._merkle.on('items:synced', ({ from, items }) => {
+      console.log('[SDK] MerkleSync items:synced from', from, '— received', items.length, 'items');
       for (const { key, value } of items) {
         const isContent = key.startsWith('item:') ||
                           key.startsWith('listing:') ||
                           key.startsWith('offer:') ||
                           key.startsWith('review:');
         if (isContent && value && value.id) {
+          console.log('[SDK] Forwarding synced item to UI:', key, value?.title || value?.id);
           this.emit('item:received', { topic: 'item', payload: value, from, msgId: null });
+        } else {
+          console.log('[SDK] Skipping non-content key or item without id:', key, 'value.id:', value?.id);
         }
       }
     });
@@ -101,6 +105,7 @@ export class GossipSync extends EventBus {
   async publishItem(item) {
     if (!item || !item.id) throw new TypeError('item must have an id');
     await this._storage.put(`item:${item.id}`, item);
+    console.log('[SDK] publishItem stored item:', item.id, item.title || '');
     return this._plumtree.publish('item', item);
   }
 

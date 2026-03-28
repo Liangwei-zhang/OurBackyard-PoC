@@ -6,7 +6,7 @@
 
 ## 已完成
 - ✅ `@ourbackyard/p2p-sdk` 6层架构已合入 master（PR #1, #7, #8）
-- ✅ 325 单元测试通过（`node --test sdk/tests/*.test.js`）
+- ✅ 536 单元测试通过（`node --test sdk/tests/*.test.js`）
 - ✅ 废弃分支已全部清理，仅保留 master
 - ✅ server.py SDK 信令协议 + CHAT bug 修复
 
@@ -26,7 +26,7 @@ sdk/src/
 
 ## 待办
 - [x] 添加 CI/CD（GitHub Actions `.github/workflows/ci.yml`）
-- [x] 集成测试（22 项端到端测试，`sdk/tests/integration.test.js`）
+- [x] 集成测试（32 项端到端测试，`sdk/tests/integration.test.js`）
 - [x] 用 SDK 重构 index.html — P2P 层（`src/p2p-adapter.js` → `js/ob-sdk.js` IIFE 包，替换 native/communication/* 脚本）
 - [x] IndexedDB 持久化存储实现（`sdk/src/storage/indexeddb-storage.js`，21 单元测试，p2p-adapter.js 已接入）
 - [x] TypeScript 类型声明（36 个 `.d.ts` 模块 + `sdk/index.d.ts` barrel，`package.json` 已添加 `types` 字段）

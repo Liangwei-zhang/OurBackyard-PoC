@@ -354,7 +354,7 @@ describe('NostrSignaling — sendSignal()', () => {
     assert.equal(targetTag[1], 'peer_target99');
   });
 
-  it('signal is published to only one relay (not all)', async () => {
+  it('signal is published to all connected relays (not just one)', async () => {
     const s = makeSignaling();
     await s.connect();
     // Drain pending async announces before clearing, same reason as test above.
@@ -364,11 +364,13 @@ describe('NostrSignaling — sendSignal()', () => {
     await s.sendSignal('peer_other1', { type: 'ice-candidate', candidate: {} });
     await tick(30);
 
-    // _publishToOne sends to exactly 1 relay
+    // _publish sends to ALL connected relays for reliability
+    // (avoids write-restricted relays like nostr.wine silently dropping signals)
+    const connectedCount = MockWebSocket._instances.filter(ws => ws.readyState === 1).length;
     const totalEvents = MockWebSocket._instances
       .flatMap(ws => ws.sent.map(m => JSON.parse(m)))
       .filter(m => m[0] === 'EVENT');
-    assert.equal(totalEvents.length, 1, 'Signal must go to exactly one relay');
+    assert.ok(totalEvents.length >= connectedCount, `Signal must go to all ${connectedCount} connected relays, got ${totalEvents.length}`);
   });
 });
 

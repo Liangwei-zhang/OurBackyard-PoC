@@ -32,8 +32,8 @@ const ICE_SERVERS = [
 // Message types handled entirely inside the SDK layer
 // For these types, we do NOT re-route to window.handleMessage to avoid double-processing.
 const SDK_HANDLED_TYPES = new Set([
-  // PlumtreeGossip
-  'GOSSIP_PUSH', 'GOSSIP_IHAVE', 'GOSSIP_GRAFT', 'GOSSIP_PRUNE',
+  // PlumtreeGossip — actual type strings from sdk/src/sync/plumtree-gossip.js
+  'GOSSIP_MSG', 'IHAVE', 'IWANT', 'GRAFT', 'PRUNE',
   // MerkleSync — actual type strings used in sdk/src/sync/merkle-sync.js
   'SYNC_REQ', 'SYNC_RESP', 'SYNC_TREE_REQ', 'SYNC_TREE_RESP',
   'SYNC_ITEMS_REQ', 'SYNC_ITEMS_RESP',
@@ -155,6 +155,7 @@ class OurBackyardMesh {
     // Item received via GossipSync (plumtree broadcast)
     node.gossipSync.on('item:received', ({ payload }) => {
       if (!payload) return;
+      console.log('[SDK Mesh] item:received:', payload?.title || payload?.id, 'id:', payload?.id);
       // options.onItem may be patched by LocalAI
       if (this.options?.onItem) {
         this.options.onItem(payload);
@@ -291,7 +292,8 @@ class OurBackyardMesh {
     );
     // Also broadcast as LISTING_NEW so MarketplaceProtocol handler on remote peers
     // persists the listing under listing: key in their storage.
-    this._node.broadcastMessage('LISTING_NEW', { listing: item }).catch?.(() => {});
+    // broadcastMessage is synchronous/void — do NOT call .catch on its return value.
+    try { this._node.broadcastMessage('LISTING_NEW', { listing: item }); } catch (_) {}
   }
 
   /**

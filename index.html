@@ -816,14 +816,19 @@ self.onmessage = async function(e) {
                     try {
                         const msg = JSON.parse(data);
                         if (msg.type === "IMG_HEADER") {
-                            this.incomingTransfers.set(msg.itemId, {
-                                itemId: msg.itemId,
-                                imageHash: msg.imageHash, // Track hash for content-addressable storage!
-                                total: msg.size,
-                                received: 0,
-                                chunks: [],
-                            });
-                            log("[P2P] Receiving image:", msg.itemId, "hash:", msg.imageHash);
+                            // Key by imageHash (content-addressable) — msg.itemId may be undefined
+                            // when sent via sendImageToPeer which only sets imageHash.
+                            const headerKey = msg.imageHash || msg.itemId;
+                            if (headerKey) {
+                                this.incomingTransfers.set(headerKey, {
+                                    itemId: msg.itemId,
+                                    imageHash: msg.imageHash,
+                                    total: msg.size,
+                                    received: 0,
+                                    chunks: [],
+                                });
+                                log("[P2P] Receiving image hash:", msg.imageHash, "size:", msg.size);
+                            }
                         }
                         // Handle REQ_IMAGE - "Selfless Neighbor" fix!
                         // Any peer with cached image should serve it, not just the original seller
@@ -843,9 +848,11 @@ self.onmessage = async function(e) {
 
                 async handleBinaryChunk(peerId, data) {
                     let transfer = null;
-                    for (const [id, t] of this.incomingTransfers) {
+                    let transferKey = null;
+                    for (const [key, t] of this.incomingTransfers) {
                         if (t.received < t.total) {
                             transfer = t;
+                            transferKey = key;
                             break;
                         }
                     }
@@ -860,15 +867,16 @@ self.onmessage = async function(e) {
                         const blob = new Blob(transfer.chunks, {
                             type: "image/jpeg",
                         });
-                        // Store by IMAGE HASH (content-addressable), not itemId!
-                        const hash = transfer.imageHash || transfer.itemId;
+                        // Store by IMAGE HASH (content-addressable)
+                        const hash = transfer.imageHash || transfer.itemId || transferKey;
                         await db.blobs.put({
-                            hash: hash, // Content-addressable key!
+                            hash: hash,
                             blob: blob,
                             timestamp: Date.now(),
                         });
-                        log("[P2P] Image received, stored by hash:", hash);
-                        this.incomingTransfers.delete(transfer.itemId);
+                        log("[P2P] Image received via DC, stored hash:", hash);
+                        this.incomingTransfers.delete(transferKey);
+                        notifyImageReady(hash);
                         debouncedLoadItems();
                     }
                 },
@@ -1891,6 +1899,11 @@ self.onmessage = async function(e) {
                     chatMessages: "++id, from, to, ts, itemId, direction, read",
                     deadDrop: "++id, toPeerId, createdAt, delivered",
                 });
+                // v6: add itemId index to items table for O(1) P2P dedup
+                // itemId stores the original sender's item id so we can avoid duplicate inserts
+                db.version(6).stores({
+                    items: "++id, imageHash, title, category, price, status, sellerId, h3Index, timestamp, itemId",
+                });
                 await db.open();
                 log("IndexedDB initialized and opened");
             }
@@ -2162,8 +2175,12 @@ self.onmessage = async function(e) {
                 async isItemSynced(item) {
                     // Fast path: look up by original item ID (indexed in v6)
                     if (item.id) {
-                        const byId = await db.items.where("itemId").equals(item.id).first();
-                        if (byId) return byId.id; // Return local id
+                        try {
+                            const byId = await db.items.where("itemId").equals(item.id).first();
+                            if (byId) return byId.id; // Return local id
+                        } catch (_) {
+                            // itemId index not yet available (pre-v6) - fall through
+                        }
                     }
                     // Fallback: title + sellerId (catches pre-v6 rows)
                     const byTitle = await db.items
@@ -3306,11 +3323,27 @@ self.onmessage = async function(e) {
                     .where("hash")
                     .equals(imageHash)
                     .toArray();
-                if (blobs.length > 0) {
-                    log("[P2P] Found image, sending to:", requesterId);
-                    await sendImageBinaryWS(ws, blobs[0].blob, null, imageHash);
-                } else {
+                if (blobs.length === 0) {
                     log("[P2P] Image not found:", imageHash);
+                    return;
+                }
+                const blob = blobs[0].blob;
+
+                // Prefer DataChannel (SDK bridge) — WebSocket has no direct peer routing.
+                // window.dataChannels is populated by p2p-adapter's _bridgePeer().
+                const dcMap = window.dataChannels || {};
+                const dc = requesterId && dcMap[requesterId]
+                    ? dcMap[requesterId]
+                    : null;
+
+                if (dc && dc.readyState === 'open') {
+                    log("[P2P] Serving image via DataChannel to:", requesterId);
+                    await P2PStreamer.sendImageToPeer(requesterId, imageHash, blob);
+                } else if (ws && ws.readyState === WebSocket.OPEN) {
+                    log("[P2P] Serving image via WebSocket to:", requesterId);
+                    await sendImageBinaryWS(ws, blob, null, imageHash);
+                } else {
+                    log("[P2P] No channel available for:", requesterId);
                 }
             }
 
@@ -4808,26 +4841,20 @@ window.showItemDetail = async function (id) {
                         imageHashes: fullItem.imageHashes || [],
                     };
 
-                    // Try to broadcast immediately, queue if offline
-                    const broadcastNow = () => {
-                        broadcastNewItem(broadcastData);
-                    };
+                    // Always broadcast immediately (stores item in SDK storage for MerkleSync).
+                    // Background sync is an offline-retry mechanism only — not a replacement.
+                    broadcastNewItem(broadcastData);
 
+                    // Also register background sync so the item retries if we're briefly offline.
                     if ('serviceWorker' in navigator && 'sync' in ServiceWorkerRegistration.prototype) {
-                        // Register background sync for offline publishing
                         try {
                             const registration = await navigator.serviceWorker.ready;
                             await registration.sync.register('sync-publish');
-                            log('[BG-Sync] Registered for offline publish');
-                            // Store pending item for later sync
-                            const pending = await db.sync.add({ type: 'pending-publish', data: fullItem, timestamp: Date.now() });
+                            await db.sync.add({ type: 'pending-publish', data: fullItem, timestamp: Date.now() });
+                            log('[BG-Sync] Registered offline retry');
                         } catch (err) {
-                            log('[BG-Sync] Failed, broadcasting now:', err);
-                            broadcastNow();
+                            log('[BG-Sync] Registration failed (already broadcasting):', err);
                         }
-                    } else {
-                        // No background sync support, broadcast directly
-                        broadcastNow();
                     }
 
                     progressBar.style.width = "100%";
@@ -5573,19 +5600,12 @@ window.showItemDetail = async function (id) {
                                 }
                             }
 
-                            // Use conflict resolution to prevent duplicates
-                            if (msg.item && msg.item.id) {
-                                db.items.get(msg.item.id).then(localItem => {
-                                    const resolved = resolveConflict(localItem, msg.item);
-                                    if (resolved.updated) {
-                                        log("[Conflict] NEW_ITEM:", resolved.reason, "- updating");
-                                        saveNeighborItem(resolved.item);
-                                    } else {
-                                        log("[Conflict] NEW_ITEM:", resolved.reason, "- keeping local");
-                                    }
-                                });
-                            } else {
-                                saveNeighborItem(msg.item);
+                            // Save via SyncController which deduplicates by itemId (sender's id)
+                            // NOTE: Do NOT use db.items.get(msg.item.id) here — that would look up
+                            // by this client's Dexie auto-increment PK which has no relation to the
+                            // sender's PK, causing wrong conflict resolution / item overwrites.
+                            if (msg.item) {
+                                await saveNeighborItem(msg.item);
                             }
                             break;
                         case "CHAT":
@@ -5647,10 +5667,12 @@ window.showItemDetail = async function (id) {
                             }
 
                             if (msg.itemId) {
-                                db.items.get(msg.itemId).then(localItem => {
-                                    // Create incoming item from message
+                                // Look up by itemId (sender's original id), NOT by local PK.
+                                // db.items.get() uses the local auto-increment PK — completely
+                                // unrelated to msg.itemId which is the sender's PK.
+                                const localItem = await db.items.where("itemId").equals(msg.itemId).first();
+                                if (localItem) {
                                     const incomingItem = {
-                                        id: msg.itemId,
                                         title: msg.title,
                                         price: msg.price,
                                         description: msg.description,
@@ -5662,19 +5684,20 @@ window.showItemDetail = async function (id) {
 
                                     const resolved = resolveConflict(localItem, incomingItem);
                                     if (resolved.updated) {
+                                        // Preserve local PK (id) — never let the sender's id overwrite it
                                         const finalItem = {
-                                            ...(localItem || {}),
+                                            ...localItem,
                                             ...incomingItem,
-                                            updatedAt: Math.max(localItem?.updatedAt || 0, incomingItem.updatedAt)
+                                            id: localItem.id,
+                                            updatedAt: Math.max(localItem.updatedAt || 0, incomingItem.updatedAt)
                                         };
-                                        db.items.put(finalItem).then(() => {
-                                            log("[ITEM_UPDATE] Updated item:", msg.itemId, resolved.reason);
-                                            debouncedLoadItems();
-                                        });
+                                        await db.items.put(finalItem);
+                                        log("[ITEM_UPDATE] Updated item:", msg.itemId, resolved.reason);
+                                        debouncedLoadItems();
                                     } else {
                                         log("[ITEM_UPDATE] Ignored (older):", msg.itemId, resolved.reason);
                                     }
-                                });
+                                }
                             }
                             break;
                         case "IMG_HEADER":
@@ -7052,6 +7075,14 @@ window.showItemDetail = async function (id) {
   };
 
     console.log('[OurBackyard] All modules connected - serverless P2P');
+
+  // Flush any items that were stored as pending-publish in a previous session
+  // (they were queued for BG sync but never broadcast due to SW tag mismatch bug).
+  setTimeout(() => {
+    if (typeof window.syncPublishPendingItems === 'function') {
+      window.syncPublishPendingItems().catch(() => {});
+    }
+  }, 3000); // wait 3s for SDK node to fully connect before broadcasting
 
 })();
 

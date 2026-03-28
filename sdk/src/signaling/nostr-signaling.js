@@ -22,7 +22,8 @@ const PEER_ID_PATTERN = /^[a-zA-Z0-9_-]{1,50}$/;
 
 const DEFAULT_RELAYS = [
   'wss://relay.damus.io',
-  'wss://nostr.wine',
+  // nostr.wine removed — rejects ALL writes ("restricted: sign up"), causes noisy logs
+  // and contributes to damus rate-limit budget since we broadcast to all relays at once.
   'wss://relay.snort.social',
   'wss://nostr.oxtr.dev',
   'wss://relay.primal.net',
@@ -136,7 +137,11 @@ export class NostrSignaling extends ISignaling {
       this.emit('error', e);
       return;
     }
-    this._publishToOne(event);
+    // Broadcast to ALL relays — WebRTC signaling requires the remote peer to receive every
+    // signal (offer, answer, ICE candidates). Using _publishToOne risks picking a write-
+    // restricted relay (e.g. nostr.wine) for any individual message, which silently drops
+    // that signal and breaks the WebRTC handshake. Broadcasting is the safe choice here.
+    this._publish(event);
   }
 
   async announce(meta = {}) {
