@@ -6096,7 +6096,7 @@ window.showItemDetail = async function (id) {
                     if (window._currentImageReceive) {
                         const { imageHash, expectedSize } =
                             window._currentImageReceive;
-                        log(
+                        console.log(
                             "[Binary] Current receive:",
                             imageHash,
                             "expected:",
@@ -6113,7 +6113,7 @@ window.showItemDetail = async function (id) {
 
                         incomingImages[imageHash].chunks.push(buffer);
                         incomingImages[imageHash].received += buffer.byteLength;
-                        log(
+                        console.log(
                             "[Binary] Chunk for hash:",
                             imageHash,
                             incomingImages[imageHash].received,
@@ -6121,7 +6121,7 @@ window.showItemDetail = async function (id) {
                             expectedSize,
                         );
                     } else {
-                        log("[Binary] No _currentImageReceive set!");
+                        console.log("[Binary] No _currentImageReceive set!");
                     }
                 } catch (err) {
                     console.error("Binary message error:", err);
@@ -6141,7 +6141,7 @@ window.showItemDetail = async function (id) {
                 if (item.price !== undefined) {
                     const p = item.price;
                     if (p !== "swap" && p !== 0 && !(typeof p === "string" && /^\d+(\.\d{1,2})?$/.test(p)) && !(typeof p === "number" && isFinite(p) && p >= 0)) {
-                        log("[saveNeighborItem] Rejected item with invalid price:", p);
+                        console.warn("[saveNeighborItem] Rejected item with invalid price:", p);
                         return;
                     }
                 }
@@ -6818,7 +6818,7 @@ window.showItemDetail = async function (id) {
                 window.addEventListener('load', () => {
                     navigator.serviceWorker.register('./sw.js')
                         .then(reg => {
-                            log('[SW] Registered:', reg.scope);
+                            console.log('[SW] Registered:', reg.scope);
 
                             // Check for updates
                             reg.onupdatefound = () => {
@@ -6826,7 +6826,7 @@ window.showItemDetail = async function (id) {
                                 installingWorker.onstatechange = () => {
                                     if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                         // New version available
-                                        log('[SW] New version available');
+                                        console.log('[SW] New version available');
                                         if (typeof notify === 'function') {
                                             notify('New version available - click to refresh.', 'info');
                                         }
@@ -6834,17 +6834,17 @@ window.showItemDetail = async function (id) {
                                 };
                             };
                         })
-                        .catch(err => log('[SW] Failed:', err));
+                        .catch(err => console.error('[SW] Failed:', err));
                 });
 
                 // Listen for SW messages
                 navigator.serviceWorker.addEventListener('message', event => {
                     if (event.data.type === 'SYNC_REQUEST') {
-                        log('[SW] Received sync request, reloading items...');
+                        console.log('[SW] Received sync request, reloading items...');
                         loadItems();
                     }
                     if (event.data.type === 'SYNC_PUBLISH') {
-                        log('[SW] Received sync publish request...');
+                        console.log('[SW] Received sync publish request...');
                         syncPublishPendingItems();
                     }
                 });

@@ -1,11 +1,11 @@
 // OurBackyard Service Worker v45
-// 策略：App Shell 预缓存 + 动态资源 network-first + IndexedDB 数据离线可用
+// 策略：App Shell 预缓�?+ 动态资�?network-first + IndexedDB 数据离线可用
 
 const APP_SHELL_VERSION = 'v49';
 const CACHE_SHELL  = 'ob-shell-'  + APP_SHELL_VERSION;
 const CACHE_ASSETS = 'ob-assets-' + APP_SHELL_VERSION;
 
-// ── App Shell：安装时预缓存，确保离线可启动 ─────────────────────────────────
+// ── App Shell：安装时预缓存，确保离线可启�?─────────────────────────────────
 const APP_SHELL_FILES = [
   '/',
   '/index.html',
@@ -29,18 +29,18 @@ const APP_SHELL_FILES = [
   '/app/security/geo-consent.js',
 ];
 
-// ── 这些文件每次都走网络（动态内容 / 频繁变更）─────────────────────────────
+// ── 这些文件每次都走网络（动态内�?/ 频繁变更）─────────────────────────────
 const NEVER_CACHE = [
   '/server.log',
   '/uploads/',
 ];
 
-// ── Install：预缓存 App Shell，跳过等待 ──────────────────────────────────────
+// ── Install：预缓存 App Shell，跳过等�?──────────────────────────────────────
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_SHELL).then(cache => {
-      // addAll 会原子性失败；对每个文件单独 fetch 避免一个 404 阻断全部
+      // addAll 会原子性失败；对每个文件单�?fetch 避免一�?404 阻断全部
       return Promise.all(
         APP_SHELL_FILES.map(url =>
           fetch(url, { cache: 'no-store' })
@@ -55,7 +55,7 @@ self.addEventListener('install', event => {
   );
 });
 
-// ── Activate：清旧缓存 + 立即接管 ────────────────────────────────────────────
+// ── Activate：清旧缓�?+ 立即接管 ────────────────────────────────────────────
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(names =>
@@ -88,7 +88,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Navigate (HTML) → shell-first, then network update in background
+  // Navigate (HTML) �?shell-first, then network update in background
   if (event.request.mode === 'navigate') {
     event.respondWith(
       caches.match('/index.html', { cacheName: CACHE_SHELL })
@@ -109,7 +109,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // App Shell JS/CSS/icons → cache-first (fast), network fallback, background update
+  // App Shell JS/CSS/icons �?cache-first (fast), network fallback, background update
   const isShell = APP_SHELL_FILES.includes(url.pathname);
   if (isShell) {
     event.respondWith(
@@ -130,7 +130,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Everything else (fonts, CDN, API calls) → network-first, cache fallback
+  // Everything else (fonts, CDN, API calls) �?network-first, cache fallback
   event.respondWith(
     fetch(event.request, { cache: 'no-store' })
       .then(res => {
@@ -144,7 +144,7 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// ── Background Sync：发布商品离线队列 ────────────────────────────────────────
+// ── Background Sync：发布商品离线队�?────────────────────────────────────────
 self.addEventListener('sync', event => {
   if (event.tag === 'sync-publish') {
     // Trigger pending-publish retry in all open clients
@@ -189,3 +189,4 @@ self.addEventListener('notificationclick', event => {
       })
   );
 });
+
