@@ -5386,33 +5386,6 @@ window.showItemDetail = async function (id) {
                 } // end: if (!_isHostedDeploy)
             }
 
-            // ============ Heartbeat Functions ============
-            function startHeartbeat() {
-                if (heartbeatInterval) return;
-
-                heartbeatInterval = setInterval(() => {
-                    const heartbeatMsg = {
-                        type: "HEARTBEAT",
-                        peerId,
-                        timestamp: Date.now(),
-                    };
-
-                    // Send via P2P
-                    for (const [_, dc] of Object.entries(dataChannels)) {
-                        if (dc.readyState === "open")
-                            dc.send(JSON.stringify(heartbeatMsg));
-                    }
-
-                    // Send via WS
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify(heartbeatMsg));
-                    }
-
-                    log("Heartbeat sent");
-                }, HEARTBEAT_INTERVAL);
-            }
-
-
             // Send a message to a specific peer: prefer open DataChannel, fallback to WebSocket
             function sendToPeer(targetPeerId, msg) {
                 const json = JSON.stringify(msg);
@@ -6183,7 +6156,6 @@ window.showItemDetail = async function (id) {
                         }
 
                         loadItems();
-                    }
                 }).catch(err => {
                     console.warn('[saveNeighborItem] error:', err);
                 });
