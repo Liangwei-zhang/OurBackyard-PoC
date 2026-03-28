@@ -57,7 +57,7 @@ export class MarketplaceProtocol {
       h3Cell:     this._node._config.h3Cell,
     };
 
-    if (this._storage) await this._storage.put(`listing:${item.id}`, item);
+    if (this._storage) await this._storage.put(`item:${item.id}`, item);
 
     // Gossip to network
     if (this._node.gossipSync) {
@@ -77,11 +77,11 @@ export class MarketplaceProtocol {
    */
   async updateListing(id, updates) {
     if (!id) throw new TypeError('id is required');
-    let existing = this._storage ? await this._storage.get(`listing:${id}`) : null;
+    let existing = this._storage ? await this._storage.get(`item:${id}`) : null;
     if (!existing) existing = { id };
 
     const updated = { ...existing, ...updates, id, updatedAt: Date.now() };
-    if (this._storage) await this._storage.put(`listing:${id}`, updated);
+    if (this._storage) await this._storage.put(`item:${id}`, updated);
 
     if (this._node.gossipSync) {
       await this._node.gossipSync.updateItemStatus(id, updates.status || updated.status || 'available');
@@ -111,7 +111,7 @@ export class MarketplaceProtocol {
     // Find seller from listing
     let sellerId = offer.sellerId;
     if (!sellerId && this._storage) {
-      const listing = await this._storage.get(`listing:${listingId}`);
+      const listing = await this._storage.get(`item:${listingId}`);
       sellerId = listing?.sellerId;
     }
 
@@ -198,7 +198,7 @@ export class MarketplaceProtocol {
     if (!this._storage) return [];
     const all = await this._storage.getAll();
     return all
-      .filter(e => e.key.startsWith('listing:'))
+      .filter(e => e.key.startsWith('item:'))
       .map(e => e.value)
       .filter(item => {
         if (!item) return false;
@@ -225,7 +225,7 @@ export class MarketplaceProtocol {
     if (!this._storage) return [];
     const all = await this._storage.getAll();
     return all
-      .filter(e => e.key.startsWith('listing:'))
+      .filter(e => e.key.startsWith('item:'))
       .map(e => e.value)
       .filter(item => item && item.h3Cell === h3Cell);
   }
@@ -236,11 +236,13 @@ export class MarketplaceProtocol {
   async _onListingNew(from, msg) {
     const listing = msg.listing;
     if (!listing?.id) return;
-    if (this._storage) await this._storage.put(`listing:${listing.id}`, listing);
-    // Emit as gossip item so GossipSync 'item:received' listeners (and the adapter's
-    // onItem callback) are notified \u2014 without this, LISTING_NEW arrivals are silently
-    // written to storage but never surfaced to the UI / Dexie layer.
-    this._node.gossipSync?.emit('item:received', { topic: 'item', payload: listing, from, msgId: null });
+    // Store under 'item:' key (same as GossipSync.publishItem) so MerkleSync
+    // has a single canonical key per item — not both 'item:' and 'listing:'.
+    if (this._storage) await this._storage.put(`item:${listing.id}`, listing);
+    // NOTE: Do NOT emit item:received here.  Items broadcast via broadcastItem()
+    // already arrive through PlumtreeGossip → GossipSync item:received.  Emitting
+    // a second item:received for the same payload causes the adapter to call
+    // saveNeighborItem() twice, resulting in duplicate items in the Dexie UI DB.
   }
 
   /** @private */
@@ -248,11 +250,20 @@ export class MarketplaceProtocol {
     const listing = msg.listing;
     if (!listing?.id) return;
     if (!this._storage) return;
-    const existing = await this._storage.get(`listing:${listing.id}`);
-    // LWW merge — strict > to prevent same-timestamp re-broadcast from overwriting
-    if (!existing || (listing.updatedAt || 0) > (existing.updatedAt || 0)) {
-      await this._storage.put(`listing:${listing.id}`, listing);
-      // Notify UI of the status change
+    // Check under 'item:' key (canonical) for LWW merge
+    const existing = await this._storage.get(`item:${listing.id}`);
+    // LWW merge — strict > to prevent same-timestamp re-broadcast from overwriting;
+    // tie-break by sellerId (lexicographically larger wins) for deterministic convergence.
+    const inTs = listing.updatedAt || 0;
+    const exTs = existing ? (existing.updatedAt || 0) : -1;
+    const wins = !existing ||
+      inTs > exTs ||
+      (inTs === exTs && (listing.sellerId || '') > (existing?.sellerId || ''));
+    if (wins) {
+      await this._storage.put(`item:${listing.id}`, listing);
+      // Notify UI of the status change — LISTING_UPDATE is NOT duplicated by
+      // PlumtreeGossip (only NEW_ITEM goes through broadcastItem / publishItem),
+      // so it is safe to emit here.
       this._node.gossipSync?.emit('item:received', { topic: 'item', payload: listing, from, msgId: null });
     }
   }

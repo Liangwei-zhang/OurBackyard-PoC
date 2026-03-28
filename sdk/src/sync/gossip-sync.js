@@ -55,16 +55,24 @@ export class GossipSync extends EventBus {
 
     // Forward items received via Merkle reconciliation as item:received
     // so the application layer (Dexie / UI) gets updated for pre-existing items.
-    // NOTE: MarketplaceProtocol stores under 'listing:' / 'offer:' / 'review:' keys,
-    //       not 'item:' — we must forward all content-bearing keys, not just 'item:'.
+    // NOTE: The same logical item may exist under BOTH 'item:<id>' and 'listing:<id>'
+    // keys in SDK storage.  We must deduplicate by value.id before emitting, otherwise
+    // the adapter calls saveNeighborItem() twice for the same item → Dexie duplicates.
     this._merkle.on('items:synced', ({ from, items }) => {
       console.log('[SDK] MerkleSync items:synced from', from, '— received', items.length, 'items');
+      const emitted = new Set();
       for (const { key, value } of items) {
         const isContent = key.startsWith('item:') ||
                           key.startsWith('listing:') ||
                           key.startsWith('offer:') ||
                           key.startsWith('review:');
         if (isContent && value && value.id) {
+          // Skip if we already emitted an event for this logical item
+          if (emitted.has(value.id)) {
+            console.log('[SDK] Skipping duplicate item from MerkleSync:', key, value.id);
+            continue;
+          }
+          emitted.add(value.id);
           console.log('[SDK] Forwarding synced item to UI:', key, value?.title || value?.id);
           this.emit('item:received', { topic: 'item', payload: value, from, msgId: null });
         } else {

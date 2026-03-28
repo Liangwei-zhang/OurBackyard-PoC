@@ -64,7 +64,7 @@ describe('MarketplaceProtocol — createListing', () => {
     const mp = new MarketplaceProtocol(node);
     mp.install(node);
     const listing = await mp.createListing({ title: 'Chair' });
-    const stored = await node.storage.get(`listing:${listing.id}`);
+    const stored = await node.storage.get(`item:${listing.id}`);
     assert.equal(stored.title, 'Chair');
   });
 

@@ -352,7 +352,7 @@ describe('Integration — MarketplaceProtocol', () => {
     assert.equal(item.title, 'Bike');
     assert.equal(item.sellerId, 'peer-A');
     assert.equal(item.status, 'available');
-    const stored = await nodeA._config.storage.get(`listing:${item.id}`);
+    const stored = await nodeA._config.storage.get(`item:${item.id}`);
     assert.ok(stored, 'Listing should persist in storage');
   });
 
@@ -379,7 +379,7 @@ describe('Integration — MarketplaceProtocol', () => {
   });
 
   it('searchListings() finds stored listings', async () => {
-    // Create listing locally on B so it is stored under listing: key (no gossip key-format mismatch)
+    // Create listing locally on B so it is stored under item: key (canonical key)
     await mktB.createListing({ title: 'Couch', price: 100, category: 'furniture' });
     const results = await mktB.searchListings({ category: 'furniture' });
     assert.ok(results.length >= 1, 'Should find at least one listing');

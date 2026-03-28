@@ -286,14 +286,14 @@ class OurBackyardMesh {
   broadcastItem(item, ttl = 4) {
     if (!this._node) return;
     // SDK plumtree publish (handles dedup + lazy-push automatically).
-    // Also persists under item: key so MerkleSync can sync it to late-joining peers.
+    // Persists under item: key so MerkleSync can sync it to late-joining peers.
+    // The GossipSync item:received event notifies the UI via the adapter listener.
+    // NOTE: Do NOT also call broadcastMessage('LISTING_NEW') — that triggers
+    // MarketplaceProtocol._onListingNew which emits a SECOND item:received for
+    // the same item, causing duplicates in the receiver's Dexie DB.
     this._node.publishItem(item).catch(e =>
       console.warn('[SDK Mesh] broadcastItem failed:', e.message)
     );
-    // Also broadcast as LISTING_NEW so MarketplaceProtocol handler on remote peers
-    // persists the listing under listing: key in their storage.
-    // broadcastMessage is synchronous/void — do NOT call .catch on its return value.
-    try { this._node.broadcastMessage('LISTING_NEW', { listing: item }); } catch (_) {}
   }
 
   /**
