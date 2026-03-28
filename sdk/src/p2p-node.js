@@ -138,7 +138,7 @@ export class P2PNode extends EventBus {
     // before any items are exchanged — this is the primary cause of "商品无法同步".
     const sendFn = (peerId, msg) => {
       const data = JSON.stringify(msg);
-      this.transport.send(peerId, data);
+      return this.transport.send(peerId, data);
     };
     this.gossipSync.setSendFn(sendFn);
     this.resilience.setSendFn(sendFn);

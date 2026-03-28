@@ -193,18 +193,17 @@ class OurBackyardMesh {
       _deduplicatedOnItem(payload);
     });
 
-    // Reconciliation fallback: if MerkleSync reports 0 new items but UI DB was cleared,
-    // replay canonical SDK items through the same onItem pipeline.
-    node.gossipSync.on('sync:completed', async ({ itemsSynced }) => {
-      if (itemsSynced !== 0) return;
+    // Reconciliation fallback: always verify SDK storage vs Dexie after sync.
+    // This covers root-match no-op syncs and failed send attempts.
+    node.gossipSync.on('sync:completed', async ({ itemsSynced, synced }) => {
       if (typeof window === 'undefined' || !window.db?.items) return;
       try {
         const sdkItems = await this._storage?.getByPrefix?.('item:');
         if (!sdkItems || sdkItems.length === 0) return;
         const dexieCount = await window.db.items.where('status').notEqual('gone').count();
-        if (dexieCount > 0) return;
+        if (dexieCount >= sdkItems.length) return;
 
-        console.log('[SDK Mesh] Dexie empty while SDK storage has items, replaying to UI:', sdkItems.length);
+        console.log('[SDK Mesh] sync:completed reconcile — synced:', synced, 'itemsSynced:', itemsSynced, 'dexie:', dexieCount, 'sdk:', sdkItems.length);
         for (const { value } of sdkItems) {
           if (value && value.id) _deduplicatedOnItem(value);
         }

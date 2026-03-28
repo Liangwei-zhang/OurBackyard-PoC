@@ -117,7 +117,7 @@ export class MerkleSync extends EventBus {
 
     this._sessions.set(sessionId, session);
 
-    await this._sendTo(peerId, {
+    const sendOk = await this._sendTo(peerId, {
       type: 'SYNC_REQ',
       id: uuid(),
       sessionId,
@@ -125,6 +125,14 @@ export class MerkleSync extends EventBus {
       leafCount: tree.leafCount,
       since,
     });
+
+    // transport.send() can return false when the DataChannel is not open.
+    // Complete promptly so upper-layer reconciliation can run instead of waiting
+    // for the 30s timeout path.
+    if (sendOk === false) {
+      console.warn('[SDK] MerkleSync SYNC_REQ to', peerId, 'failed (DC not open) — completing with itemsSynced: 0');
+      this._completeSession(session, { synced: false, itemsSynced: 0 });
+    }
 
     return promise;
   }
@@ -341,9 +349,14 @@ export class MerkleSync extends EventBus {
   /** @private */
   async _sendTo(peerId, message) {
     if (typeof this._sendFn === 'function') {
-      try { await this._sendFn(peerId, message); } catch (e) { /* swallow */ }
+      try {
+        return await this._sendFn(peerId, message);
+      } catch (e) {
+        return false;
+      }
     } else {
       this.emit('send', peerId, message);
+      return true;
     }
   }
 

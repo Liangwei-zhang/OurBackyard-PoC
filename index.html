@@ -7127,6 +7127,7 @@ window.showItemDetail = async function (id) {
     // from SDK storage so listings become visible again.
     try {
         const _sdkStorage = mesh._storage;
+        console.log('[Boot] Checking SDK→Dexie reverse backfill. _storage available:', !!_sdkStorage, 'getByPrefix:', typeof _sdkStorage?.getByPrefix);
         if (_sdkStorage && typeof _sdkStorage.getByPrefix === 'function') {
             const _sdkItems = await _sdkStorage.getByPrefix('item:');
             const _dexieItems = await window.db.items.where('status').notEqual('gone').toArray();
