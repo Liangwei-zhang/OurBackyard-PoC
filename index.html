@@ -3329,17 +3329,57 @@ self.onmessage = async function(e) {
                 }
                 const blob = blobs[0].blob;
 
-                // Prefer DataChannel (SDK bridge) — WebSocket has no direct peer routing.
-                // window.dataChannels is populated by p2p-adapter's _bridgePeer().
-                const dcMap = window.dataChannels || {};
-                const dc = requesterId && dcMap[requesterId]
-                    ? dcMap[requesterId]
-                    : null;
-
-                if (dc && dc.readyState === 'open') {
-                    log("[P2P] Serving image via DataChannel to:", requesterId);
+                // 1. Prefer legacy DataChannel (real RTCDataChannel supports binary)
+                const legacyDC = P2PStreamer.dataChannels.get(requesterId);
+                if (legacyDC && legacyDC.readyState === 'open') {
+                    log("[P2P] Serving image via legacy DataChannel to:", requesterId);
                     await P2PStreamer.sendImageToPeer(requesterId, imageHash, blob);
-                } else if (ws && ws.readyState === WebSocket.OPEN) {
+                    return;
+                }
+
+                // 2. SDK bridge DataChannel: send as base64 JSON (binary chunks are
+                //    silently dropped by the SDK router which JSON.parse's everything).
+                const sdkDC = (window.dataChannels || {})[requesterId];
+                if (sdkDC && sdkDC.readyState === 'open') {
+                    log("[P2P] Serving image via SDK bridge (base64) to:", requesterId);
+                    try {
+                        const buffer = await blob.arrayBuffer();
+                        const CHUNK_SIZE = 16384;
+                        // Send header
+                        sdkDC.send(JSON.stringify({
+                            type: "IMG_HEADER",
+                            imageHash,
+                            size: buffer.byteLength,
+                            mimeType: "image/jpeg",
+                            encoding: "base64",
+                        }));
+                        // Send chunks as base64 JSON
+                        for (let offset = 0; offset < buffer.byteLength; offset += CHUNK_SIZE) {
+                            const chunk = new Uint8Array(buffer.slice(offset, offset + CHUNK_SIZE));
+                            // Use array join instead of string concatenation for performance
+                            const chars = new Array(chunk.length);
+                            for (let i = 0; i < chunk.length; i++) chars[i] = String.fromCharCode(chunk[i]);
+                            sdkDC.send(JSON.stringify({
+                                type: "IMG_CHUNK",
+                                imageHash,
+                                data: btoa(chars.join('')),
+                                offset,
+                            }));
+                        }
+                        sdkDC.send(JSON.stringify({
+                            type: "IMG_END",
+                            imageHash,
+                            totalSize: buffer.byteLength,
+                        }));
+                        log("[P2P] Image sent via SDK bridge:", imageHash, "size:", buffer.byteLength);
+                    } catch (err) {
+                        console.warn("[P2P] SDK bridge image send failed:", err);
+                    }
+                    return;
+                }
+
+                // 3. Fall back to WebSocket relay
+                if (ws && ws.readyState === WebSocket.OPEN) {
                     log("[P2P] Serving image via WebSocket to:", requesterId);
                     await sendImageBinaryWS(ws, blob, null, imageHash);
                 } else {
@@ -6107,6 +6147,11 @@ window.showItemDetail = async function (id) {
                 }
             }
 
+            // Per-itemId lock to prevent concurrent saveNeighborItem calls for the same item.
+            // Without this, two near-simultaneous event paths (e.g. PlumtreeGossip + MerkleSync)
+            // can both pass the isItemSynced check before either has inserted, causing duplicates.
+            const _saveItemLocks = new Map();
+
             async function saveNeighborItem(item) {
                 // Validate incoming P2P item before writing to local DB
                 if (!item || typeof item !== "object") return;
@@ -6119,30 +6164,54 @@ window.showItemDetail = async function (id) {
                         return;
                     }
                 }
-                // Use Sync Controller to avoid duplicates, get local ID back
-                const localId = await SyncController.syncItem(item);
-                if (localId) {
-                    // Map original itemId to local id for image association
-                    if (item.id && item.id !== localId) {
-                        window._itemIdMapping = window._itemIdMapping || {};
-                        window._itemIdMapping[item.id] = localId;
-                    }
 
-                    // Request ALL missing images from seller
-                    const hashes = item.imageHashes || (item.imageHash ? [item.imageHash] : []);
-                    for (const hash of hashes) {
-                        if (item.sellerId !== peerId) {
-                            executeImageRequest(hash, item.sellerId);
+                // Derive a stable dedup key from the item.
+                // Prefer the original item id; fall back to title+sellerId.
+                const dedupKey = item.id || (item.title + '::' + (item.sellerId || ''));
+                if (!dedupKey) return;
+
+                // Serialise concurrent calls for the SAME item behind a promise chain
+                // so isItemSynced + add() is atomic per dedupKey.
+                const prev = _saveItemLocks.get(dedupKey) || Promise.resolve();
+                const current = prev.then(async () => {
+                    // Use Sync Controller to avoid duplicates, get local ID back
+                    const localId = await SyncController.syncItem(item);
+                    if (localId) {
+                        // Map original itemId to local id for image association
+                        if (item.id && item.id !== localId) {
+                            window._itemIdMapping = window._itemIdMapping || {};
+                            window._itemIdMapping[item.id] = localId;
                         }
-                    }
 
-                    // Index in LocalAI for semantic search (non-blocking)
-                    if (window.LocalAI) {
-                        LocalAI.indexItem({ ...item, id: localId }).catch(() => {});
-                    }
+                        // Request ALL missing images from seller
+                        const hashes = item.imageHashes || (item.imageHash ? [item.imageHash] : []);
+                        for (const hash of hashes) {
+                            if (item.sellerId !== peerId) {
+                                executeImageRequest(hash, item.sellerId);
+                            }
+                        }
 
-                    loadItems();
-                }
+                        // Index in LocalAI for semantic search (non-blocking)
+                        if (window.LocalAI) {
+                            LocalAI.indexItem({ ...item, id: localId }).catch(() => {});
+                        }
+
+                        loadItems();
+                    }
+                }).catch(err => {
+                    console.warn('[saveNeighborItem] error:', err);
+                });
+
+                _saveItemLocks.set(dedupKey, current);
+
+                // Clean up lock once settled to avoid unbounded growth
+                current.finally(() => {
+                    if (_saveItemLocks.get(dedupKey) === current) {
+                        _saveItemLocks.delete(dedupKey);
+                    }
+                });
+
+                return current;
             }
 
             function createThumbnailFromBlob(blob) {
