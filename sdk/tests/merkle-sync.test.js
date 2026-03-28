@@ -138,6 +138,39 @@ describe('MerkleSync', () => {
     assert.equal(item.title, 'New Title');
   });
 
+  it('should canonicalize legacy listing keys to item keys on sync', async () => {
+    const { sync1, storage1 } = await makeSyncPair(
+      {},
+      { 'listing:legacy-1': { id: 'legacy-1', title: 'Legacy Listing' } }
+    );
+
+    const result = await sync1.syncWithPeer('peer2');
+    assert.ok(result.synced);
+    assert.equal(result.itemsSynced, 1);
+
+    const canonical = await storage1.get('item:legacy-1');
+    const legacy = await storage1.get('listing:legacy-1');
+    assert.ok(canonical, 'legacy listing should be stored under canonical item key');
+    assert.equal(legacy, null, 'legacy listing key should not be persisted locally');
+  });
+
+  it('should ignore legacy listing diff when canonical item already exists', async () => {
+    const payload = { id: 'same-1', title: 'Same Item' };
+    const { sync1, storage1 } = await makeSyncPair(
+      { 'item:same-1': payload },
+      { 'listing:same-1': payload }
+    );
+
+    const result = await sync1.syncWithPeer('peer2');
+    assert.ok(result.synced);
+    assert.equal(result.itemsSynced, 0);
+
+    const canonical = await storage1.get('item:same-1');
+    const legacy = await storage1.get('listing:same-1');
+    assert.ok(canonical, 'canonical item should remain available');
+    assert.equal(legacy, null, 'legacy listing key should not be requested/persisted');
+  });
+
   it('should emit sync:started and sync:completed events', async () => {
     const { sync1, sync2 } = await makeSyncPair({ 'a': 1 }, { 'a': 1 });
 

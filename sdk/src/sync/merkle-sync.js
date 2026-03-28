@@ -220,9 +220,19 @@ export class MerkleSync extends EventBus {
     const missingKeys = [];
     for (const [key, remoteHash] of remoteLeafMap) {
       const localHash = localLeafMap.get(key);
-      if (localHash !== remoteHash) {
-        missingKeys.push(key);
+      if (localHash === remoteHash) continue;
+
+      // Backward compatibility: older peers may still carry legacy `listing:<id>` keys.
+      // If we already have canonical `item:<id>` locally, requesting `listing:<id>` again
+      // only creates perpetual diff churn without adding any new state.
+      if (key.startsWith('listing:')) {
+        const legacyId = key.slice('listing:'.length);
+        if (legacyId && localLeafMap.has(`item:${legacyId}`)) {
+          continue;
+        }
       }
+
+      missingKeys.push(key);
     }
 
     console.log('[SDK] _onSyncResp from', from, '— remote leaves:', remoteLeaves.length, 'missing/diff keys:', missingKeys.length, missingKeys.slice(0,5));
@@ -268,7 +278,12 @@ export class MerkleSync extends EventBus {
     const { sessionId, keys } = msg;
     const items = [];
     for (const key of keys) {
-      const value = await this._storage.get(key);
+      let value = await this._storage.get(key);
+      // Backward compatibility for peers still requesting legacy listing keys.
+      if (value === null && key.startsWith('listing:')) {
+        const legacyId = key.slice('listing:'.length);
+        if (legacyId) value = await this._storage.get(`item:${legacyId}`);
+      }
       if (value !== null) items.push({ key, value });
     }
     await this._sendTo(from, {
@@ -289,12 +304,17 @@ export class MerkleSync extends EventBus {
     const newItems = [];
     for (const { key, value } of items) {
       try {
-        const existing = await this._storage.get(key);
-        if (existing !== value) {
-          await this._storage.put(key, value);
+        const targetKey = this._canonicalStorageKey(key, value);
+        const existing = await this._storage.get(targetKey);
+        // Deep comparison: use JSON serialisation to avoid always-true object reference check.
+        // Without this, `existing !== value` is always true (different object references) so
+        // every MerkleSync pass re-emits all items → Dexie duplicates.
+        const isDifferent = !existing || JSON.stringify(existing) !== JSON.stringify(value);
+        if (isDifferent) {
+          await this._storage.put(targetKey, value);
           synced++;
-          newItems.push({ key, value });
-          this.emit('sync:progress', { sessionId, key, from });
+          newItems.push({ key: targetKey, value });
+          this.emit('sync:progress', { sessionId, key: targetKey, from });
         }
       } catch (e) {
         this.emit('sync:conflict', { sessionId, key, error: e });
@@ -333,5 +353,22 @@ export class MerkleSync extends EventBus {
    */
   setSendFn(fn) {
     this._sendFn = fn;
+  }
+
+  /**
+   * Normalise legacy storage keys to canonical keys.
+   * @private
+   * @param {string} key
+   * @param {any} value
+   * @returns {string}
+   */
+  _canonicalStorageKey(key, value) {
+    if (typeof key === 'string' && key.startsWith('listing:')) {
+      const idFromValue = value && typeof value === 'object' ? value.id : null;
+      const idFromKey = key.slice('listing:'.length);
+      const id = idFromValue || idFromKey;
+      if (id) return `item:${id}`;
+    }
+    return key;
   }
 }
