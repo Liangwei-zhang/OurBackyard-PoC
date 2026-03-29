@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OurBackyard — License Token Generator</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{background:#1e293b;border-radius:16px;padding:32px;width:100%;max-width:600px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  h1{font-size:22px;font-weight:700;margin-bottom:4px;color:#f8fafc}
+  .sub{font-size:13px;color:#94a3b8;margin-bottom:28px}
+  label{display:block;font-size:13px;font-weight:600;color:#94a3b8;margin-bottom:6px;margin-top:16px}
+  input,select{width:100%;padding:10px 14px;background:#0f172a;border:1.5px solid #334155;border-radius:10px;color:#f1f5f9;font-size:14px;font-family:inherit;outline:none}
+  input:focus,select:focus{border-color:#6366f1}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .btn{width:100%;margin-top:24px;padding:14px;background:#6366f1;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .15s}
+  .btn:hover{opacity:.9}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn-secondary{background:#334155;margin-top:10px}
+  .result{margin-top:20px;display:none}
+  .token-box{background:#0f172a;border:1.5px solid #334155;border-radius:10px;padding:14px;font-family:monospace;font-size:11px;word-break:break-all;color:#a5b4fc;line-height:1.6}
+  .copy-btn{margin-top:10px;width:100%;padding:10px;background:#0f172a;border:1.5px solid #6366f1;color:#a5b4fc;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s}
+  .copy-btn:hover{background:#6366f1;color:#fff}
+  .meta{font-size:12px;color:#64748b;margin-top:8px;line-height:1.8}
+  .sep{border:none;border-top:1px solid #1e293b;margin:28px 0}
+  .keygen-section{margin-top:0}
+  h2{font-size:15px;font-weight:700;color:#94a3b8;margin-bottom:16px}
+  .pubkey-box{background:#0f172a;border:1.5px solid #334155;border-radius:10px;padding:14px;font-family:monospace;font-size:11px;word-break:break-all;color:#86efac;line-height:1.6}
+  .warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px;font-size:12px;color:#fbbf24;margin-top:16px;line-height:1.6}
+  .ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:10px;font-size:12px;color:#86efac;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🔑 License Token Generator</h1>
+  <p class="sub">OurBackyard — Publish Authorisation System (Phase 1)</p>
+
+  <!-- Key Management -->
+  <div class="keygen-section">
+    <h2>① Private Key (keep secret — never share)</h2>
+    <div id="key-status" class="warn">No key loaded. Generate or paste one below.</div>
+    <button class="btn btn-secondary" id="btn-gen-key">Generate New Ed25519 Key Pair</button>
+    <label>Or paste existing private key (hex)</label>
+    <input type="password" id="privkey-input" placeholder="64-byte hex private key…">
+    <button class="btn btn-secondary" id="btn-load-key">Load Key</button>
+    <div id="pubkey-area" style="display:none;margin-top:16px">
+      <label>Public Key (embed in OurBackyard)</label>
+      <div class="pubkey-box" id="pubkey-display"></div>
+      <button class="copy-btn" onclick="copy('pubkey-display')">Copy Public Key</button>
+    </div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- Token Issuance -->
+  <h2>② Issue License Token</h2>
+  <label>Merchant ID / Email</label>
+  <input type="text" id="merchant-id" placeholder="merchant@example.com or shop-abc">
+
+  <div class="row">
+    <div>
+      <label>Validity Period</label>
+      <select id="validity">
+        <option value="7">7 days</option>
+        <option value="30" selected>30 days</option>
+        <option value="90">90 days</option>
+        <option value="180">6 months</option>
+        <option value="365">1 year</option>
+        <option value="0">No expiry</option>
+      </select>
+    </div>
+    <div>
+      <label>Tier</label>
+      <select id="tier">
+        <option value="basic">Basic</option>
+        <option value="pro">Pro</option>
+        <option value="enterprise">Enterprise</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="btn" id="btn-issue" disabled>⚡ Issue Token</button>
+
+  <div class="result" id="result">
+    <label>License Token (give to merchant)</label>
+    <div class="token-box" id="token-out"></div>
+    <button class="copy-btn" onclick="copy('token-out')">📋 Copy Token</button>
+    <div class="meta" id="token-meta"></div>
+  </div>
+</div>
+
+<script>
+// ── Ed25519 via WebCrypto ──────────────────────────────────────────────────
+let _privKey = null, _pubKey = null, _privHex = '';
+
+function buf2hex(buf) {
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+function hex2buf(hex) {
+  const b = new Uint8Array(hex.length/2);
+  for (let i=0;i<hex.length;i+=2) b[i/2]=parseInt(hex.slice(i,i+2),16);
+  return b;
+}
+function b64uEncode(bytes) {
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+
+async function genKeyPair() {
+  const kp = await crypto.subtle.generateKey({name:'Ed25519'},true,['sign','verify']);
+  const privRaw = await crypto.subtle.exportKey('pkcs8', kp.privateKey);
+  // Ed25519 pkcs8 raw seed is last 32 bytes, but we need the full 64-byte private key
+  // Use the raw JWK d value instead
+  const jwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
+  // d is base64url of 32-byte seed; reconstruct 64-byte private key as seed+pubkey
+  const seed = Uint8Array.from(atob(jwk.d.replace(/-/g,'+').replace(/_/g,'/')), c=>c.charCodeAt(0));
+  const pubRaw = await crypto.subtle.exportKey('raw', kp.publicKey);
+  const privFull = new Uint8Array(64);
+  privFull.set(seed, 0);
+  privFull.set(new Uint8Array(pubRaw), 32);
+  return { privHex: buf2hex(privFull), pubHex: buf2hex(pubRaw), privKey: kp.privateKey, pubKey: kp.publicKey };
+}
+
+async function loadPrivKey(hex) {
+  // Import raw Ed25519 private key (seed = first 32 bytes)
+  const seed = hex2buf(hex.slice(0,64));
+  // Rebuild CryptoKey from seed via JWK
+  const d = btoa(String.fromCharCode(...seed)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  const jwk = { kty:'OKP', crv:'Ed25519', d, x: '' }; // x will be derived
+  // Use generateKey approach: import seed as PKCS8
+  // Actually the easiest way is to use the SubtleCrypto importKey with 'raw' format
+  // Ed25519 importKey 'raw' is the 32-byte public key (for verify only)
+  // For signing, we need pkcs8. Build minimal pkcs8 from seed:
+  const pkcs8 = new Uint8Array([
+    0x30,0x2e,0x02,0x01,0x00,0x30,0x05,0x06,0x03,0x2b,0x65,0x70,
+    0x04,0x22,0x04,0x20,...seed
+  ]);
+  const privKey = await crypto.subtle.importKey('pkcs8', pkcs8.buffer, {name:'Ed25519'}, false, ['sign']);
+  // Derive public key by signing a known message and extracting
+  // Actually we can't derive pub from priv in WebCrypto; use stored pubkey from full key
+  const pubSeed = hex.length >= 128 ? hex2buf(hex.slice(64,128)) : null;
+  let pubKey = null, pubHex = '';
+  if (pubSeed) {
+    pubKey = await crypto.subtle.importKey('raw', pubSeed.buffer, {name:'Ed25519'}, true, ['verify']);
+    pubHex = buf2hex(pubSeed);
+  }
+  return { privKey, pubKey, pubHex };
+}
+
+async function signToken(privKey, message) {
+  const sig = await crypto.subtle.sign('Ed25519', privKey, new TextEncoder().encode(message));
+  return b64uEncode(new Uint8Array(sig));
+}
+
+// ── UI ─────────────────────────────────────────────────────────────────────
+document.getElementById('btn-gen-key').onclick = async () => {
+  try {
+    const kp = await genKeyPair();
+    _privKey = kp.privKey; _pubKey = kp.pubKey; _privHex = kp.privHex;
+    showKey(kp.privHex, kp.pubHex);
+  } catch(e) { alert('Key generation failed: ' + e.message); }
+};
+
+document.getElementById('btn-load-key').onclick = async () => {
+  const hex = document.getElementById('privkey-input').value.trim();
+  if (hex.length < 64) { alert('Private key must be at least 64 hex chars (32 bytes seed)'); return; }
+  try {
+    const kp = await loadPrivKey(hex);
+    _privKey = kp.privKey; _pubKey = kp.pubKey; _privHex = hex;
+    showKey(hex, kp.pubHex);
+  } catch(e) { alert('Key load failed: ' + e.message); }
+};
+
+function showKey(privHex, pubHex) {
+  document.getElementById('privkey-input').value = privHex;
+  document.getElementById('pubkey-display').textContent = pubHex || '(derive public key by generating a new pair)';
+  document.getElementById('pubkey-area').style.display = 'block';
+  document.getElementById('key-status').className = 'ok';
+  document.getElementById('key-status').textContent = '✅ Key loaded — private key stays in this tab only';
+  document.getElementById('btn-issue').disabled = false;
+}
+
+document.getElementById('btn-issue').onclick = async () => {
+  if (!_privKey) { alert('Load a key first'); return; }
+  const merchantId = document.getElementById('merchant-id').value.trim();
+  if (!merchantId) { alert('Enter a Merchant ID'); return; }
+
+  const days = parseInt(document.getElementById('validity').value);
+  const tier = document.getElementById('tier').value;
+  const now  = Math.floor(Date.now() / 1000);
+  const exp  = days === 0 ? undefined : now + days * 86400;
+
+  const enc = s => b64uEncode(new TextEncoder().encode(s));
+  const header  = enc(JSON.stringify({ alg:'Ed25519', typ:'PGT' }));
+  const payload = enc(JSON.stringify({
+    sub: merchantId, iat: now,
+    ...(exp ? { exp } : {}),
+    scope: 'publish', tier,
+    jti: crypto.randomUUID(),
+  }));
+
+  const sig = await signToken(_privKey, header + '.' + payload);
+  const token = `${header}.${payload}.${sig}`;
+
+  document.getElementById('token-out').textContent = token;
+  document.getElementById('token-meta').innerHTML =
+    `<b>Merchant:</b> ${merchantId}<br>` +
+    `<b>Issued:</b> ${new Date(now*1000).toLocaleString()}<br>` +
+    (exp ? `<b>Expires:</b> ${new Date(exp*1000).toLocaleString()}` : '<b>Expires:</b> Never') +
+    `<br><b>Tier:</b> ${tier}`;
+  document.getElementById('result').style.display = 'block';
+};
+
+function copy(id) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target; btn.textContent = '✅ Copied!';
+    setTimeout(() => btn.textContent = '📋 Copy Token', 1500);
+  });
+}
+</script>
+</body>
+</html>
